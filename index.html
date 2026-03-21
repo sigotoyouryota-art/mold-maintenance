@@ -2223,11 +2223,20 @@ async function exportMaster(type) {
     }
     const rows = {
       molds: data.map(m=>[m.part_no,m.part_name,m.model_no||'',m.category_name||'',m.machine_no||'',m.line_name||'',m.maintenance_interval,m.cycle_time_sec,m.alert_shot_danger,m.alert_shot_warning,m.alert_min_danger,m.alert_min_warning]),
-      machines: data.map(m=>[m.machine_no,m.line_name,m.is_dandori?'○':'',m.note||'']),
+      machines: data.map(m=>[
+        // 機番は文字列として保持（先頭ゼロが消えないよう）
+        m.machine_no,
+        m.line_name,
+        m.is_dandori?'○':'',
+        m.note||''
+      ]),
       users: data.map(u=>[u.name,u.role,u.is_active?'○':'']),
     };
-    const csv = [headers, ...(rows[type]||[])].map(r=>r.map(v=>{
+    const csv = [headers, ...(rows[type]||[])].map((r,rowIdx)=>r.map((v,colIdx)=>{
       const s = String(v==null?'':v);
+      // 機番列（machines: col0, molds: col4）は文字列として保持
+      const isMachineNo = (type==='machines' && colIdx===0) || (type==='molds' && colIdx===4);
+      if (isMachineNo && /^\d+$/.test(s)) return `"${s}"`;
       return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
     }).join(',')).join('\n');
     // UTF-8 BOM付きで出力（ExcelもそのままUTF-8で開ける）
@@ -2409,7 +2418,12 @@ async function importMoldRow(row) {
   }
 
   const cat = state.categories.find(c=>c.name===catName);
-  const machine = state.machines.find(m=>String(m.machine_no)===String(machineNo));
+  // 機番マッチ：先頭0考慮
+  const machNoNorm = machineNo.replace(/^0+/,'') || '0';
+  const machine = state.machines.find(m=>{
+    const mNo = String(m.machine_no||'');
+    return mNo === machineNo || mNo.replace(/^0+/,'') === machNoNorm;
+  });
 
   // メンテ間隔・サイクル（各種表記対応）
   const interval = parseInt(row['メンテ間隔(shot)']||row['メンテ間隔']||row['maintenance_interval']||'5000')||5000;
@@ -2435,7 +2449,24 @@ async function importMoldRow(row) {
     updated_at: new Date().toISOString(),
   };
 
-  const existing = state.molds.find(m=>String(m.part_no)===String(partNo));
+  // 品番+型番の組み合わせでユニーク判定（型番なしの場合は品番のみ）
+  const modelNo = (row['型番']||row['model_no']||'').toString().trim();
+  let existing;
+  if (modelNo) {
+    // 型番あり：品番+型番で一致するものを探す
+    existing = state.molds.find(m=>
+      String(m.part_no)===String(partNo) &&
+      String(m.model_no||'')===String(modelNo)
+    );
+  } else {
+    // 型番なし：品番のみで一致
+    existing = state.molds.find(m=>
+      String(m.part_no)===String(partNo) &&
+      !m.model_no
+    );
+  }
+  if (modelNo) data.model_no = modelNo;
+
   if (existing) {
     await sb('molds','PATCH',data,`?id=eq.${existing.id}`);
   } else {
@@ -2467,8 +2498,13 @@ async function importMachineRow(row) {
     is_dandori: isDandori,
     note: (row['備考']||row['note']||'').toString().trim()
   };
-  // 文字列・数値両方でマッチ
-  const existing = state.machines.find(m=>String(m.machine_no)===String(no));
+  // 機番マッチ：先頭0を考慮（"04"と"4"は同じとみなす）
+  const noNormalized = no.replace(/^0+/, '') || '0';
+  const existing = state.machines.find(m=>{
+    const mNo = String(m.machine_no||'');
+    const mNoNorm = mNo.replace(/^0+/, '') || '0';
+    return mNo === no || mNoNorm === noNormalized;
+  });
   if (existing) {
     await sb('machines','PATCH',data,`?id=eq.${existing.id}`);
   } else {
