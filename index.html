@@ -38,19 +38,25 @@
   --sidebar-w: 130px;
 }
 .light {
-  --bg: #f8fafc;
+  --bg: #f1f5f9;
   --bg2: #ffffff;
   --bg3: #1e293b;
-  --bg4: #f1f5f9;
-  --border: #e2e8f0;
-  --border2: #cbd5e1;
-  --text: #1e293b;
-  --text2: #334155;
-  --text3: #64748b;
-  --text4: #94a3b8;
-  --accent: #f59e0b;
+  --bg4: #e2e8f0;
+  --border: #cbd5e1;
+  --border2: #94a3b8;
+  --text: #0f172a;
+  --text2: #1e293b;
+  --text3: #475569;
+  --text4: #64748b;
+  --accent: #d97706;
   --accent2: #fef3c7;
-  --info-bg: #eff6ff;
+  --danger-bg: #fee2e2;
+  --danger-text: #b91c1c;
+  --warning-bg: #fef3c7;
+  --warning-text: #b45309;
+  --success-bg: #dcfce7;
+  --success-text: #15803d;
+  --info-bg: #dbeafe;
   --info-text: #1d4ed8;
 }
 
@@ -657,6 +663,7 @@ const state = {
   dandoriDandoriOnly: false,
   listViewMode: 'detail',
   alertViewMode: 'detail',
+  listSortMode: 'maint_asc',
 };
 
 // ===== 多言語 =====
@@ -665,6 +672,7 @@ const T = {
     appName:'金型メンテ管理', login:'ログイン', selectShift:'直を選択', selectWorker:'作業者を選択',
     loginWith:'でログイン', dashboard:'ダッシュボード', list:'一覧', alert:'アラート',
     history:'メンテ履歴', dandori:'段取り設定', master:'マスタ設定', logout:'ログアウト',
+    settings:'設定',
     allLine:'全ライン', lineA:'Aライン', lineB:'Bライン', lineC:'Cライン',
     totalMolds:'管理金型数', needMaint:'要メンテ', caution:'注意', normal:'正常',
     machineNo:'機番', partName:'品名', partNo:'品番', type:'分類', line:'ライン',
@@ -682,11 +690,28 @@ const T = {
     weeklyComplete:'今週完了', monthlyComplete:'今月完了', prevWeek:'先週比',
     allFilter:'全て', ohFilter:'OH', simpleFilter:'簡易', loading:'読み込み中...',
     noData:'データがありません', inputShot:'現在のショット数を入力',
+    sortMaintAsc:'メンテ近い順', sortMaintDesc:'メンテ遠い順',
+    sortMachineAsc:'機番昇順', sortMachineDesc:'機番降順',
+    moldMaster:'金型マスタ', machineMaster:'機械マスタ', lineMaster:'ラインマスタ',
+    userMaster:'ユーザー管理', alertSettings:'アラート設定',
+    addMold:'＋ 金型追加', addMachine:'＋ 機械追加', bulkAdd:'＋＋ 一括追加',
+    addLine:'＋ ライン追加', addUser:'＋ ユーザー追加',
+    edit:'編集', delete:'削除', save:'保存する', close:'閉じる',
+    exportCsv:'↓ CSVエクスポート', importCsv:'↑ CSVインポート',
+    maintInterval:'メンテ間隔(shot)', cycleTime2:'サイクル(秒)',
+    alertDangerShot:'要メンテ(shot前)', alertWarnShot:'注意(shot前)',
+    lineAlert:'ライン別アラート状況', top5:'進捗率が高い金型 TOP5',
+    shotUpdateDone:'ショット数を更新しました', maintDone:'メンテ完了を登録しました',
+    loggedIn:'ログイン中', theme:'テーマ', language:'言語',
+    addHomeScreen:'📱 ホーム画面に追加する', adminMenu:'管理者メニュー',
+    monthlyReport:'月次レポート出力', backup:'データバックアップ',
+    version:'製造3課',
   },
   vi: {
     appName:'Quản Lý Bảo Trì Khuôn', login:'Đăng nhập', selectShift:'Chọn ca', selectWorker:'Chọn công nhân',
     loginWith:'Đăng nhập ca', dashboard:'Tổng quan', list:'Danh sách', alert:'Cảnh báo',
     history:'Lịch sử BT', dandori:'Cài đặt đổi khuôn', master:'Cài đặt master', logout:'Đăng xuất',
+    settings:'Cài đặt',
     allLine:'Tất cả', lineA:'Dây A', lineB:'Dây B', lineC:'Dây C',
     totalMolds:'Tổng khuôn', needMaint:'Cần BT', caution:'Cảnh báo', normal:'Bình thường',
     machineNo:'Máy', partName:'Tên', partNo:'Mã', type:'Loại', line:'Dây',
@@ -704,17 +729,34 @@ const T = {
     weeklyComplete:'Hoàn thành tuần', monthlyComplete:'Hoàn thành tháng', prevWeek:'So tuần trước',
     allFilter:'Tất cả', ohFilter:'OH', simpleFilter:'Đơn giản', loading:'Đang tải...',
     noData:'Không có dữ liệu', inputShot:'Nhập số shot hiện tại',
+    sortMaintAsc:'Gần BT nhất', sortMaintDesc:'Xa BT nhất',
+    sortMachineAsc:'Máy tăng dần', sortMachineDesc:'Máy giảm dần',
+    moldMaster:'Master khuôn', machineMaster:'Master máy', lineMaster:'Master dây',
+    userMaster:'Quản lý người dùng', alertSettings:'Cài đặt cảnh báo',
+    addMold:'＋ Thêm khuôn', addMachine:'＋ Thêm máy', bulkAdd:'＋＋ Thêm nhiều',
+    addLine:'＋ Thêm dây', addUser:'＋ Thêm người dùng',
+    edit:'Sửa', delete:'Xóa', save:'Lưu', close:'Đóng',
+    exportCsv:'↓ Xuất CSV', importCsv:'↑ Nhập CSV',
+    maintInterval:'Chu kỳ BT(shot)', cycleTime2:'Thời gian chu kỳ(s)',
+    alertDangerShot:'Cần BT(trước shot)', alertWarnShot:'Cảnh báo(trước shot)',
+    lineAlert:'Cảnh báo theo dây', top5:'Top 5 khuôn gần BT',
+    shotUpdateDone:'Đã cập nhật số shot', maintDone:'Đã đăng ký BT hoàn thành',
+    loggedIn:'Đang đăng nhập', theme:'Giao diện', language:'Ngôn ngữ',
+    addHomeScreen:'📱 Thêm vào màn hình chính', adminMenu:'Menu quản trị',
+    monthlyReport:'Xuất báo cáo tháng', backup:'Sao lưu dữ liệu',
+    version:'Phân xưởng 3',
   },
   en: {
     appName:'Mold Maintenance', login:'Login', selectShift:'Select shift', selectWorker:'Select worker',
-    loginWith:'Login as shift', dashboard:'Dashboard', list:'List', alert:'Alert',
+    loginWith:'Login shift', dashboard:'Dashboard', list:'List', alert:'Alert',
     history:'Maint. history', dandori:'Setup config', master:'Master settings', logout:'Logout',
+    settings:'Settings',
     allLine:'All lines', lineA:'Line A', lineB:'Line B', lineC:'Line C',
     totalMolds:'Total molds', needMaint:'Needs maint.', caution:'Warning', normal:'Normal',
     machineNo:'Machine', partName:'Name', partNo:'Part No.', type:'Type', line:'Line',
     progress:'Progress', remainShot:'Remaining', remainTime:'Time left', pct:'%', status:'Status',
     shotInput:'Shot count input', update:'Update shot', cancel:'Cancel',
-    maintComplete:'Register maintenance', maintRegister:'Confirm registration',
+    maintComplete:'Register maint.', maintRegister:'Confirm registration',
     simpleMaint:'Simple maint.', ohMaint:'OH maint.', resetDesc:'Reset optional', ohDesc:'Auto reset',
     resetCounter:'Reset shot counter', resetNote:'OH maint. resets automatically',
     worker:'Worker', confirmTitle:'Confirm details', back:'Back', register:'Register',
@@ -726,6 +768,22 @@ const T = {
     weeklyComplete:'Weekly done', monthlyComplete:'Monthly done', prevWeek:'vs last week',
     allFilter:'All', ohFilter:'OH', simpleFilter:'Simple', loading:'Loading...',
     noData:'No data', inputShot:'Enter current shot count',
+    sortMaintAsc:'Maint. soonest', sortMaintDesc:'Maint. latest',
+    sortMachineAsc:'Machine asc.', sortMachineDesc:'Machine desc.',
+    moldMaster:'Mold master', machineMaster:'Machine master', lineMaster:'Line master',
+    userMaster:'User management', alertSettings:'Alert settings',
+    addMold:'＋ Add mold', addMachine:'＋ Add machine', bulkAdd:'＋＋ Bulk add',
+    addLine:'＋ Add line', addUser:'＋ Add user',
+    edit:'Edit', delete:'Delete', save:'Save', close:'Close',
+    exportCsv:'↓ Export CSV', importCsv:'↑ Import CSV',
+    maintInterval:'Maint. interval(shot)', cycleTime2:'Cycle time(sec)',
+    alertDangerShot:'Needs maint.(shots)', alertWarnShot:'Warning(shots)',
+    lineAlert:'Alert by line', top5:'Top 5 molds near maint.',
+    shotUpdateDone:'Shot count updated', maintDone:'Maintenance registered',
+    loggedIn:'Logged in', theme:'Theme', language:'Language',
+    addHomeScreen:'📱 Add to home screen', adminMenu:'Admin menu',
+    monthlyReport:'Monthly report', backup:'Data backup',
+    version:'Section 3',
   }
 };
 function t(key) { return T[state.lang][key] || key; }
@@ -750,6 +808,8 @@ function setLang(lang) {
     b.classList.toggle('active', b.textContent.toLowerCase() === (lang==='ja'?'jp':lang));
   });
   applyLabels();
+  // 現在表示中のセクションを再描画
+  if (state.currentSection) showSection(state.currentSection);
 }
 function applyLabels() {
   document.querySelectorAll('[data-t]').forEach(el => {
@@ -980,14 +1040,19 @@ function renderList(el) {
   <div class="seg-wrap" id="list-seg">
     ${lines.map((l,i)=>`<button class="seg-btn ${i===0?'active':''}" onclick="setListFilter('${l?l.name:'all'}',this)">${i===0?t('allLine'):l.name}</button>`).join('')}
   </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px 4px">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px 4px;flex-wrap:wrap;gap:6px">
     <div style="font-size:11px;color:var(--text3)" id="list-count"></div>
-    <div style="display:flex;gap:6px">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <div class="seg-wrap" style="margin:0">
         <button class="seg-btn active" onclick="setListViewMode('detail',this)" style="padding:3px 8px;font-size:10px">${t('detail')}</button>
         <button class="seg-btn" onclick="setListViewMode('simple',this)" style="padding:3px 8px;font-size:10px">${t('simple')}</button>
       </div>
-      <span style="font-size:11px;color:var(--text3);align-self:center">▼ メンテ近い順</span>
+      <select onchange="setListSort(this.value)" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:5px;padding:4px 8px;font-size:11px;color:var(--text2);cursor:pointer">
+        <option value="maint_asc">▼ メンテ近い順</option>
+        <option value="maint_desc">▼ メンテ遠い順</option>
+        <option value="machine_asc">▼ 機番昇順</option>
+        <option value="machine_desc">▼ 機番降順</option>
+      </select>
     </div>
   </div>
   <div id="list-body"></div>`;
@@ -1010,7 +1075,7 @@ function setListViewMode(mode, el) {
 }
 
 function renderListBody() {
-  let molds = state.molds;
+  let molds = sortMolds(state.molds, state.listSortMode);
   if (state.listFilter !== 'all') molds = molds.filter(m=>m.line_name===state.listFilter);
   const el = document.getElementById('list-body');
   if (!el) return;
@@ -1351,11 +1416,11 @@ async function saveDandori() {
 function renderMaster(el) {
   el.innerHTML = `
   <div class="master-tabs" id="master-tabs">
-    <div class="master-tab active" onclick="showMasterTab('molds',this)">金型マスタ</div>
-    <div class="master-tab" onclick="showMasterTab('machines',this)">機械マスタ</div>
-    <div class="master-tab" onclick="showMasterTab('lines',this)">ラインマスタ</div>
-    <div class="master-tab" onclick="showMasterTab('users',this)">ユーザー管理</div>
-    <div class="master-tab" onclick="showMasterTab('alerts',this)">アラート設定</div>
+    <div class="master-tab active" onclick="showMasterTab('molds',this)">${t('moldMaster')}</div>
+    <div class="master-tab" onclick="showMasterTab('machines',this)">${t('machineMaster')}</div>
+    <div class="master-tab" onclick="showMasterTab('lines',this)">${t('lineMaster')}</div>
+    <div class="master-tab" onclick="showMasterTab('users',this)">${t('userMaster')}</div>
+    <div class="master-tab" onclick="showMasterTab('alerts',this)">${t('alertSettings')}</div>
   </div>
   <div id="master-body"></div>`;
   showMasterTab('molds', document.querySelector('#master-tabs .master-tab'));
@@ -2101,15 +2166,24 @@ function handleImportFile(e) {
 }
 
 function parseImportCSV(text) {
-  // BOM除去
-  text = text.replace(/^\uFEFF/, '');
+  // BOM除去・改行コード統一
+  text = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines = text.trim().split('\n').filter(l=>l.trim());
   if (lines.length < 2) { document.getElementById('import-status').textContent = 'データが見つかりません'; return; }
   const headers = lines[0].split(',').map(h=>h.trim().replace(/^[★]/, ''));
   importRows = lines.slice(1).map(line => {
-    const vals = line.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+    // クォートで囲まれたカンマを含む値にも対応
+    const vals = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+      else { cur += c; }
+    }
+    vals.push(cur.trim());
     const obj = {};
-    headers.forEach((h,i) => obj[h] = vals[i]||'');
+    headers.forEach((h,i) => obj[h] = (vals[i]||'').replace(/^"|"$/g,''));
     return obj;
   }).filter(r => Object.values(r).some(v=>v));
 
@@ -2726,6 +2800,29 @@ function showMasterTabByIndex(idx) {
       if (renders[idx]) renders[idx](body);
     }
   }, 100);
+}
+
+
+// ===== ソート =====
+function sortMolds(molds, mode) {
+  const arr = [...molds];
+  switch(mode) {
+    case 'maint_asc':  return arr.sort((a,b) => b.progress_pct - a.progress_pct);
+    case 'maint_desc': return arr.sort((a,b) => a.progress_pct - b.progress_pct);
+    case 'machine_asc': return arr.sort((a,b) => (a.machine_no||'').localeCompare(b.machine_no||'', undefined, {numeric:true}));
+    case 'machine_desc': return arr.sort((a,b) => (b.machine_no||'').localeCompare(a.machine_no||'', undefined, {numeric:true}));
+    default: return arr;
+  }
+}
+const SORT_LABELS = {
+  maint_asc: 'メンテ近い順',
+  maint_desc: 'メンテ遠い順',
+  machine_asc: '機番昇順',
+  machine_desc: '機番降順',
+};
+function setListSort(mode) {
+  state.listSortMode = mode;
+  renderListBody();
 }
 
 // ===== 初期化 =====
