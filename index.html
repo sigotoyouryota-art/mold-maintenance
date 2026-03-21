@@ -511,8 +511,9 @@ select.form-control { cursor: pointer; }
     <div class="bn-item active" onclick="showSection('dashboard')" id="bn-dashboard"><span class="bn-icon">📊</span><span class="bn-label" id="bn-label-dashboard">DB</span></div>
     <div class="bn-item" onclick="showSection('list')" id="bn-list"><span class="bn-icon">≡</span><span class="bn-label" id="bn-label-list">一覧</span></div>
     <div class="bn-item" onclick="showSection('schedule')" id="bn-schedule"><span class="bn-icon">📅</span><span class="bn-label" id="bn-label-schedule">予定</span></div>
+    <div class="bn-item" onclick="showSection('dandori')" id="bn-dandori"><span class="bn-icon">⚙</span><span class="bn-label" id="bn-label-dandori-bn">段取り</span></div>
     <div class="bn-item" onclick="showSection('history')" id="bn-history"><span class="bn-icon">📋</span><span class="bn-label" id="bn-label-history">履歴</span></div>
-    <div class="bn-item" onclick="showSection('settings')" id="bn-settings"><span class="bn-icon">👤</span><span class="bn-label" id="bn-label-settings">設定</span></div>
+    <div class="bn-item" onclick="showSection('analysis')" id="bn-analysis"><span class="bn-icon">📈</span><span class="bn-label" id="bn-label-analysis-bn">分析</span></div>
   </div>
 </div>
 
@@ -962,11 +963,10 @@ function applyLabels() {
   const bnLabels = {
     'bn-label-dashboard': 'navDashboard',
     'bn-label-list': 'navList',
-    'bn-label-alert': 'navAlert',
-    'bn-label-history': 'navHistory',
     'bn-label-schedule': 'schedule',
-    'bn-label-dandori': 'navDandori',
-    'bn-label-settings': 'navSettings',
+    'bn-label-dandori-bn': 'navDandori',
+    'bn-label-history': 'navHistory',
+    'bn-label-analysis-bn': 'analysis',
   };
   Object.entries(bnLabels).forEach(([id, key]) => {
     const el = document.getElementById(id);
@@ -1142,7 +1142,17 @@ function showSection(section) {
     alert: renderAlert,
     history: renderHistory,
     schedule: renderSchedule,
-    analysis: renderAnalysis,
+    analysis: (el) => {
+      if (state.currentUser?.role !== 'admin') {
+        el.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text3)">
+          <div style="font-size:40px;margin-bottom:12px">🔒</div>
+          <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px">管理者専用</div>
+          <div style="font-size:12px">分析機能は管理者のみ使用できます</div>
+        </div>`;
+        return;
+      }
+      renderAnalysis(el);
+    },
     dandori: renderDandori,
     master: renderMaster,
     settings: renderSettings,
