@@ -496,6 +496,7 @@ select.form-control { cursor: pointer; }
       <div class="sidebar-item" id="nav-master" onclick="showSection('master')" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-master">マスタ設定</span></div>
       <div class="sidebar-item" id="nav-report" onclick="generateMonthlyReport()" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-report">月次レポート</span></div>
       <div class="sidebar-item" id="nav-backup" onclick="backupAllData()" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-backup">バックアップ</span></div>
+      <div class="sidebar-item" onclick="showSection('settings')"><div class="sidebar-dot"></div><span>設定</span></div>
       <div class="sidebar-item" onclick="doLogout()" style="margin-top:auto"><div class="sidebar-dot"></div><span id="nav-label-logout">ログアウト</span></div>
     </div>
     <div class="main-content" id="main-content">
@@ -509,10 +510,8 @@ select.form-control { cursor: pointer; }
   <div class="bottom-nav">
     <div class="bn-item active" onclick="showSection('dashboard')" id="bn-dashboard"><span class="bn-icon">📊</span><span class="bn-label" id="bn-label-dashboard">DB</span></div>
     <div class="bn-item" onclick="showSection('list')" id="bn-list"><span class="bn-icon">≡</span><span class="bn-label" id="bn-label-list">一覧</span></div>
-    <div class="bn-item" onclick="showSection('alert')" id="bn-alert"><span class="bn-icon">🔔</span><span class="bn-label" id="bn-label-alert">アラート</span></div>
-    <div class="bn-item" onclick="showSection('history')" id="bn-history"><span class="bn-icon">📋</span><span class="bn-label" id="bn-label-history">履歴</span></div>
     <div class="bn-item" onclick="showSection('schedule')" id="bn-schedule"><span class="bn-icon">📅</span><span class="bn-label" id="bn-label-schedule">予定</span></div>
-    <div class="bn-item" onclick="showSection('dandori')" id="bn-dandori2"><span class="bn-icon">⚙</span><span class="bn-label" id="bn-label-dandori2">段取り</span></div>
+    <div class="bn-item" onclick="showSection('history')" id="bn-history"><span class="bn-icon">📋</span><span class="bn-label" id="bn-label-history">履歴</span></div>
     <div class="bn-item" onclick="showSection('settings')" id="bn-settings"><span class="bn-icon">👤</span><span class="bn-label" id="bn-label-settings">設定</span></div>
   </div>
 </div>
@@ -3070,9 +3069,21 @@ function renderSettings(el) {
       </div>
     </div>` : ''}
 
-    <div style="text-align:center;padding:16px 0">
-      <div style="font-size:11px;color:var(--text4)">${t('appVersion')}</div>
-      <div style="font-size:10px;color:var(--text4);margin-top:2px">${t('version')}</div>
+    <div style="background:var(--bg2);border-radius:8px;overflow:hidden;margin-bottom:12px;border:0.5px solid var(--border)">
+      <div style="padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:13px;color:var(--text2)">アプリバージョン</div>
+          <div style="font-size:11px;color:var(--text4);margin-top:2px">v${CURRENT_VERSION}</div>
+        </div>
+        <button id="update-check-btn" onclick="checkForUpdate()" class="btn btn-secondary btn-sm" style="white-space:nowrap">更新確認</button>
+      </div>
+      <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="forceReload()">
+        <span style="font-size:13px;color:var(--text2)">🔄 強制リロード</span>
+        <span style="color:var(--text3)">›</span>
+      </div>
+    </div>
+    <div style="text-align:center;padding:8px 0 16px">
+      <div style="font-size:10px;color:var(--text4)">${t('version')}</div>
     </div>
   </div>`;
 }
