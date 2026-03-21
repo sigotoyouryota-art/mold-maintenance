@@ -489,6 +489,7 @@ select.form-control { cursor: pointer; }
       <div class="sidebar-item" onclick="showSection('list')" id="nav-list"><div class="sidebar-dot"></div><span id="nav-label-list">一覧</span></div>
       <div class="sidebar-item" onclick="showSection('alert')" id="nav-alert"><div class="sidebar-dot"></div><span id="nav-label-alert">アラート</span> <span id="alert-count-badge" style="font-size:9px;background:var(--danger-bg);color:var(--danger-text);padding:1px 5px;border-radius:3px;margin-left:2px;display:none"></span></div>
       <div class="sidebar-item" onclick="showSection('history')" id="nav-history"><div class="sidebar-dot"></div><span id="nav-label-history">メンテ履歴</span></div>
+      <div class="sidebar-item" onclick="showSection('schedule')" id="nav-schedule"><div class="sidebar-dot"></div><span id="nav-label-schedule">スケジュール</span></div>
       <div class="sidebar-item" onclick="showSection('dandori')" id="nav-dandori"><div class="sidebar-dot"></div><span id="nav-label-dandori">段取り設定</span></div>
       <div class="sidebar-item" id="nav-master" onclick="showSection('master')" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-master">マスタ設定</span></div>
       <div class="sidebar-item" id="nav-report" onclick="generateMonthlyReport()" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-report">月次レポート</span></div>
@@ -508,7 +509,7 @@ select.form-control { cursor: pointer; }
     <div class="bn-item" onclick="showSection('list')" id="bn-list"><span class="bn-icon">≡</span><span class="bn-label" id="bn-label-list">一覧</span></div>
     <div class="bn-item" onclick="showSection('alert')" id="bn-alert"><span class="bn-icon">🔔</span><span class="bn-label" id="bn-label-alert">アラート</span></div>
     <div class="bn-item" onclick="showSection('history')" id="bn-history"><span class="bn-icon">📋</span><span class="bn-label" id="bn-label-history">履歴</span></div>
-    <div class="bn-item" onclick="showSection('dandori')" id="bn-dandori"><span class="bn-icon">⚙</span><span class="bn-label" id="bn-label-dandori">段取り</span></div>
+    <div class="bn-item" onclick="showSection('schedule')" id="bn-schedule"><span class="bn-icon">📅</span><span class="bn-label" id="bn-label-schedule">予定</span></div>
     <div class="bn-item" onclick="showSection('settings')" id="bn-settings"><span class="bn-icon">👤</span><span class="bn-label" id="bn-label-settings">設定</span></div>
   </div>
 </div>
@@ -706,6 +707,13 @@ const T = {
     addHomeScreen:'📱 ホーム画面に追加する', adminMenu:'管理者メニュー',
     monthlyReport:'月次レポート出力', backup:'データバックアップ',
     version:'製造3課',
+    schedule:'スケジュール', scheduleTitle:'メンテスケジュール',
+    shift1:'1S', shift2:'2S', shift3:'3S',
+    viewTimeline:'タイムライン', viewCard:'カード',
+    needMaintCount:'要メンテ', schedCount:'本日予定', doneCount:'完了',
+    autoSorted:'優先度順で自動配置',
+    rightNow:'今すぐ!', duration:'所要', minuteUnit:'分',
+    simpleMaintTime:'簡易メンテ所要時間(分)', ohMaintTime:'OHメンテ所要時間(分)',
     shotUpdate:'ショット更新', maintDone2:'メンテ完了',
     lineAlertStatus:'ライン別アラート状況', top5Title:'進捗率が高い金型 TOP5',
     noAlert:'アラートはありません ✓',
@@ -763,6 +771,13 @@ const T = {
     addHomeScreen:'📱 Thêm vào màn hình chính', adminMenu:'Menu quản trị',
     monthlyReport:'Xuất báo cáo tháng', backup:'Sao lưu dữ liệu',
     version:'Phân xưởng 3',
+    schedule:'Lịch BT', scheduleTitle:'Lịch bảo trì',
+    shift1:'Ca 1', shift2:'Ca 2', shift3:'Ca 3',
+    viewTimeline:'Dòng thời gian', viewCard:'Thẻ',
+    needMaintCount:'Cần BT', schedCount:'Hôm nay', doneCount:'Hoàn thành',
+    autoSorted:'Tự động sắp xếp theo ưu tiên',
+    rightNow:'Ngay bây giờ!', duration:'Thời gian', minuteUnit:'phút',
+    simpleMaintTime:'Thời gian BT đơn giản(phút)', ohMaintTime:'Thời gian BT tổng hợp(phút)',
     shotUpdate:'Cập nhật shot', maintDone2:'Hoàn thành BT',
     lineAlertStatus:'Cảnh báo theo dây', top5Title:'Top 5 khuôn gần BT nhất',
     noAlert:'Không có cảnh báo ✓',
@@ -820,6 +835,13 @@ const T = {
     addHomeScreen:'📱 Add to home screen', adminMenu:'Admin menu',
     monthlyReport:'Monthly report', backup:'Data backup',
     version:'Section 3',
+    schedule:'Schedule', scheduleTitle:'Maint. schedule',
+    shift1:'1S', shift2:'2S', shift3:'3S',
+    viewTimeline:'Timeline', viewCard:'Card',
+    needMaintCount:'Needs maint.', schedCount:'Today', doneCount:'Done',
+    autoSorted:'Auto-sorted by priority',
+    rightNow:'Now!', duration:'Duration', minuteUnit:'min',
+    simpleMaintTime:'Simple maint. time(min)', ohMaintTime:'OH maint. time(min)',
     shotUpdate:'Update shot', maintDone2:'Complete maint.',
     lineAlertStatus:'Alert by line', top5Title:'Top 5 molds near maint.',
     noAlert:'No alerts ✓',
@@ -875,6 +897,7 @@ function applyLabels() {
     'nav-label-list': 'navList',
     'nav-label-alert': 'navAlert',
     'nav-label-history': 'navHistory',
+    'nav-label-schedule': 'schedule',
     'nav-label-dandori': 'navDandori',
     'nav-label-master': 'navMaster',
     'nav-label-report': 'navReport',
@@ -891,6 +914,7 @@ function applyLabels() {
     'bn-label-list': 'navList',
     'bn-label-alert': 'navAlert',
     'bn-label-history': 'navHistory',
+    'bn-label-schedule': 'schedule',
     'bn-label-dandori': 'navDandori',
     'bn-label-settings': 'navSettings',
   };
@@ -1048,6 +1072,7 @@ function showSection(section) {
     list: renderList,
     alert: renderAlert,
     history: renderHistory,
+    schedule: renderSchedule,
     dandori: renderDandori,
     master: renderMaster,
     settings: renderSettings,
@@ -1901,6 +1926,8 @@ async function openAddMoldModal() {
   document.getElementById('mold-f-warning-shot').value = '1000';
   document.getElementById('mold-f-danger-min').value = '120';
   document.getElementById('mold-f-warning-min').value = '480';
+  document.getElementById('mold-f-simple-time').value = '20';
+  document.getElementById('mold-f-oh-time').value = '60';
   document.getElementById('mold-edit-error').style.display = 'none';
   populateMoldSelects();
   openModal('modal-mold-edit');
@@ -1921,6 +1948,8 @@ async function editMold(id) {
   document.getElementById('mold-f-warning-shot').value = mold.alert_shot_warning || 1000;
   document.getElementById('mold-f-danger-min').value = mold.alert_min_danger || 120;
   document.getElementById('mold-f-warning-min').value = mold.alert_min_warning || 480;
+  document.getElementById('mold-f-simple-time').value = mold.simple_maint_time_min || 20;
+  document.getElementById('mold-f-oh-time').value = mold.oh_maint_time_min || 60;
   document.getElementById('mold-edit-error').style.display = 'none';
   populateMoldSelects(mold);
   openModal('modal-mold-edit');
@@ -1965,6 +1994,8 @@ async function saveMold() {
       alert_shot_warning: parseInt(document.getElementById('mold-f-warning-shot').value)||1000,
       alert_min_danger: parseInt(document.getElementById('mold-f-danger-min').value)||120,
       alert_min_warning: parseInt(document.getElementById('mold-f-warning-min').value)||480,
+      simple_maint_time_min: parseInt(document.getElementById('mold-f-simple-time').value)||20,
+      oh_maint_time_min: parseInt(document.getElementById('mold-f-oh-time').value)||60,
       is_active: true, updated_at: new Date().toISOString(),
     };
     if (editingMoldId) {
@@ -3179,6 +3210,208 @@ function updateRealtimeDisplay() {
   });
 }
 
+
+// ===== スケジュール画面 =====
+const SHIFT_HOURS = { '1S': [8,16], '2S': [16,24], '3S': [0,8] };
+let scheduleShift = '2S';
+let scheduleView = 'card'; // 'card' | 'timeline'
+
+function renderSchedule(el) {
+  el.innerHTML = `
+  <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:0.5px solid var(--border)">
+    <div style="font-size:13px;font-weight:600;color:var(--text)">${t('scheduleTitle')}</div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:2px;background:var(--bg3);border-radius:6px;padding:3px" id="sched-shift-seg">
+        ${['1S','2S','3S'].map(s=>`<button class="seg-btn ${s===scheduleShift?'active':''}" onclick="setSchedShift('${s}',this)" style="padding:5px 14px;font-size:11px">${s}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:2px;background:var(--bg3);border-radius:6px;padding:3px" id="sched-view-seg">
+        <button class="seg-btn ${scheduleView==='card'?'active':''}" onclick="setSchedView('card',this)" style="padding:5px 10px;font-size:11px">📋 ${t('viewCard')}</button>
+        <button class="seg-btn ${scheduleView==='timeline'?'active':''}" onclick="setSchedView('timeline',this)" style="padding:5px 10px;font-size:11px">📊 ${t('viewTimeline')}</button>
+      </div>
+    </div>
+  </div>
+  <div id="sched-body" style="padding:10px 14px"></div>`;
+  renderScheduleBody();
+}
+
+function setSchedShift(shift, el) {
+  scheduleShift = shift;
+  document.querySelectorAll('#sched-shift-seg .seg-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderScheduleBody();
+}
+
+function setSchedView(view, el) {
+  scheduleView = view;
+  document.querySelectorAll('#sched-view-seg .seg-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderScheduleBody();
+}
+
+function buildSchedule(shift) {
+  const [startH, endH] = SHIFT_HOURS[shift];
+  const now = new Date();
+  const shiftStart = new Date(now);
+  shiftStart.setHours(startH, 0, 0, 0);
+  const shiftEnd = new Date(now);
+  if (endH === 24) { shiftEnd.setDate(shiftEnd.getDate()+1); shiftEnd.setHours(0,0,0,0); }
+  else shiftEnd.setHours(endH, 0, 0, 0);
+
+  // 残り時間でソート（要メンテ→注意→正常）
+  const sorted = [...state.molds].sort((a,b) => {
+    const aMin = calcEstimatedRemainingMin(a);
+    const bMin = calcEstimatedRemainingMin(b);
+    const aS = calcStatus(a); const bS = calcStatus(b);
+    const order = {danger:0, warning:1, normal:2};
+    if (order[aS] !== order[bS]) return order[aS] - order[bS];
+    return aMin - bMin;
+  });
+
+  // スケジュール割り当て
+  let cursor = new Date(Math.max(shiftStart.getTime(), now.getTime()));
+  const scheduled = [];
+
+  for (const mold of sorted) {
+    const remMin = calcEstimatedRemainingMin(mold);
+    const status = calcStatus(mold);
+    const dur = mold.simple_maint_time_min || 20;
+    const maintAt = new Date(now.getTime() + remMin * 60000);
+
+    // メンテ推奨時刻を計算
+    let schedStart;
+    if (status === 'danger') {
+      schedStart = new Date(cursor);
+    } else {
+      // 注意・正常はメンテ推奨時刻か現在カーソルの遅い方
+      const recommended = new Date(maintAt.getTime() - dur * 60000);
+      schedStart = new Date(Math.max(cursor.getTime(), Math.min(recommended.getTime(), shiftEnd.getTime() - dur*60000)));
+    }
+
+    const schedEnd = new Date(schedStart.getTime() + dur * 60000);
+
+    // 直の範囲内のみ
+    if (schedStart >= shiftEnd) continue;
+
+    scheduled.push({
+      mold,
+      status,
+      schedStart,
+      schedEnd: schedEnd > shiftEnd ? shiftEnd : schedEnd,
+      dur,
+      remMin,
+    });
+
+    cursor = new Date(schedEnd.getTime());
+    if (cursor >= shiftEnd) break;
+  }
+
+  return { scheduled, shiftStart, shiftEnd };
+}
+
+function fmtHM(date) {
+  return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+}
+
+function renderScheduleBody() {
+  const el = document.getElementById('sched-body');
+  if (!el) return;
+  if (!state.molds.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
+
+  const { scheduled, shiftStart, shiftEnd } = buildSchedule(scheduleShift);
+  const dangerCount = scheduled.filter(s=>s.status==='danger').length;
+  const warnCount = scheduled.filter(s=>s.status==='warning').length;
+  const totalMin = (shiftEnd - shiftStart) / 60000;
+
+  const infoBar = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+    <span style="font-size:8px;color:#6b7590">${fmtHM(shiftStart)}〜${fmtHM(shiftEnd)}</span>
+    ${dangerCount?`<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--danger-bg);color:var(--danger-text);font-weight:500">要メンテ ${dangerCount}件</span>`:''}
+    ${warnCount?`<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--warning-bg);color:var(--warning-text);font-weight:500">注意 ${warnCount}件</span>`:''}
+    <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--success-bg);color:var(--success-text);font-weight:500">予定 ${scheduled.length}件</span>
+    <span style="font-size:9px;color:var(--text4);margin-left:auto">${t('autoSorted')}</span>
+  </div>`;
+
+  if (scheduleView === 'card') {
+    el.innerHTML = infoBar + scheduled.map(s => {
+      const color = statusColor(s.status);
+      const isNow = s.status === 'danger';
+      return `<div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;width:44px">
+          <div style="font-size:${isNow?'10px':'11px'};font-weight:600;color:${isNow?'var(--danger-text)':color};white-space:nowrap">${isNow?t('rightNow'):fmtHM(s.schedStart)}</div>
+          <div style="font-size:9px;color:var(--text4);white-space:nowrap">〜${fmtHM(s.schedEnd)}</div>
+          <div style="width:1.5px;flex:1;background:${color};opacity:0.35;margin-top:3px"></div>
+        </div>
+        <div style="flex:1;background:var(--bg2);border-radius:8px;padding:9px 11px;border-left:3px solid ${color}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="font-size:12px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
+            ${statusBadge(s.status)}
+          </div>
+          <div style="height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:5px">
+            <div style="width:${calcEstimatedProgress(s.mold)}%;height:100%;border-radius:2px;background:${color}"></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;gap:6px;align-items:center">
+              ${typeBadge(s.mold.category_name)}
+              <span style="font-size:10px;color:var(--text3)">${s.mold.line_name||'-'}</span>
+              <span style="font-size:10px;color:var(--text3)">${calcEstimatedProgress(s.mold)}%</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+              <span style="font-size:10px;color:var(--text3)">${t('duration')}</span>
+              <span style="font-size:11px;font-weight:600;color:var(--accent)">${s.dur}${t('minuteUnit')}</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('') + (scheduled.length===0?`<div style="text-align:center;padding:40px;color:var(--text3)">この直にメンテ予定はありません</div>`:'');
+  } else {
+    // タイムライン表示
+    const timelineHTML = `<div style="overflow-x:auto">
+      <div style="min-width:400px">
+        <div style="display:flex;margin-bottom:6px;padding-left:80px">
+          ${[0,1,2,3,4,5,6,7].map(i=>{
+            const h = (shiftStart.getHours() + i) % 24;
+            return `<div style="flex:1;font-size:9px;color:var(--text4);text-align:left;white-space:nowrap">${String(h).padStart(2,'0')}:00</div>`;
+          }).join('')}
+        </div>
+        ${state.molds.slice(0,10).map(mold => {
+          const status = calcStatus(mold);
+          const color = statusColor(status);
+          const pct = calcEstimatedProgress(mold);
+          const remMin = calcEstimatedRemainingMin(mold);
+          const dur = mold.simple_maint_time_min || 20;
+          const sched = scheduled.find(s=>s.mold.id===mold.id);
+
+          const shiftDur = (shiftEnd - shiftStart) / 60000;
+          const nowOffset = Math.max(0, Math.min(100, (new Date() - shiftStart) / 60000 / shiftDur * 100));
+          const maintOffset = sched ? Math.max(0, Math.min(100, (sched.schedStart - shiftStart) / 60000 / shiftDur * 100)) : null;
+          const maintWidth = sched ? Math.min(100 - maintOffset, dur / shiftDur * 100) : 0;
+          const runWidth = maintOffset !== null ? maintOffset : Math.min(100, remMin / shiftDur * 100 + 5);
+
+          return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+            <div style="width:76px;flex-shrink:0">
+              <div style="font-size:10px;font-weight:600;color:var(--text)">#${mold.machine_no||'?'}　${mold.part_name}</div>
+              <div style="font-size:9px;color:var(--text3)">${mold.category_name||'-'}</div>
+            </div>
+            <div style="flex:1;height:26px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden">
+              <div style="position:absolute;left:0;top:0;width:${runWidth}%;height:100%;background:${status==='danger'?'#7f1d1d60':status==='warning'?'#78350f50':'#1e335860'};border-right:1px solid ${color}"></div>
+              ${maintOffset!==null?`<div style="position:absolute;left:${maintOffset}%;top:2px;width:${maintWidth}%;height:22px;background:var(--accent);border-radius:3px;display:flex;align-items:center;justify-content:center"><span style="font-size:8px;font-weight:600;color:#1c1917;white-space:nowrap">${dur}分</span></div>`:''}
+              <div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:1.5px;background:#ef4444;opacity:0.8"></div>
+              <div style="position:absolute;left:3px;top:50%;transform:translateY(-50%);font-size:8px;color:${color};font-weight:500">${pct}%　残${fmtTime(remMin)}</div>
+            </div>
+          </div>`;
+        }).join('')}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:6px;border-top:0.5px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:2px;background:#7f1d1d60;border:0.5px solid #ef4444"></div><span style="font-size:9px;color:var(--text3)">要メンテ</span></div>
+          <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:2px;background:#78350f50;border:0.5px solid #f59e0b"></div><span style="font-size:9px;color:var(--text3)">注意</span></div>
+          <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:2px;background:#1e3358;border:0.5px solid #3a5a8a"></div><span style="font-size:9px;color:var(--text3)">稼働中</span></div>
+          <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:2px;background:var(--accent)"></div><span style="font-size:9px;color:var(--text3)">メンテ予定</span></div>
+          <div style="display:flex;align-items:center;gap:3px"><div style="width:1.5px;height:10px;background:#ef4444"></div><span style="font-size:9px;color:var(--text3)">現在時刻</span></div>
+        </div>
+      </div>
+    </div>`;
+    el.innerHTML = infoBar + timelineHTML;
+  }
+}
+
 // ===== 初期化 =====
 applyTheme();
 setLang(state.lang);
@@ -3234,6 +3467,17 @@ if (state.currentUser) {
       <div class="form-group">
         <label class="form-label">★サイクルタイム（秒）</label>
         <input type="number" class="form-control" id="mold-f-cycle" placeholder="30" min="1">
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;padding-top:4px;border-top:0.5px solid var(--border)">メンテ所要時間</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">簡易メンテ所要時間（分）</label>
+        <input type="number" class="form-control" id="mold-f-simple-time" placeholder="20" min="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">OHメンテ所要時間（分）</label>
+        <input type="number" class="form-control" id="mold-f-oh-time" placeholder="60" min="1">
       </div>
     </div>
     <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;padding-top:4px;border-top:0.5px solid var(--border)">アラート設定</div>
