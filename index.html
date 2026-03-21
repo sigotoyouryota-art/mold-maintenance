@@ -487,7 +487,7 @@ select.form-control { cursor: pointer; }
     <div class="sidebar" id="sidebar">
       <div class="sidebar-item active" onclick="showSection('dashboard')" id="nav-dashboard"><div class="sidebar-dot"></div><span id="nav-label-dashboard">ダッシュボード</span></div>
       <div class="sidebar-item" onclick="showSection('list')" id="nav-list"><div class="sidebar-dot"></div><span id="nav-label-list">一覧</span></div>
-      <div class="sidebar-item" onclick="showSection('alert')" id="nav-alert"><div class="sidebar-dot"></div><span id="nav-label-alert">アラート</span> <span id="alert-count-badge" style="font-size:9px;background:var(--danger-bg);color:var(--danger-text);padding:1px 5px;border-radius:3px;margin-left:2px;display:none"></span></div>
+      <div class="sidebar-item" onclick="showSection('alert')" id="nav-alert" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-alert">アラート</span> <span id="alert-count-badge" style="font-size:9px;background:var(--danger-bg);color:var(--danger-text);padding:1px 5px;border-radius:3px;margin-left:2px;display:none"></span></div>
       <div class="sidebar-item" onclick="showSection('history')" id="nav-history"><div class="sidebar-dot"></div><span id="nav-label-history">メンテ履歴</span></div>
       <div class="sidebar-item" onclick="showSection('schedule')" id="nav-schedule"><div class="sidebar-dot"></div><span id="nav-label-schedule">スケジュール</span></div>
       <div class="sidebar-item" onclick="showSection('dandori')" id="nav-dandori"><div class="sidebar-dot"></div><span id="nav-label-dandori">段取り設定</span></div>
@@ -511,6 +511,7 @@ select.form-control { cursor: pointer; }
     <div class="bn-item" onclick="showSection('alert')" id="bn-alert"><span class="bn-icon">🔔</span><span class="bn-label" id="bn-label-alert">アラート</span></div>
     <div class="bn-item" onclick="showSection('history')" id="bn-history"><span class="bn-icon">📋</span><span class="bn-label" id="bn-label-history">履歴</span></div>
     <div class="bn-item" onclick="showSection('schedule')" id="bn-schedule"><span class="bn-icon">📅</span><span class="bn-label" id="bn-label-schedule">予定</span></div>
+    <div class="bn-item" onclick="showSection('dandori')" id="bn-dandori2"><span class="bn-icon">⚙</span><span class="bn-label" id="bn-label-dandori2">段取り</span></div>
     <div class="bn-item" onclick="showSection('settings')" id="bn-settings"><span class="bn-icon">👤</span><span class="bn-label" id="bn-label-settings">設定</span></div>
   </div>
 </div>
@@ -1237,7 +1238,7 @@ function renderTop5() {
 }
 
 // ===== 一覧 =====
-function renderList(el) {
+async function renderList(el) {
   const lines = [null, ...state.lines];
   el.innerHTML = `
   <div class="seg-wrap" id="list-seg">
@@ -1259,7 +1260,21 @@ function renderList(el) {
     </div>
   </div>
   <div id="list-body"></div>`;
+  await loadDandoriForList();
   renderListBody();
+}
+
+let activeMoldIds = new Set();
+
+async function loadDandoriForList() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const settings = await sb('dandori_settings','GET',null,
+      `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=mold_id`);
+    activeMoldIds = new Set((settings||[]).map(s=>s.mold_id));
+  } catch(e) {
+    activeMoldIds = new Set();
+  }
 }
 
 function setListFilter(filter, el) {
@@ -1278,54 +1293,62 @@ function setListViewMode(mode, el) {
 }
 
 function renderListBody() {
-  let molds = sortMolds(state.molds, state.listSortMode);
-  if (state.listFilter !== 'all') molds = molds.filter(m=>m.line_name===state.listFilter);
+  let sorted = sortMolds(state.molds, state.listSortMode);
+  if (state.listFilter !== 'all') sorted = sorted.filter(m=>m.line_name===state.listFilter);
   const el = document.getElementById('list-body');
   if (!el) return;
-  document.getElementById('list-count').textContent = `${molds.length}台`;
-  if (!molds.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
+
+  // 稼働中（段取り設定済み）と未設定に分ける
+  const active = sorted.filter(m=>activeMoldIds.has(m.id));
+  const inactive = sorted.filter(m=>!activeMoldIds.has(m.id));
+  document.getElementById('list-count').textContent = `${sorted.length}台（稼働中 ${active.length}台）`;
+  if (!sorted.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
 
   // PC テーブル
-  const tableHTML = `<div class="table-wrap"><table>
-    <tr><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>${t('type')}</th><th>${t('line')}</th><th>${t('progress')}</th><th>${t('remainShot')}</th><th>${t('remainTime')}</th><th>${t('pct')}</th><th>累計shot</th><th>${t('status')}</th><th></th></tr>
-    ${molds.map(m=>{
-      const est = calcEstimatedShot(m);
-      const rem = calcEstimatedRemaining(m);
-      const remMin = calcEstimatedRemainingMin(m);
-      const pct = calcEstimatedProgress(m);
-      const status = calcStatus(m);
-      const color = statusColor(status);
-      return `<tr data-mold-id="${m.id}">
-        <td style="font-weight:600">#${m.machine_no||'?'}</td>
-        <td style="font-weight:500">${m.part_name}</td>
-        <td style="color:var(--text3);font-size:11px">${m.part_no}</td>
-        <td>${typeBadge(m.category_name)}</td>
-        <td>${m.line_name||'-'}</td>
-        <td><div class="progress-wrap"><div class="progress-fill rt-progress" style="width:${pct}%;background:${color}"></div></div></td>
-        <td class="rt-remain-shot" style="color:${color};font-weight:600">${fmtNum(rem)}</td>
-        <td class="rt-remain-time" style="color:${color}">${fmtTime(remMin)}</td>
-        <td class="rt-pct" style="color:${color}">${pct}%</td>
-        <td style="color:var(--text3);font-size:11px">${fmtNum(calcEstimatedTotalShot(m))}</td>
-        <td class="rt-status">${statusBadge(status)}</td>
-        <td><span style="font-size:11px;color:var(--accent);cursor:pointer" onclick="openShotModal('${m.id}')">入力 ›</span></td>
-      </tr>`;
-    }).join('')}
-  </table></div>`;
-
-  // スマホ カード
-  const cardsHTML = `<div class="mold-cards">${molds.map(m=>{
+  const makeRow = (m, dim=false) => {
     const rem = calcEstimatedRemaining(m);
     const remMin = calcEstimatedRemainingMin(m);
     const pct = calcEstimatedProgress(m);
     const status = calcStatus(m);
-    const color = statusColor(status);
-    return `<div class="mold-card ${status}" data-mold-id="${m.id}">
+    const color = dim ? 'var(--text4)' : statusColor(status);
+    return `<tr data-mold-id="${m.id}" style="${dim?'opacity:0.45':''}">
+      <td style="font-weight:600">#${m.machine_no||'?'}</td>
+      <td style="font-weight:500">${m.part_name}</td>
+      <td style="color:var(--text3);font-size:11px">${m.part_no}</td>
+      <td style="color:var(--text3);font-size:11px">${m.model_no||'-'}</td>
+      <td>${typeBadge(m.category_name)}</td>
+      <td>${m.line_name||'-'}</td>
+      <td><div class="progress-wrap"><div class="progress-fill rt-progress" style="width:${pct}%;background:${color}"></div></div></td>
+      <td class="rt-remain-shot" style="color:${color};font-weight:600">${fmtNum(rem)}</td>
+      <td class="rt-remain-time" style="color:${color}">${fmtTime(remMin)}</td>
+      <td class="rt-pct" style="color:${color}">${pct}%</td>
+      <td class="rt-status">${dim?'':statusBadge(status)}</td>
+      <td><span style="font-size:11px;color:var(--accent);cursor:pointer" onclick="openShotModal('${m.id}')">入力 ›</span></td>
+    </tr>`;
+  };
+
+  const tableHTML = `<div class="table-wrap"><table>
+    <tr><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>型番</th><th>${t('type')}</th><th>${t('line')}</th><th>${t('progress')}</th><th>${t('remainShot')}</th><th>${t('remainTime')}</th><th>${t('pct')}</th><th>${t('status')}</th><th></th></tr>
+    ${active.length>0?`<tr><td colspan="12" style="background:var(--bg3);font-size:10px;font-weight:500;color:var(--info-text);padding:5px 8px">● 稼働中（段取り設定済み）${active.length}台</td></tr>`:''}
+    ${active.map(m=>makeRow(m,false)).join('')}
+    ${inactive.length>0?`<tr><td colspan="12" style="background:var(--bg3);font-size:10px;color:var(--text4);padding:5px 8px">段取り未設定 ${inactive.length}台</td></tr>`:''}
+    ${inactive.map(m=>makeRow(m,true)).join('')}
+  </table></div>`;
+
+  // スマホカード
+  const makeCard = (m, dim=false) => {
+    const rem = calcEstimatedRemaining(m);
+    const remMin = calcEstimatedRemainingMin(m);
+    const pct = calcEstimatedProgress(m);
+    const status = calcStatus(m);
+    const color = dim ? 'var(--text4)' : statusColor(status);
+    return `<div class="mold-card ${dim?'':status}" data-mold-id="${m.id}" style="${dim?'opacity:0.45;border-left-color:var(--border)':''}">
       <div class="mold-card-top">
         <div>
-          <div class="mold-card-name">#${m.machine_no||'?'}　${m.part_name}</div>
+          <div class="mold-card-name">#${m.machine_no||'?'}　${m.part_name}　<span style="font-size:9px;color:var(--text4)">${m.model_no||''}</span></div>
           <div class="mold-card-part">${m.part_no} / ${m.category_name||'-'} / ${m.line_name||'-'}</div>
         </div>
-        ${statusBadge(status)}
+        ${dim?'':statusBadge(status)}
       </div>
       <div class="mold-card-bar"><div class="rt-bar-fill" style="height:100%;border-radius:2px;background:${color};width:${pct}%"></div></div>
       <div class="mold-card-meta rt-meta">
@@ -1333,9 +1356,16 @@ function renderListBody() {
         <span style="color:${color}">${fmtTime(remMin)}</span>
         <span style="color:${color}">${pct}%</span>
       </div>
-      <div class="mold-card-btn ${status==='danger'?'hot':''}" onclick="openShotModal('${m.id}')">${t('shotUpdate')} / ${t('maintDone2')}</div>
+      ${dim?'':`<div class="mold-card-btn ${status==='danger'?'hot':''}" onclick="openShotModal('${m.id}')">${t('shotUpdate')} / ${t('maintDone2')}</div>`}
     </div>`;
-  }).join('')}</div>`;
+  };
+
+  const cardsHTML = `<div class="mold-cards">
+    ${active.length>0?`<div style="font-size:10px;font-weight:500;color:var(--info-text);padding:4px 2px 6px;display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:var(--success)"></div>稼働中 ${active.length}台</div>`:''}
+    ${active.map(m=>makeCard(m,false)).join('')}
+    ${inactive.length>0?`<div class="section-sep" style="font-size:10px;color:var(--text4);padding:8px 2px 4px;margin-top:4px;border-top:0.5px solid var(--border)">段取り未設定 ${inactive.length}台</div>`:''}
+    ${inactive.map(m=>makeCard(m,true)).join('')}
+  </div>`;
 
   el.innerHTML = tableHTML + cardsHTML;
 }
