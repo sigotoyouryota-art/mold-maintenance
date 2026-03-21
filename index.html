@@ -1985,7 +1985,8 @@ function openShotModal(moldId) {
   document.getElementById('shot-machine').textContent = `#${mold.machine_no||'?'}　${mold.line_name||'-'}`;
   document.getElementById('shot-part-no').textContent = mold.part_no;
   document.getElementById('shot-part-name').textContent = mold.part_name;
-  document.getElementById('shot-status-badge').outerHTML = statusBadge(mold.status) + '';
+  const badgeEl = document.getElementById('shot-status-badge');
+  if (badgeEl) badgeEl.innerHTML = statusBadge(mold.status);
 
   const prog = document.getElementById('shot-progress-bar');
   prog.style.width = mold.progress_pct + '%';
@@ -2068,10 +2069,12 @@ async function submitShot() {
       shift: state.currentShift,
       logged_by: state.currentUser.id,
     });
+    const section = state.currentSection;
     closeModal('modal-shot');
     showToast(t('shotUpdated'), 'success');
     await loadMolds();
-    showSection(state.currentSection);
+    state.currentMold = null;
+    showSection(section);
   } catch(e) {
     showToast('更新エラー: '+e.message, 'error');
   }
