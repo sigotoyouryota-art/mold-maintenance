@@ -509,7 +509,7 @@ select.form-control { cursor: pointer; }
     <div class="bn-item" onclick="showSection('alert')" id="bn-alert"><span class="bn-icon">🔔</span><span class="bn-label" id="bn-label-alert">アラート</span></div>
     <div class="bn-item" onclick="showSection('history')" id="bn-history"><span class="bn-icon">📋</span><span class="bn-label" id="bn-label-history">履歴</span></div>
     <div class="bn-item" onclick="showSection('dandori')" id="bn-dandori"><span class="bn-icon">⚙</span><span class="bn-label" id="bn-label-dandori">段取り</span></div>
-    <div class="bn-item" onclick="showSection('settings')" id="bn-settings"><span class="bn-icon">👤</span><span class="bn-label">設定</span></div>
+    <div class="bn-item" onclick="showSection('settings')" id="bn-settings"><span class="bn-icon">👤</span><span class="bn-label" id="bn-label-settings">設定</span></div>
   </div>
 </div>
 
@@ -892,6 +892,7 @@ function applyLabels() {
     'bn-label-alert': 'navAlert',
     'bn-label-history': 'navHistory',
     'bn-label-dandori': 'navDandori',
+    'bn-label-settings': 'navSettings',
   };
   Object.entries(bnLabels).forEach(([id, key]) => {
     const el = document.getElementById(id);
@@ -1004,7 +1005,13 @@ async function initMainPage() {
 
   // 最後に表示していたセクションを復元（なければdashboard）
   const lastSection = localStorage.getItem('lastSection') || 'dashboard';
-  showSection(lastSection);
+  // 管理者専用セクションは権限チェック
+  const adminOnly = ['master'];
+  if (adminOnly.includes(lastSection) && state.currentUser?.role !== 'admin') {
+    showSection('dashboard');
+  } else {
+    showSection(lastSection);
+  }
 }
 
 async function loadMolds() {
