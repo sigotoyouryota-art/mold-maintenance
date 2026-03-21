@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
+<meta name="app-version" content="1.0.5">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -4005,9 +4006,80 @@ async function applyRecommended(moldId, recommended) {
   }
 }
 
+
+// ===== アップデート確認 =====
+const CURRENT_VERSION = '1.0.5';
+
+async function checkForUpdate() {
+  try {
+    const btn = document.getElementById('update-check-btn');
+    if (btn) { btn.textContent = '確認中...'; btn.disabled = true; }
+
+    // GitHub Pagesのindex.htmlからバージョンを取得
+    const res = await fetch(window.location.href.split('?')[0] + '?cache=' + Date.now(), {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    const html = await res.text();
+
+    // メタタグからバージョンを取得
+    const match = html.match(/name="app-version" content="([^"]+)"/);
+    const latestVersion = match ? match[1] : null;
+
+    if (btn) { btn.textContent = '更新確認'; btn.disabled = false; }
+
+    if (!latestVersion) {
+      showToast('バージョン情報を取得できませんでした', '');
+      return;
+    }
+
+    if (latestVersion !== CURRENT_VERSION) {
+      // 新しいバージョンあり
+      if (confirm(`新しいバージョン（v${latestVersion}）があります。\n現在: v${CURRENT_VERSION}\n\n今すぐ更新しますか？`)) {
+        forceReload();
+      }
+    } else {
+      showToast(`最新バージョン（v${CURRENT_VERSION}）です ✓`, 'success');
+    }
+  } catch(e) {
+    const btn = document.getElementById('update-check-btn');
+    if (btn) { btn.textContent = '更新確認'; btn.disabled = false; }
+    showToast('更新確認エラー（通信を確認してください）', 'error');
+  }
+}
+
+function forceReload() {
+  // キャッシュを無視して強制リロード
+  const url = window.location.href.split('?')[0] + '?v=' + Date.now();
+  window.location.replace(url);
+}
+
 // ===== 初期化 =====
 applyTheme();
 setLang(state.lang);
+
+// バックグラウンドでアップデート確認（起動5秒後）
+setTimeout(async () => {
+  try {
+    const res = await fetch(window.location.href.split('?')[0] + '?cache=' + Date.now(), {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    const html = await res.text();
+    const match = html.match(/name="app-version" content="([^"]+)"/);
+    const latest = match ? match[1] : null;
+    if (latest && latest !== CURRENT_VERSION) {
+      // 新バージョン通知をトーストで表示
+      const toast = document.getElementById('toast');
+      if (toast) {
+        toast.innerHTML = `新しいバージョン v${latest} があります <span onclick="forceReload()" style="text-decoration:underline;cursor:pointer;font-weight:600;margin-left:8px">今すぐ更新</span>`;
+        toast.className = 'show';
+        // 10秒間表示
+        setTimeout(() => { if(toast) toast.className = ''; }, 10000);
+      }
+    }
+  } catch(e) { /* バックグラウンド確認失敗は無視 */ }
+}, 5000);
 
 // shift-btnにイベントリスナーを設定
 document.querySelectorAll('.shift-btn[data-shift]').forEach(btn => {
