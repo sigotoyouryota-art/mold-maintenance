@@ -1188,9 +1188,7 @@ async function renderDashboard(el) {
   const warning = state.molds.filter(m=>calcStatus(m)==='warning').length;
   const normal = state.molds.filter(m=>calcStatus(m)==='normal').length;
   // 成形中（段取り設定済み）金型数
-  const activeMoldCount = activeMoldIds.size || state.molds.length;
-  const activeCount = activeMoldIds ? activeMoldIds.size : 0;
-  const activeCount = activeMoldIds.size;
+  const activeCount = activeMoldIds && activeMoldIds.size > 0 ? activeMoldIds.size : state.molds.length;
   el.innerHTML = `
   <div class="kpi-row">
     <div class="kpi-card"><div class="kpi-label">成形中金型数</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${state.molds.length}</span></div><div class="kpi-sub" style="color:var(--text3)">段取り設定済み</div></div>
