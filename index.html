@@ -3623,7 +3623,8 @@ function buildSchedule(shift) {
   // 直の開始・終了時刻
   const shiftStart = new Date(now);
   shiftStart.setHours(startH, 0, 0, 0);
-  const shiftEnd = new Date(now);
+  shiftStart.setMinutes(0, 0, 0);
+  const shiftEnd = new Date(shiftStart);
   if (endH === 24) {
     shiftEnd.setDate(shiftEnd.getDate() + 1);
     shiftEnd.setHours(0, 0, 0, 0);
@@ -3631,10 +3632,17 @@ function buildSchedule(shift) {
     shiftEnd.setHours(endH, 0, 0, 0);
   }
 
-  // 3Sなど日付をまたぐ直の処理
+  // 直の終了が開始より前（日をまたぐ3S等）の場合は翌日に
   if (shiftEnd <= shiftStart) {
     shiftEnd.setDate(shiftEnd.getDate() + 1);
   }
+
+  // 現在時刻が直の終了後の場合 → 翌日の同じ直として計算
+  if (now > shiftEnd) {
+    shiftStart.setDate(shiftStart.getDate() + 1);
+    shiftEnd.setDate(shiftEnd.getDate() + 1);
+  }
+  // 現在時刻が直の開始前の場合はそのまま（未来の直）
 
   const shiftDurMin = (shiftEnd - shiftStart) / 60000;
 
