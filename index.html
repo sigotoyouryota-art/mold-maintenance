@@ -896,19 +896,29 @@ function doLogout() {
 // ===== メインページ初期化 =====
 async function initMainPage() {
   showPage('main');
-  document.getElementById('main-user-info').textContent = `${state.currentUser.name} / ${state.currentShift}`;
+  const userInfo = document.getElementById('main-user-info');
+  if (userInfo) userInfo.textContent = `${state.currentUser.name} / ${state.currentShift}`;
+
   if (state.currentUser.role === 'admin') {
-    document.getElementById('nav-master').style.display = 'flex';
-    document.getElementById('nav-report').style.display = 'flex';
-    document.getElementById('nav-backup').style.display = 'flex';
+    const navMaster = document.getElementById('nav-master');
+    const navReport = document.getElementById('nav-report');
+    const navBackup = document.getElementById('nav-backup');
+    if (navMaster) navMaster.style.display = 'flex';
+    if (navReport) navReport.style.display = 'flex';
+    if (navBackup) navBackup.style.display = 'flex';
   }
-  document.getElementById('main-loading').style.display = 'flex';
+
+  const loading = document.getElementById('main-loading');
+  if (loading) loading.style.display = 'flex';
+
   try {
     await Promise.all([loadMolds(), loadLines(), loadCategories(), loadMachines()]);
   } catch(e) {
     showToast('データ読み込みエラー', 'error');
+    console.error('initMainPage error:', e);
   }
-  document.getElementById('main-loading').style.display = 'none';
+
+  if (loading) loading.style.display = 'none';
   showSection('dashboard');
 }
 
@@ -937,6 +947,8 @@ function showSection(section) {
   if (bnEl) bnEl.classList.add('active');
 
   const content = document.getElementById('main-content');
+  if (!content) return;
+
   const renders = {
     dashboard: renderDashboard,
     list: renderList,
@@ -2791,15 +2803,14 @@ function showMasterTabByIndex(idx) {
   showSection('master');
   setTimeout(() => {
     const tabs = document.querySelectorAll('.master-tab');
-    if (tabs[idx]) {
-      tabs.forEach(t => t.classList.remove('active'));
-      tabs[idx].classList.add('active');
-      const body = document.getElementById('master-body');
-      if (!body) return;
-      const renders = [renderMasterMolds, renderMasterMachines, renderMasterLines, renderMasterUsers, renderMasterAlerts];
-      if (renders[idx]) renders[idx](body);
-    }
-  }, 100);
+    if (!tabs || !tabs[idx]) return;
+    tabs.forEach(t => t.classList.remove('active'));
+    tabs[idx].classList.add('active');
+    const body = document.getElementById('master-body');
+    if (!body) return;
+    const renders = [renderMasterMolds, renderMasterMachines, renderMasterLines, renderMasterUsers, renderMasterAlerts];
+    if (renders[idx]) renders[idx](body);
+  }, 150);
 }
 
 
