@@ -1391,7 +1391,7 @@ async function loadHistory() {
   const el = document.getElementById('hist-body');
   if (!el) return;
   try {
-    let query = '?order=performed_at.desc&limit=50&select=*,molds(part_no,part_name,mold_categories(name)),machines(machine_no,lines(name)),users(name)';
+    let query = '?order=performed_at.desc&limit=50&select=*,mold_id,machine_id,molds(part_no,part_name,mold_categories(name)),machines(machine_no,lines(name)),users(name)';
     if (state.histFilter === 'OH') query += '&maintenance_type=eq.OH';
     else if (state.histFilter === 'simple') query += '&maintenance_type=eq.simple';
     const logs = await sb('maintenance_logs', 'GET', null, query);
@@ -3202,16 +3202,43 @@ function updateRealtimeDisplay() {
   const section = state.currentSection;
 
   if (section === 'alert') {
-    // アラート件数を更新
+    // アラートカードのDOM要素を直接更新（全体再描画なし）
+    state.molds.forEach(mold => {
+      const card = document.querySelector(`.alert-rt-card[data-mold-id="${mold.id}"]`);
+      if (!card) return;
+      const rem = calcEstimatedRemaining(mold);
+      const remMin = calcEstimatedRemainingMin(mold);
+      const pct = calcEstimatedProgress(mold);
+      const status = calcStatus(mold);
+      const color = statusColor(status);
+      // ボーダー色
+      card.style.borderLeftColor = color;
+      // プログレスバー
+      const bar = card.querySelector('.rt-progress');
+      if (bar) { bar.style.width = pct + '%'; bar.style.background = color; }
+      // 残りshot
+      const remShotEl = card.querySelector('.rt-remain-shot');
+      if (remShotEl) { remShotEl.textContent = fmtNum(rem); remShotEl.style.color = color; }
+      // 残り時間
+      const remTimeEl = card.querySelector('.rt-remain-time');
+      if (remTimeEl) { remTimeEl.textContent = fmtTime(remMin); remTimeEl.style.color = color; }
+      // 進捗
+      const pctEl = card.querySelector('.rt-pct');
+      if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = color; }
+      // ステータスバッジ
+      const badgeEl = card.querySelector('.rt-status-badge');
+      if (badgeEl) badgeEl.innerHTML = statusBadge(status);
+    });
+    // 件数バッジ更新
     const alertMolds = state.molds.filter(m=>calcStatus(m)==='danger'||calcStatus(m)==='warning');
     const filtered = state.alertFilter !== 'all'
       ? alertMolds.filter(m=>m.line_name===state.alertFilter)
       : alertMolds;
     const countEl = document.getElementById('alert-header-count');
     if (countEl) countEl.textContent = filtered.length + '件';
-    // アラートボディを再描画
-    const body = document.getElementById('alert-body');
-    if (body) renderAlertBody();
+    // グローバルバッジ
+    const badge = document.getElementById('alert-count-badge');
+    if (badge) { badge.textContent = alertMolds.length; badge.style.display = alertMolds.length > 0 ? 'inline' : 'none'; }
     return;
   }
 
