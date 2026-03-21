@@ -487,9 +487,9 @@ select.form-control { cursor: pointer; }
     <div class="sidebar" id="sidebar">
       <div class="sidebar-item active" onclick="showSection('dashboard')" id="nav-dashboard"><div class="sidebar-dot"></div><span id="nav-label-dashboard">ダッシュボード</span></div>
       <div class="sidebar-item" onclick="showSection('list')" id="nav-list"><div class="sidebar-dot"></div><span id="nav-label-list">一覧</span></div>
-      <div class="sidebar-item" onclick="showSection('alert')" id="nav-alert" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-alert">アラート</span> <span id="alert-count-badge" style="font-size:9px;background:var(--danger-bg);color:var(--danger-text);padding:1px 5px;border-radius:3px;margin-left:2px;display:none"></span></div>
-      <div class="sidebar-item" onclick="showSection('history')" id="nav-history"><div class="sidebar-dot"></div><span id="nav-label-history">メンテ履歴</span></div>
       <div class="sidebar-item" onclick="showSection('schedule')" id="nav-schedule"><div class="sidebar-dot"></div><span id="nav-label-schedule">スケジュール</span></div>
+      <div class="sidebar-item" onclick="showSection('history')" id="nav-history"><div class="sidebar-dot"></div><span id="nav-label-history">メンテ履歴</span></div>
+      <div class="sidebar-item" onclick="showSection('alert')" id="nav-alert" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-alert">アラート</span> <span id="alert-count-badge" style="font-size:9px;background:var(--danger-bg);color:var(--danger-text);padding:1px 5px;border-radius:3px;margin-left:2px;display:none"></span></div>
       <div class="sidebar-item" onclick="showSection('dandori')" id="nav-dandori"><div class="sidebar-dot"></div><span id="nav-label-dandori">段取り設定</span></div>
       <div class="sidebar-item" id="nav-analysis" onclick="showSection('analysis')" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-analysis">分析</span></div>
       <div class="sidebar-item" id="nav-master" onclick="showSection('master')" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-master">マスタ設定</span></div>
@@ -1456,25 +1456,82 @@ function renderAlertBody() {
 }
 
 // ===== 履歴 =====
+let histEditMode = false;
+let histSelectedIds = new Set();
+
 async function renderHistory(el) {
   el.innerHTML = `
-  <div class="filter-pills" id="hist-filters">
-    <div class="filter-pill active" onclick="setHistFilter('all',this)">${t('allFilter')}</div>
-    <div class="filter-pill" onclick="setHistFilter('OH',this)">${t('ohFilter')}</div>
-    <div class="filter-pill" onclick="setHistFilter('simple',this)">${t('simpleFilter')}</div>
-    ${state.lines.map(l=>`<div class="filter-pill" onclick="setHistFilter('${l.name}',this)">${l.name}</div>`).join('')}
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 0;flex-shrink:0">
+    <div class="filter-pills" id="hist-filters" style="padding:0;flex:1">
+      <div class="filter-pill active" onclick="setHistFilter('all',this)">${t('allFilter')}</div>
+      <div class="filter-pill" onclick="setHistFilter('OH',this)">${t('ohFilter')}</div>
+      <div class="filter-pill" onclick="setHistFilter('simple',this)">${t('simpleFilter')}</div>
+      ${state.lines.map(l=>`<div class="filter-pill" onclick="setHistFilter('${l.name}',this)">${l.name}</div>`).join('')}
+    </div>
+    <button id="hist-edit-btn" onclick="toggleHistEditMode()" style="font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--border);background:${histEditMode?'#3a1515':'var(--bg2)'};color:${histEditMode?'var(--danger-text)':'var(--text3)'};cursor:pointer;flex-shrink:0;margin-left:8px">${histEditMode?'完了':'編集'}</button>
   </div>
+  ${histEditMode?`<div style="font-size:11px;color:var(--danger-text);padding:5px 12px 0">削除する履歴を選択してください</div>`:''}
   <div id="hist-body" style="padding:6px 12px">
     <div class="loading-overlay"><div class="spinner"></div></div>
-  </div>`;
+  </div>
+  ${histEditMode?`<div style="padding:0 12px 10px" id="hist-delete-bar"></div>`:''}`;
   await loadHistory();
+}
+
+function toggleHistEditMode() {
+  histEditMode = !histEditMode;
+  histSelectedIds = new Set();
+  const el = document.getElementById('main-content');
+  if (el) renderHistory(el);
+}
+
+function toggleHistSelect(id, el) {
+  if (histSelectedIds.has(id)) {
+    histSelectedIds.delete(id);
+    el.style.background = 'transparent';
+    el.style.borderColor = 'var(--border2)';
+    el.innerHTML = '';
+  } else {
+    histSelectedIds.add(id);
+    el.style.background = 'var(--info-bg)';
+    el.style.borderColor = 'var(--info-text)';
+    el.innerHTML = '<span style="font-size:10px;color:var(--info-text);font-weight:700">✓</span>';
+  }
+  updateHistDeleteBar();
+}
+
+function updateHistDeleteBar() {
+  const bar = document.getElementById('hist-delete-bar');
+  if (!bar) return;
+  const count = histSelectedIds.size;
+  bar.innerHTML = count > 0
+    ? `<div style="background:var(--danger);border-radius:8px;padding:10px;text-align:center;font-size:13px;font-weight:600;color:#fff;cursor:pointer" onclick="deleteSelectedHist()">選択した${count}件を削除</div>`
+    : `<div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center;font-size:12px;color:var(--text3);border:0.5px solid var(--border)">削除する履歴を選択してください</div>`;
+}
+
+async function deleteSelectedHist() {
+  if (!histSelectedIds.size) return;
+  if (!confirm(`選択した${histSelectedIds.size}件のメンテ履歴を削除しますか？
+この操作は取り消せません。`)) return;
+  try {
+    for (const id of histSelectedIds) {
+      await sb('maintenance_logs','DELETE',null,`?id=eq.${id}`);
+    }
+    showToast(`${histSelectedIds.size}件の履歴を削除しました`, 'success');
+    histSelectedIds = new Set();
+    histEditMode = false;
+    const el = document.getElementById('main-content');
+    if (el) renderHistory(el);
+  } catch(e) {
+    showToast('削除エラー: ' + e.message, 'error');
+  }
 }
 
 async function loadHistory() {
   const el = document.getElementById('hist-body');
   if (!el) return;
   try {
-    let query = '?order=performed_at.desc&limit=50&select=*,mold_id,machine_id,molds(part_no,part_name,mold_categories(name)),machines(machine_no,lines(name)),users(name)';
+    let query = '?order=performed_at.desc&limit=100&select=id,mold_id,machine_id,maintenance_type,shot_at_maintenance,maint_shot_at_maintenance,is_reset,shift,performed_at,molds(part_no,part_name,mold_categories(name)),machines(machine_no,lines(name)),users(name)';
     if (state.histFilter === 'OH') query += '&maintenance_type=eq.OH';
     else if (state.histFilter === 'simple') query += '&maintenance_type=eq.simple';
     const logs = await sb('maintenance_logs', 'GET', null, query);
