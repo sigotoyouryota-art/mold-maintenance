@@ -1181,13 +1181,16 @@ function fmtTime(min) {
 function fmtNum(n) { return Number(n).toLocaleString(); }
 
 // ===== ダッシュボード =====
-function renderDashboard(el) {
+async function renderDashboard(el) {
+  // 段取り設定を取得してactiveMoldIdsを更新
+  if (activeMoldIds.size === 0) await loadDandoriForList();
   const danger = state.molds.filter(m=>calcStatus(m)==='danger').length;
   const warning = state.molds.filter(m=>calcStatus(m)==='warning').length;
   const normal = state.molds.filter(m=>calcStatus(m)==='normal').length;
+  const activeCount = activeMoldIds.size;
   el.innerHTML = `
   <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-label">${t('totalMolds')}</div><div class="kpi-value">${state.molds.length}</div></div>
+    <div class="kpi-card"><div class="kpi-label">成形中金型数</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${state.molds.length}</span></div><div class="kpi-sub" style="color:var(--text3)">段取り設定済み</div></div>
     <div class="kpi-card"><div class="kpi-label">${t('needMaint')}</div><div class="kpi-value" style="color:var(--danger)">${danger}</div></div>
     <div class="kpi-card"><div class="kpi-label">${t('caution')}</div><div class="kpi-value" style="color:var(--warning)">${warning}</div></div>
     <div class="kpi-card"><div class="kpi-label">${t('normal')}</div><div class="kpi-value" style="color:var(--success)">${normal}</div></div>
@@ -3488,8 +3491,8 @@ let scheduleView = 'card'; // 'card' | 'timeline'
 
 function renderSchedule(el) {
   el.innerHTML = `
-  <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:0.5px solid var(--border)">
-    <div style="font-size:13px;font-weight:600;color:var(--text)">${t('scheduleTitle')}</div>
+  <div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">${t('scheduleTitle')}</div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <div style="display:flex;gap:2px;background:var(--bg3);border-radius:6px;padding:3px" id="sched-shift-seg">
         ${['1S','2S','3S'].map(s=>`<button class="seg-btn ${s===scheduleShift?'active':''}" onclick="setSchedShift('${s}',this)" style="padding:5px 14px;font-size:11px">${s}</button>`).join('')}
@@ -3618,11 +3621,12 @@ function renderScheduleBody() {
           <div style="height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:5px">
             <div style="width:${calcEstimatedProgress(s.mold)}%;height:100%;border-radius:2px;background:${color}"></div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <div style="display:flex;gap:6px;align-items:center">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
               ${typeBadge(s.mold.category_name)}
               <span style="font-size:10px;color:var(--text3)">${s.mold.line_name||'-'}</span>
-              <span style="font-size:10px;color:var(--text3)">${calcEstimatedProgress(s.mold)}%</span>
+              <span style="font-size:10px;color:${color}">${calcEstimatedProgress(s.mold)}%</span>
+              <span style="font-size:10px;color:${color}">残 ${fmtNum(calcEstimatedRemaining(s.mold))}shot</span>
             </div>
             <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
               <span style="font-size:10px;color:var(--text3)">${t('duration')}</span>
