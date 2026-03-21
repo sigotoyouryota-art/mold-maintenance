@@ -1289,13 +1289,13 @@ function renderListBody() {
 
 // ===== アラート =====
 function renderAlert(el) {
-  const alerts = state.molds.filter(m=>m.status==='danger'||m.status==='warning');
+  const alerts = state.molds.filter(m=>calcStatus(m)==='danger'||calcStatus(m)==='warning');
   const lines = [null, ...state.lines];
   el.innerHTML = `
   <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">
     <div style="display:flex;align-items:center;gap:8px">
       <div style="font-size:14px;font-weight:600;color:var(--text)">${t('alert')}</div>
-      <span style="font-size:11px;background:var(--danger-bg);color:var(--danger-text);padding:2px 8px;border-radius:4px;font-weight:600">${alerts.length}件</span>
+      <span style="font-size:11px;background:var(--danger-bg);color:var(--danger-text);padding:2px 8px;border-radius:4px;font-weight:600" id="alert-header-count">${alerts.length}件</span>
     </div>
   </div>
   <div class="seg-wrap" id="alert-line-seg">
@@ -1560,19 +1560,37 @@ async function saveDandori() {
       const line = state.lines.find(l=>l.id===m.line_id);
       return line?.name === state.dandoriFilter;
     });
+
+    // 既存の設定を取得
+    const existing = await sb('dandori_settings','GET',null,
+      `?setting_date=eq.${today}&shift=eq.${state.currentShift}`);
+    const existingMap = {};
+    (existing||[]).forEach(s => existingMap[s.machine_id] = s.id);
+
+    let saved = 0;
     for (const machine of lineMachines) {
-      const moldId = dandoriData[machine.id];
-      if (!moldId) continue;
-      await sb('dandori_settings','POST',{
+      const moldId = dandoriData[machine.id] || null;
+      const data = {
         setting_date: today,
         machine_id: machine.id,
         mold_id: moldId,
         shift: state.currentShift,
         set_by: state.currentUser.id
-      });
+      };
+      if (existingMap[machine.id]) {
+        // 既存レコードを更新
+        await sb('dandori_settings','PATCH',{mold_id:moldId, set_by:state.currentUser.id},
+          `?id=eq.${existingMap[machine.id]}`);
+      } else {
+        // 新規登録
+        if (!moldId) continue; // moldIdなし＆新規はスキップ
+        await sb('dandori_settings','POST',data);
+      }
+      saved++;
     }
-    showToast('段取り設定を保存しました', 'success');
+    showToast(`段取り設定を保存しました（${saved}件）`, 'success');
   } catch(e) {
+    console.error('saveDandori error:', e);
     showToast('保存エラー: ' + e.message, 'error');
   }
 }
@@ -3184,7 +3202,14 @@ function updateRealtimeDisplay() {
   const section = state.currentSection;
 
   if (section === 'alert') {
-    // アラート画面は全体再描画（件数変動があるため）
+    // アラート件数を更新
+    const alertMolds = state.molds.filter(m=>calcStatus(m)==='danger'||calcStatus(m)==='warning');
+    const filtered = state.alertFilter !== 'all'
+      ? alertMolds.filter(m=>m.line_name===state.alertFilter)
+      : alertMolds;
+    const countEl = document.getElementById('alert-header-count');
+    if (countEl) countEl.textContent = filtered.length + '件';
+    // アラートボディを再描画
     const body = document.getElementById('alert-body');
     if (body) renderAlertBody();
     return;
