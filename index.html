@@ -3160,7 +3160,7 @@ function startRealtimeUpdate() {
   stopRealtimeUpdate();
   realtimeTimer = setInterval(() => {
     updateRealtimeDisplay();
-  }, 3000); // 3秒ごとに更新
+  }, 5000); // 5秒ごとに更新
 }
 
 function stopRealtimeUpdate() {
@@ -3168,7 +3168,6 @@ function stopRealtimeUpdate() {
 }
 
 function updateRealtimeDisplay() {
-  // 現在表示中のセクションに応じて更新
   if (!state.molds.length) return;
 
   // アラートバッジ更新
@@ -3181,16 +3180,39 @@ function updateRealtimeDisplay() {
     badge.style.display = totalAlert > 0 ? 'inline' : 'none';
   }
 
-  // 一覧テーブルのリアルタイム更新
+  // セクションに応じてリアルタイム更新
+  const section = state.currentSection;
+
+  if (section === 'alert') {
+    // アラート画面は全体再描画（件数変動があるため）
+    const body = document.getElementById('alert-body');
+    if (body) renderAlertBody();
+    return;
+  }
+
+  if (section === 'schedule') {
+    // スケジュール画面も再描画
+    const body = document.getElementById('sched-body');
+    if (body) renderScheduleBody();
+    return;
+  }
+
+  if (section === 'dashboard') {
+    // ダッシュボードのKPI・TOP5を再描画
+    const content = document.getElementById('main-content');
+    if (content) renderDashboard(content);
+    return;
+  }
+
+  // 一覧テーブルのリアルタイム更新（DOM操作で高速更新）
   state.molds.forEach(mold => {
-    const estimated = calcEstimatedShot(mold);
     const remaining = calcEstimatedRemaining(mold);
     const remainMin = calcEstimatedRemainingMin(mold);
     const pct = calcEstimatedProgress(mold);
     const status = calcStatus(mold);
     const color = statusColor(status);
 
-    // テーブル行の更新（data-mold-id属性で特定）
+    // PCテーブル行
     const row = document.querySelector(`tr[data-mold-id="${mold.id}"]`);
     if (row) {
       const progBar = row.querySelector('.rt-progress');
@@ -3205,7 +3227,7 @@ function updateRealtimeDisplay() {
       if (statusEl) statusEl.innerHTML = statusBadge(status);
     }
 
-    // スマホカードの更新
+    // スマホカード
     const card = document.querySelector(`.mold-card[data-mold-id="${mold.id}"]`);
     if (card) {
       card.className = `mold-card ${status}`;
@@ -3216,19 +3238,6 @@ function updateRealtimeDisplay() {
         <span style="color:${color}">残 ${fmtNum(remaining)}shot</span>
         <span style="color:${color}">${fmtTime(remainMin)}</span>
         <span style="color:${color}">${pct}%</span>`;
-    }
-
-    // アラートカードの更新
-    const alertCard = document.querySelector(`.alert-rt-card[data-mold-id="${mold.id}"]`);
-    if (alertCard) {
-      const newStatus = calcStatus(mold);
-      alertCard.style.borderColor = statusColor(newStatus);
-      const bar = alertCard.querySelector('.rt-progress');
-      if (bar) { bar.style.width = pct + '%'; bar.style.background = color; }
-      const stats = alertCard.querySelectorAll('.rt-stat-val');
-      if (stats[0]) { stats[0].textContent = fmtNum(remaining); stats[0].style.color = color; }
-      if (stats[1]) { stats[1].textContent = fmtTime(remainMin); stats[1].style.color = color; }
-      if (stats[2]) { stats[2].textContent = pct + '%'; stats[2].style.color = color; }
     }
   });
 }
