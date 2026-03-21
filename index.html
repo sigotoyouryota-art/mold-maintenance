@@ -2169,9 +2169,22 @@ function handleImportFile(e) {
   if (!file) return;
   const ext = file.name.split('.').pop().toLowerCase();
   if (ext === 'csv') {
-    const reader = new FileReader();
-    reader.onload = ev => parseImportCSV(ev.target.result);
-    reader.readAsText(file, 'UTF-8');
+    // まずShift-JISで読み込んでみて、文字化けしていたらUTF-8で再試行
+    const readerSJIS = new FileReader();
+    readerSJIS.onload = ev => {
+      const textSJIS = ev.target.result;
+      // Shift-JISで正常に読めているか判定（日本語文字が含まれているか）
+      const hasJapanese = /[\u3000-\u9fff]/.test(textSJIS);
+      if (hasJapanese) {
+        parseImportCSV(textSJIS);
+      } else {
+        // UTF-8で再試行
+        const readerUTF = new FileReader();
+        readerUTF.onload = ev2 => parseImportCSV(ev2.target.result);
+        readerUTF.readAsText(file, 'UTF-8');
+      }
+    };
+    readerSJIS.readAsText(file, 'Shift-JIS');
   } else {
     showToast('CSVファイルを選択してください', 'error');
   }
