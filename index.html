@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.0.6">
+<meta name="app-version" content="1.0.7">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -482,6 +482,7 @@ select.form-control { cursor: pointer; }
       </div>
       <button class="theme-btn" onclick="toggleTheme()" id="theme-btn-main">☾</button>
       <span class="user-info" id="main-user-info"></span>
+      <button onclick="showSection('settings')" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text2);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="設定">⚙</button>
     </div>
   </div>
   <div class="pc-layout">
@@ -924,8 +925,11 @@ function toggleTheme() {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem('theme', state.theme);
   applyTheme();
+  const icon = state.theme === 'dark' ? '☾' : '☀';
   const btn = document.getElementById('theme-btn');
-  if (btn) btn.textContent = state.theme === 'dark' ? '☾' : '☀';
+  if (btn) btn.textContent = icon;
+  const btnMain = document.getElementById('theme-btn-main');
+  if (btnMain) btnMain.textContent = icon;
 }
 
 // ===== 言語 =====
@@ -3755,51 +3759,46 @@ function renderScheduleBody() {
       </div>`;
     }).join('') + (scheduled.length===0?`<div style="text-align:center;padding:40px;color:var(--text3)">この直にメンテ予定はありません</div>`:'');
   } else {
-    // タイムライン表示
-    const timelineHTML = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <div style="min-width:500px;padding-right:16px">
-        <div style="display:flex;margin-bottom:6px;padding-left:80px">
-          ${[0,1,2,3,4,5,6,7].map(i=>{
-            const h = (shiftStart.getHours() + i) % 24;
-            return `<div style="flex:1;font-size:9px;color:var(--text4);text-align:left;white-space:nowrap">${String(h).padStart(2,'0')}:00</div>`;
-          }).join('')}
+    // タイムライン表示（パターンB: 左に機番+メンテ時刻を大きく表示）
+    const shiftDur = (shiftEnd - shiftStart) / 60000;
+    const nowOffset = Math.max(0, Math.min(100, (new Date() - shiftStart) / 60000 / shiftDur * 100));
+    const hourLabels = [];
+    for (let i = 0; i <= 8; i++) {
+      const pct = (i / 8) * 100;
+      const h = (shiftStart.getHours() + i) % 24;
+      hourLabels.push(`<div style="position:absolute;left:${pct}%;transform:translateX(-50%);font-size:8px;color:var(--text4);white-space:nowrap">${String(h).padStart(2,'0')}:00</div>`);
+    }
+    const timelineRows = state.molds.map(mold => {
+      const status = calcStatus(mold);
+      const color = statusColor(status);
+      const pct = calcEstimatedProgress(mold);
+      const rem = calcEstimatedRemaining(mold);
+      const remMin = calcEstimatedRemainingMin(mold);
+      const sched = scheduled.find(s=>s.mold.id===mold.id);
+      const isNow = status === 'danger';
+      const timeLabel = sched ? (isNow ? '今すぐ!' : `${fmtHM(sched.schedStart)}〜${fmtHM(sched.schedEnd)}`) : '';
+      const timeColor = isNow ? 'var(--danger-text)' : status==='warning' ? 'var(--warning-text)' : 'var(--success-text)';
+      const maintOffset = sched ? Math.max(0, Math.min(95, (sched.schedStart - shiftStart) / 60000 / shiftDur * 100)) : null;
+      const maintWidth = sched ? Math.max(3, Math.min(100-(maintOffset||0), sched.dur / shiftDur * 100)) : 0;
+      const barBg = isNow ? '#7f1d1d50' : status==='warning' ? '#78350f40' : '#1e335840';
+      const maintBg = isNow ? '#ef4444' : '#f59e0b';
+      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <div style="width:76px;flex-shrink:0">
+          <div style="font-size:10px;font-weight:600;color:var(--text)">#${mold.machine_no||'?'}　${mold.part_name}</div>
+          <div style="font-size:9px;font-weight:600;color:${timeColor}">${timeLabel}</div>
         </div>
-        ${state.molds.slice(0,10).map(mold => {
-          const status = calcStatus(mold);
-          const color = statusColor(status);
-          const pct = calcEstimatedProgress(mold);
-          const remMin = calcEstimatedRemainingMin(mold);
-          const dur = mold.simple_maint_time_min || 20;
-          const sched = scheduled.find(s=>s.mold.id===mold.id);
-
-          const shiftDur = (shiftEnd - shiftStart) / 60000;
-          const nowOffset = Math.max(0, Math.min(100, (new Date() - shiftStart) / 60000 / shiftDur * 100));
-          const maintOffset = sched ? Math.max(0, Math.min(100, (sched.schedStart - shiftStart) / 60000 / shiftDur * 100)) : null;
-          const maintWidth = sched ? Math.min(100 - maintOffset, dur / shiftDur * 100) : 0;
-          const runWidth = maintOffset !== null ? maintOffset : Math.min(100, remMin / shiftDur * 100 + 5);
-
-          return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-            <div style="width:76px;flex-shrink:0">
-              <div style="font-size:10px;font-weight:600;color:var(--text)">#${mold.machine_no||'?'}　${mold.part_name}</div>
-              <div style="font-size:9px;color:var(--text3)">${mold.category_name||'-'}</div>
-            </div>
-            <div style="flex:1;height:26px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden;min-width:0">
-              <div style="position:absolute;left:0;top:0;width:${runWidth}%;height:100%;background:${status==='danger'?'#7f1d1d60':status==='warning'?'#78350f50':'#1e335860'};border-right:1px solid ${color}"></div>
-              ${maintOffset!==null?`<div style="position:absolute;left:${maintOffset}%;top:2px;width:${Math.min(maintWidth, 100-maintOffset)}%;height:22px;background:var(--accent);border-radius:3px;display:flex;align-items:center;justify-content:center;overflow:hidden"><span style="font-size:8px;font-weight:600;color:#1c1917;white-space:nowrap;padding:0 3px">${dur}分</span></div>`:''}
-              <div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:1.5px;background:#ef4444;opacity:0.8"></div>
-              <div style="position:absolute;left:3px;top:50%;transform:translateY(-50%);font-size:8px;color:${color};font-weight:500;white-space:nowrap;overflow:hidden;max-width:calc(${maintOffset!==null?maintOffset:95}% - 6px)">${pct}%　残${fmtTime(remMin)}</div>
-            </div>
-          </div>`;
-        }).join('')}
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:6px;border-top:0.5px solid var(--border)">
-          <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:2px;background:#7f1d1d60;border:0.5px solid #ef4444"></div><span style="font-size:9px;color:var(--text3)">要メンテ</span></div>
-          <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:2px;background:#78350f50;border:0.5px solid #f59e0b"></div><span style="font-size:9px;color:var(--text3)">注意</span></div>
-          <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:2px;background:#1e3358;border:0.5px solid #3a5a8a"></div><span style="font-size:9px;color:var(--text3)">稼働中</span></div>
-          <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:2px;background:var(--accent)"></div><span style="font-size:9px;color:var(--text3)">メンテ予定</span></div>
-          <div style="display:flex;align-items:center;gap:3px"><div style="width:1.5px;height:10px;background:#ef4444"></div><span style="font-size:9px;color:var(--text3)">現在時刻</span></div>
+        <div style="flex:1;height:32px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:${barBg}"></div>
+          ${maintOffset!==null ? `<div style="position:absolute;left:${maintOffset}%;top:0;bottom:0;width:${maintWidth}%;background:${maintBg};display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2">
+            <span style="font-size:${isNow?'8':'7'}px;font-weight:700;color:${isNow?'#fff':'#1c1917'};white-space:nowrap;line-height:1">${isNow?'今すぐ':fmtHM(sched.schedStart)}</span>
+            <span style="font-size:6px;color:${isNow?'#fca5a5':'#92400e'}">${sched.dur}分</span>
+          </div>` : ''}
+          <div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:1.5px;background:#ef4444;z-index:3"></div>
+          <div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);font-size:8px;color:${color};font-weight:500;z-index:1;white-space:nowrap">残${fmtNum(rem)}shot　${pct}%</div>
         </div>
-      </div>
-    </div>`;
+      </div>`;
+    }).join('');
+    const timelineHTML = `<div style="position:relative;padding-left:82px;height:16px;margin-bottom:4px">${hourLabels.join('')}</div><div>${timelineRows}</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)"><div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:2px;background:#ef4444"></div><span style="font-size:9px;color:var(--text3)">今すぐ</span></div><div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:2px;background:#f59e0b"></div><span style="font-size:9px;color:var(--text3)">メンテ時間帯</span></div><div style="display:flex;align-items:center;gap:3px"><div style="width:1.5px;height:10px;background:#ef4444"></div><span style="font-size:9px;color:var(--text3)">現在時刻</span></div></div>`;
     el.innerHTML = infoBar + timelineHTML;
   }
 }
@@ -4128,7 +4127,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.0.6';
+const CURRENT_VERSION = '1.0.7';
 
 async function checkForUpdate() {
   try {
