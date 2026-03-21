@@ -445,9 +445,9 @@ select.form-control { cursor: pointer; }
       <div class="login-sub" id="login-subtitle">製造3課</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:8px" id="label-shift">直を選択</div>
       <div class="shift-row">
-        <div class="shift-btn active" onclick="selectShift('1S',this)" id="shift-1S">1S</div>
-        <div class="shift-btn" onclick="selectShift('2S',this)" id="shift-2S">2S</div>
-        <div class="shift-btn" onclick="selectShift('3S',this)" id="shift-3S">3S</div>
+        <div class="shift-btn active" id="shift-1S" data-shift="1S">1S</div>
+        <div class="shift-btn" id="shift-2S" data-shift="2S">2S</div>
+        <div class="shift-btn" id="shift-3S" data-shift="3S">3S</div>
       </div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:10px" id="label-worker">作業者を選択</div>
       <div class="user-grid" id="user-grid">
@@ -957,6 +957,16 @@ async function loadUsers() {
     const users = await sb('users', 'GET', null, '?is_active=eq.true&order=name');
     state.users = users;
     const grid = document.getElementById('user-grid');
+    if (!grid) return;
+    if (!users || users.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">
+        ユーザーが登録されていません。<br>
+        <span style="font-size:11px">Supabase → Table Editor → users にユーザーを追加してください</span>
+        <br><br>
+        <button class="btn btn-primary" onclick="loadUsers()" style="font-size:12px;padding:6px 14px">再読み込み</button>
+      </div>`;
+      return;
+    }
     const colors = ['#1e3358:#7db8f7','#2e1e4a:#c490f5','#1a3828:#5ed18a','#3a2010:#fb923c','#2e1530:#e879b0','#1a2e1a:#86efac','#2a1a3a:#a78bfa','#1a2a3a:#60a5fa','#2a2010:#fcd34d','#1e2a1e:#6ee7b7'];
     grid.innerHTML = users.map((u,i) => {
       const [bg,fg] = colors[i%colors.length].split(':');
@@ -966,7 +976,14 @@ async function loadUsers() {
       </div>`;
     }).join('');
   } catch(e) {
-    showToast('ユーザー読み込みエラー', 'error');
+    console.error('loadUsers error:', e);
+    const grid = document.getElementById('user-grid');
+    if (grid) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px">
+        <div style="color:var(--danger-text);font-size:12px;margin-bottom:8px">接続エラー: ${e.message}</div>
+        <button class="btn btn-primary" onclick="loadUsers()" style="font-size:12px;padding:6px 14px">再試行</button>
+      </div>`;
+    }
   }
 }
 
@@ -2479,10 +2496,10 @@ async function importMoldRow(row) {
 
   const cat = state.categories.find(c=>c.name===catName);
   // 機番マッチ：先頭0考慮
-  const machNoNorm = machineNo.replace(/^0+/,'') || '0';
+  const moldImportMachNorm = machineNo.replace(/^0+/,'') || '0';
   const machine = state.machines.find(m=>{
     const mNo = String(m.machine_no||'');
-    return mNo === machineNo || mNo.replace(/^0+/,'') === machNoNorm;
+    return mNo === machineNo || mNo.replace(/^0+/,'') === moldImportMachNorm;
   });
 
   // メンテ間隔・サイクル（各種表記対応）
@@ -2514,23 +2531,21 @@ async function importMoldRow(row) {
   if (modelNo) data.model_no = modelNo;
 
   // 機番マッチ（先頭0対応）
-  const machNoStr = String(machineNo||'');
-  const machNoNorm = machNoStr.replace(/^0+/,'')||'0';
+  const moldMachNoStr = String(machineNo||'');
+  const moldMachNoNorm = moldMachNoStr.replace(/^0+/,'')||'0';
 
   let existing;
   existing = state.molds.find(m => {
     // 品番一致
     if (String(m.part_no) !== String(partNo)) return false;
-    // 型番一致（両方空はOK、片方だけ空はNG）
+    // 型番一致
     const mModelNo = String(m.model_no||'');
     if (mModelNo !== modelNo) return false;
-    // 機番一致（先頭0考慮）
-    const mMachineNo = String(machine?.machine_no||'');
-    const mMachineNorm = mMachineNo.replace(/^0+/,'')||'0';
-    const mId = m.machine_id || m.machine_no;
-    // machine_idかmachine_noどちらかで一致
+    // 機番一致（machine_idで一致、なければ機番文字列で）
     if (machine?.id && m.machine_id) return m.machine_id === machine.id;
-    return mMachineNorm === machNoNorm;
+    const mMachNo = String(machine?.machine_no||'');
+    const mMachNoNorm = mMachNo.replace(/^0+/,'')||'0';
+    return mMachNoNorm === moldMachNoNorm;
   });
 
   if (existing) {
@@ -2565,11 +2580,11 @@ async function importMachineRow(row) {
     note: (row['備考']||row['note']||'').toString().trim()
   };
   // 機番マッチ：先頭0を考慮（"04"と"4"は同じとみなす）
-  const noNormalized = no.replace(/^0+/, '') || '0';
+  const importNoNorm = no.replace(/^0+/, '') || '0';
   const existing = state.machines.find(m=>{
     const mNo = String(m.machine_no||'');
     const mNoNorm = mNo.replace(/^0+/, '') || '0';
-    return mNo === no || mNoNorm === noNormalized;
+    return mNo === no || mNoNorm === importNoNorm;
   });
   if (existing) {
     await sb('machines','PATCH',data,`?id=eq.${existing.id}`);
@@ -3423,6 +3438,14 @@ function renderScheduleBody() {
 // ===== 初期化 =====
 applyTheme();
 setLang(state.lang);
+
+// shift-btnにイベントリスナーを設定
+document.querySelectorAll('.shift-btn[data-shift]').forEach(btn => {
+  btn.addEventListener('click', function() {
+    selectShift(this.dataset.shift, this);
+  });
+});
+
 if (state.currentUser) {
   initMainPage();
 } else {
