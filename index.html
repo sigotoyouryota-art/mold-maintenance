@@ -534,6 +534,17 @@ select.form-control { cursor: pointer; }
       <span id="shot-remaining-label" style="color:var(--danger)"></span>
       <span id="shot-limit-label" style="color:var(--text3)"></span>
     </div>
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <div style="flex:1;background:var(--bg3);border-radius:6px;padding:5px 8px;text-align:center">
+        <div style="font-size:9px;color:var(--text3);margin-bottom:2px">メンテ間</div>
+        <div style="font-size:11px;font-weight:600;color:var(--accent)" id="shot-maint-display">0</div>
+      </div>
+      <div style="flex:1;background:var(--bg3);border-radius:6px;padding:5px 8px;text-align:center">
+        <div style="font-size:9px;color:var(--text3);margin-bottom:2px">累計</div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2)" id="shot-total-display">0</div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:4px">現在のショット数を入力</div>
     <div class="shot-display">
       <span class="shot-value" id="shot-input-display">0</span>
       <span class="shot-unit">shot</span>
@@ -1235,7 +1246,7 @@ function renderListBody() {
 
   // PC テーブル
   const tableHTML = `<div class="table-wrap"><table>
-    <tr><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>${t('type')}</th><th>${t('line')}</th><th>${t('progress')}</th><th>${t('remainShot')}</th><th>${t('remainTime')}</th><th>${t('pct')}</th><th>${t('status')}</th><th></th></tr>
+    <tr><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>${t('type')}</th><th>${t('line')}</th><th>${t('progress')}</th><th>${t('remainShot')}</th><th>${t('remainTime')}</th><th>${t('pct')}</th><th>累計shot</th><th>${t('status')}</th><th></th></tr>
     ${molds.map(m=>{
       const est = calcEstimatedShot(m);
       const rem = calcEstimatedRemaining(m);
@@ -1253,6 +1264,7 @@ function renderListBody() {
         <td class="rt-remain-shot" style="color:${color};font-weight:600">${fmtNum(rem)}</td>
         <td class="rt-remain-time" style="color:${color}">${fmtTime(remMin)}</td>
         <td class="rt-pct" style="color:${color}">${pct}%</td>
+        <td style="color:var(--text3);font-size:11px">${fmtNum(calcEstimatedTotalShot(m))}</td>
         <td class="rt-status">${statusBadge(status)}</td>
         <td><span style="font-size:11px;color:var(--accent);cursor:pointer" onclick="openShotModal('${m.id}')">入力 ›</span></td>
       </tr>`;
@@ -1754,9 +1766,12 @@ function openShotModal(moldId) {
   const mold = state.molds.find(m=>m.id===moldId);
   if (!mold) return;
   state.currentMold = mold;
-  // リアルタイム推定値を初期値として使用
-  const estimatedShot = calcEstimatedShot(mold);
-  state.shotInputValue = String(estimatedShot);
+  // リアルタイム推定値を初期値として使用（メンテ間ショット数）
+  const estimatedMaintShot = calcEstimatedShot(mold);
+  const estimatedTotalShot = calcEstimatedTotalShot(mold);
+  state.shotInputValue = String(estimatedMaintShot);
+  state.shotTotalBase = mold.current_shot || 0;
+  state.shotMaintBase = mold.maint_shot !== undefined ? (mold.maint_shot || 0) : (mold.current_shot || 0);
 
   document.getElementById('shot-machine').textContent = `#${mold.machine_no||'?'}　${mold.line_name||'-'}`;
   document.getElementById('shot-part-no').textContent = mold.part_no;
@@ -1800,6 +1815,16 @@ function numpadPress(key) {
 function updateShotDisplay() {
   const val = parseInt(state.shotInputValue) || 0;
   document.getElementById('shot-input-display').textContent = fmtNum(val);
+  // メンテ間・累計の差分を表示
+  const maintEl = document.getElementById('shot-maint-display');
+  const totalEl = document.getElementById('shot-total-display');
+  if (maintEl) maintEl.textContent = fmtNum(val);
+  if (totalEl && state.currentMold) {
+    // 累計 = 累計ベース + (入力メンテ間 - メンテ間ベース)
+    const diff = val - (state.shotMaintBase || 0);
+    const total = Math.max(0, (state.shotTotalBase || 0) + diff);
+    totalEl.textContent = fmtNum(total);
+  }
 }
 
 function updateShotHint() {
@@ -1812,19 +1837,25 @@ function updateShotHint() {
 }
 
 async function submitShot() {
-  const val = parseInt(state.shotInputValue) || 0;
-  if (!state.currentMold || val < 0) return;
+  const maintVal = parseInt(state.shotInputValue) || 0;
+  if (!state.currentMold || maintVal < 0) return;
+  // 累計 = 累計ベース + (入力メンテ間 - メンテ間ベース)
+  const diff = maintVal - (state.shotMaintBase || 0);
+  const totalVal = Math.max(0, (state.shotTotalBase || 0) + diff);
+  const now = new Date().toISOString();
   try {
     await sb('molds','PATCH',{
-      current_shot: val,
-      last_shot_updated_at: new Date().toISOString(),
+      maint_shot: maintVal,
+      current_shot: totalVal,
+      maint_shot_updated_at: now,
+      last_shot_updated_at: now,
       last_shot_updated_by: state.currentUser.id,
-      updated_at: new Date().toISOString()
+      updated_at: now
     }, `?id=eq.${state.currentMold.id}`);
     await sb('shot_logs','POST',{
       mold_id: state.currentMold.id,
       machine_id: null,
-      shot_count: val,
+      shot_count: maintVal,
       shift: state.currentShift,
       logged_by: state.currentUser.id,
     });
@@ -1904,7 +1935,14 @@ function confirmMaintenance() {
     <div class="confirm-row"><div class="confirm-label">品名</div><div class="confirm-value">${mold.part_name}</div></div>
     <div class="confirm-row"><div class="confirm-label">${t('maintType')}</div><div class="confirm-value" style="color:${state.maintType==='OH'?'var(--accent)':'var(--info-text)'}">${state.maintType==='OH'?t('ohMaint'):t('simpleMaint')}</div></div>
     <div class="confirm-row"><div class="confirm-label">${t('resetStatus')}</div><div class="confirm-value" style="color:${state.isReset?'var(--danger-text)':'var(--text3)'}">${state.isReset?t('withReset'):t('noReset')}</div></div>
-    <div class="confirm-row"><div class="confirm-label">${t('shotCount')}</div><div class="confirm-value">${fmtNum(mold.current_shot)} shot</div></div>
+    <div class="confirm-row">
+      <div class="confirm-label">メンテ間ショット数</div>
+      <div class="confirm-value">${fmtNum(calcEstimatedShot(mold))} shot</div>
+    </div>
+    <div class="confirm-row">
+      <div class="confirm-label">累計ショット数</div>
+      <div class="confirm-value">${fmtNum(calcEstimatedTotalShot(mold))} shot</div>
+    </div>
     <div class="confirm-row"><div class="confirm-label">${t('worker')} / ${t('shift')}</div><div class="confirm-value">${state.currentUser.name} / ${state.currentShift}</div></div>`;
   document.getElementById('confirm-dialog-title').textContent = t('confirmTitle');
   document.getElementById('confirm-back-btn').textContent = t('back');
@@ -1916,18 +1954,26 @@ function confirmMaintenance() {
 async function executeMaintenance() {
   const mold = state.currentMold;
   try {
-    const newShot = state.isReset ? 0 : mold.current_shot;
+    const now = new Date().toISOString();
+    const currentMaintShot = calcEstimatedShot(mold);
+    const currentTotalShot = calcEstimatedTotalShot(mold);
+    // メンテ間ショット数は常にリセット（簡易もOHも）
+    const newMaintShot = 0;
+    // 累計ショット数: OHは自動リセット、簡易はisResetで判断
+    const newTotalShot = (state.maintType === 'OH' || state.isReset) ? 0 : currentTotalShot;
     await sb('molds','PATCH',{
-      current_shot: newShot,
-      last_shot_updated_at: new Date().toISOString(),
+      maint_shot: newMaintShot,
+      current_shot: newTotalShot,
+      maint_shot_updated_at: now,
+      last_shot_updated_at: now,
       last_shot_updated_by: state.currentUser.id,
-      updated_at: new Date().toISOString()
+      updated_at: now
     }, `?id=eq.${mold.id}`);
     await sb('maintenance_logs','POST',{
       mold_id: mold.id,
       maintenance_type: state.maintType,
-      shot_at_maintenance: mold.current_shot,
-      is_reset: state.isReset,
+      shot_at_maintenance: currentMaintShot,
+      is_reset: state.maintType === 'OH' ? true : state.isReset,
       shift: state.currentShift,
       performed_by: state.currentUser.id,
     });
@@ -3140,6 +3186,18 @@ function setListSort(mode) {
 let realtimeTimer = null;
 
 function calcEstimatedShot(mold) {
+  // メンテ間ショット数ベースでリアルタイム計算
+  const baseShot = mold.maint_shot !== undefined ? (mold.maint_shot || 0) : (mold.current_shot || 0);
+  const lastUpdated = mold.maint_shot_updated_at || mold.last_shot_updated_at;
+  const cycleTime = mold.cycle_time_sec || 30;
+  if (!lastUpdated) return baseShot;
+  const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
+  const additionalShots = Math.floor(Math.max(0, elapsedSec) / cycleTime);
+  return baseShot + additionalShots;
+}
+
+function calcEstimatedTotalShot(mold) {
+  // 累計ショット数ベースでリアルタイム計算
   const baseShot = mold.current_shot || 0;
   const lastUpdated = mold.last_shot_updated_at;
   const cycleTime = mold.cycle_time_sec || 30;
