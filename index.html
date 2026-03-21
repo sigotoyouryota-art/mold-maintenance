@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.0.5">
+<meta name="app-version" content="1.0.6">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3612,58 +3612,88 @@ function setSchedView(view, el) {
 function buildSchedule(shift) {
   const [startH, endH] = SHIFT_HOURS[shift];
   const now = new Date();
+
+  // 前直も含めた広い範囲で計算（前日から翌日まで）
   const shiftStart = new Date(now);
   shiftStart.setHours(startH, 0, 0, 0);
   const shiftEnd = new Date(now);
   if (endH === 24) { shiftEnd.setDate(shiftEnd.getDate()+1); shiftEnd.setHours(0,0,0,0); }
   else shiftEnd.setHours(endH, 0, 0, 0);
 
-  // 残り時間でソート（要メンテ→注意→正常）
-  const sorted = [...state.molds].sort((a,b) => {
-    const aMin = calcEstimatedRemainingMin(a);
-    const bMin = calcEstimatedRemainingMin(b);
-    const aS = calcStatus(a); const bS = calcStatus(b);
-    const order = {danger:0, warning:1, normal:2};
-    if (order[aS] !== order[bS]) return order[aS] - order[bS];
-    return aMin - bMin;
-  });
-
-  // スケジュール割り当て
-  let cursor = new Date(Math.max(shiftStart.getTime(), now.getTime()));
-  const scheduled = [];
-
-  for (const mold of sorted) {
-    const remMin = calcEstimatedRemainingMin(mold);
-    const status = calcStatus(mold);
-    const dur = mold.simple_maint_time_min || 20;
-    const maintAt = new Date(now.getTime() + remMin * 60000);
-
-    // メンテ推奨時刻を計算
-    let schedStart;
-    if (status === 'danger') {
-      schedStart = new Date(cursor);
-    } else {
-      // 注意・正常はメンテ推奨時刻か現在カーソルの遅い方
-      const recommended = new Date(maintAt.getTime() - dur * 60000);
-      schedStart = new Date(Math.max(cursor.getTime(), Math.min(recommended.getTime(), shiftEnd.getTime() - dur*60000)));
-    }
-
-    const schedEnd = new Date(schedStart.getTime() + dur * 60000);
-
-    // 直の範囲内のみ
-    if (schedStart >= shiftEnd) continue;
-
-    scheduled.push({
-      mold,
-      status,
-      schedStart,
-      schedEnd: schedEnd > shiftEnd ? shiftEnd : schedEnd,
-      dur,
-      remMin,
+  // ① 各金型のデッドライン（ショット超過する前に開始しなければならない時刻）を計算
+  const moldsWithDeadline = state.molds
+    .filter(m => calcStatus(m) !== 'normal' || calcEstimatedRemainingMin(m) < (endH - startH) * 60)
+    .map(mold => {
+      const remMin = calcEstimatedRemainingMin(mold);
+      const dur = mold.simple_maint_time_min || 20;
+      const status = calcStatus(mold);
+      // デッドライン = 今から残り時間後（ショット超過の瞬間）- 所要時間
+      const deadlineMs = now.getTime() + remMin * 60000 - dur * 60000;
+      const deadline = new Date(deadlineMs);
+      return { mold, remMin, dur, status, deadline, deadlineMs };
+    })
+    // デッドラインの早い順に並べる（緊急度順）
+    .sort((a, b) => {
+      // dangerは最優先
+      const order = { danger: 0, warning: 1, normal: 2 };
+      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+      return a.deadlineMs - b.deadlineMs;
     });
 
-    cursor = new Date(schedEnd.getTime());
-    if (cursor >= shiftEnd) break;
+  if (!moldsWithDeadline.length) return { scheduled: [], shiftStart, shiftEnd };
+
+  // ② デッドライン逆算アルゴリズム
+  // 最後の金型から逆算してスタート時刻を確定
+  const n = moldsWithDeadline.length;
+  const schedTimes = new Array(n);
+
+  // 最後の金型：ギリギリ（デッドライン）に開始
+  schedTimes[n-1] = {
+    start: new Date(moldsWithDeadline[n-1].deadlineMs),
+    end: new Date(moldsWithDeadline[n-1].deadlineMs + moldsWithDeadline[n-1].dur * 60000)
+  };
+
+  // 後ろから前へ逆算
+  for (let i = n - 2; i >= 0; i--) {
+    const nextStart = schedTimes[i+1].start;
+    const myDur = moldsWithDeadline[i].dur;
+    const myDeadline = moldsWithDeadline[i].deadlineMs;
+
+    // 希望開始時刻（ギリギリ）
+    const idealStart = myDeadline;
+    // 次の金型の開始前に終わらせる必要がある
+    const mustEndBy = nextStart.getTime();
+    const mustStartBy = mustEndBy - myDur * 60000;
+
+    // 実際の開始 = 希望とmustStartByの早い方（前倒しが必要なら前倒し）
+    const actualStart = Math.min(idealStart, mustStartBy);
+    schedTimes[i] = {
+      start: new Date(actualStart),
+      end: new Date(actualStart + myDur * 60000)
+    };
+  }
+
+  // ③ この直の時間帯に含まれるものだけをフィルタ
+  // 直の開始・終了をまたぐものも含む（前直の末尾 or 次直の先頭）
+  const scheduled = [];
+  for (let i = 0; i < n; i++) {
+    const { mold, dur, status, remMin } = moldsWithDeadline[i];
+    const { start, end } = schedTimes[i];
+
+    // この直の時間帯と重なるものを表示
+    // （直の開始前に終わるもの・直の終了後に始まるものは除外）
+    if (end <= shiftStart || start >= shiftEnd) continue;
+
+    // 直の範囲でクリップ
+    const clippedStart = new Date(Math.max(start.getTime(), shiftStart.getTime()));
+    const clippedEnd = new Date(Math.min(end.getTime(), shiftEnd.getTime()));
+
+    scheduled.push({
+      mold, status, dur, remMin,
+      schedStart: clippedStart,
+      schedEnd: clippedEnd,
+      isOverdue: start < now && status === 'danger',
+    });
   }
 
   return { scheduled, shiftStart, shiftEnd };
@@ -4098,7 +4128,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.0.5';
+const CURRENT_VERSION = '1.0.6';
 
 async function checkForUpdate() {
   try {
