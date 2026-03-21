@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.0.7">
+<meta name="app-version" content="1.0.8">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3620,86 +3620,92 @@ function buildSchedule(shift) {
   const [startH, endH] = SHIFT_HOURS[shift];
   const now = new Date();
 
-  // 前直も含めた広い範囲で計算（前日から翌日まで）
+  // 直の開始・終了時刻
   const shiftStart = new Date(now);
   shiftStart.setHours(startH, 0, 0, 0);
   const shiftEnd = new Date(now);
-  if (endH === 24) { shiftEnd.setDate(shiftEnd.getDate()+1); shiftEnd.setHours(0,0,0,0); }
-  else shiftEnd.setHours(endH, 0, 0, 0);
+  if (endH === 24) {
+    shiftEnd.setDate(shiftEnd.getDate() + 1);
+    shiftEnd.setHours(0, 0, 0, 0);
+  } else {
+    shiftEnd.setHours(endH, 0, 0, 0);
+  }
 
-  // ① 各金型のデッドライン計算（全金型対象）
+  // 3Sなど日付をまたぐ直の処理
+  if (shiftEnd <= shiftStart) {
+    shiftEnd.setDate(shiftEnd.getDate() + 1);
+  }
+
   const shiftDurMin = (shiftEnd - shiftStart) / 60000;
-  const moldsWithDeadline = state.molds
-    .map(mold => {
-      const remMin = calcEstimatedRemainingMin(mold);
-      const dur = mold.simple_maint_time_min || 20;
-      const status = calcStatus(mold);
-      // デッドライン = ショット超過する直前に開始しなければならない時刻
-      const deadlineMs = now.getTime() + remMin * 60000 - dur * 60000;
-      return { mold, remMin, dur, status, deadline: new Date(deadlineMs), deadlineMs };
+
+  // ① 全金型のデッドライン計算
+  const moldsWithDeadline = state.molds.map(mold => {
+    const remMin = calcEstimatedRemainingMin(mold);
+    const dur = mold.simple_maint_time_min || 20;
+    const status = calcStatus(mold);
+    // デッドライン = 今から残り時間後 - 所要時間（この時刻までに開始しないとショット超過）
+    const deadlineMs = now.getTime() + remMin * 60000 - dur * 60000;
+    return { mold, remMin, dur, status, deadlineMs };
+  });
+
+  // ② この直の範囲内にデッドラインが来る金型を抽出
+  // 「直の開始から終了まで」の間にデッドラインがある金型
+  // また既に要メンテ（deadline < now）のものも含める
+  const targets = moldsWithDeadline
+    .filter(({ deadlineMs, status }) => {
+      // 要メンテは常に含める
+      if (status === 'danger') return true;
+      // デッドラインが直の終了より前なら対象
+      return deadlineMs < shiftEnd.getTime();
     })
-    // この直の終了時刻までにメンテが必要な金型のみ対象
-    .filter(({ deadlineMs }) => deadlineMs < shiftEnd.getTime())
-    // デッドラインの早い順に並べる
     .sort((a, b) => {
       const order = { danger: 0, warning: 1, normal: 2 };
       if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
       return a.deadlineMs - b.deadlineMs;
     });
 
-  if (!moldsWithDeadline.length) return { scheduled: [], shiftStart, shiftEnd };
+  if (!targets.length) return { scheduled: [], shiftStart, shiftEnd };
 
-  // ② デッドライン逆算アルゴリズム
-  // 最後の金型から逆算してスタート時刻を確定
-  const n = moldsWithDeadline.length;
+  // ③ 後ろから逆算してスタート時刻を確定（重複回避）
+  const n = targets.length;
   const schedTimes = new Array(n);
 
-  // 最後の金型：ギリギリ（デッドライン）に開始
+  // 最後の金型：ギリギリ開始
+  const lastDeadline = targets[n-1].deadlineMs;
   schedTimes[n-1] = {
-    start: new Date(moldsWithDeadline[n-1].deadlineMs),
-    end: new Date(moldsWithDeadline[n-1].deadlineMs + moldsWithDeadline[n-1].dur * 60000)
+    start: new Date(lastDeadline),
+    end: new Date(lastDeadline + targets[n-1].dur * 60000)
   };
 
   // 後ろから前へ逆算
   for (let i = n - 2; i >= 0; i--) {
-    const nextStart = schedTimes[i+1].start;
-    const myDur = moldsWithDeadline[i].dur;
-    const myDeadline = moldsWithDeadline[i].deadlineMs;
-
-    // 希望開始時刻（ギリギリ）
-    const idealStart = myDeadline;
-    // 次の金型の開始前に終わらせる必要がある
-    const mustEndBy = nextStart.getTime();
-    const mustStartBy = mustEndBy - myDur * 60000;
-
-    // 実際の開始 = 希望とmustStartByの早い方（前倒しが必要なら前倒し）
-    const actualStart = Math.min(idealStart, mustStartBy);
+    const nextStart = schedTimes[i + 1].start.getTime();
+    const myDur = targets[i].dur * 60000;
+    const myDeadline = targets[i].deadlineMs;
+    // 前の金型が終わる前に自分が終わる必要 → 前の金型の開始 - 自分の所要時間
+    const mustStartBy = nextStart - myDur;
+    // 希望はギリギリ（deadline）、でもかぶるなら前倒し
+    const actualStart = Math.min(myDeadline, mustStartBy);
     schedTimes[i] = {
       start: new Date(actualStart),
-      end: new Date(actualStart + myDur * 60000)
+      end: new Date(actualStart + myDur)
     };
   }
 
-  // ③ この直の時間帯に含まれるものだけをフィルタ
-  // 直の開始・終了をまたぐものも含む（前直の末尾 or 次直の先頭）
+  // ④ 直の時間帯と重なるものをスケジュールとして返す
   const scheduled = [];
   for (let i = 0; i < n; i++) {
-    const { mold, dur, status, remMin } = moldsWithDeadline[i];
+    const { mold, dur, status, remMin } = targets[i];
     const { start, end } = schedTimes[i];
 
-    // この直の時間帯と重なるものを表示
-    // （直の開始前に終わるもの・直の終了後に始まるものは除外）
-    if (end <= shiftStart || start >= shiftEnd) continue;
-
-    // 直の範囲でクリップ
-    const clippedStart = new Date(Math.max(start.getTime(), shiftStart.getTime()));
-    const clippedEnd = new Date(Math.min(end.getTime(), shiftEnd.getTime()));
+    // 直と重なっていれば表示（直をまたぐものもクリップして表示）
+    if (end.getTime() <= shiftStart.getTime()) continue;
+    if (start.getTime() >= shiftEnd.getTime()) continue;
 
     scheduled.push({
       mold, status, dur, remMin,
-      schedStart: clippedStart,
-      schedEnd: clippedEnd,
-      isOverdue: start < now && status === 'danger',
+      schedStart: new Date(Math.max(start.getTime(), shiftStart.getTime())),
+      schedEnd: new Date(Math.min(end.getTime(), shiftEnd.getTime())),
     });
   }
 
@@ -3716,6 +3722,8 @@ function renderScheduleBody() {
   if (!state.molds.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
 
   const { scheduled, shiftStart, shiftEnd } = buildSchedule(scheduleShift);
+
+
   const dangerCount = scheduled.filter(s=>s.status==='danger').length;
   const warnCount = scheduled.filter(s=>s.status==='warning').length;
   const totalMin = (shiftEnd - shiftStart) / 60000;
@@ -4130,7 +4138,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.0.7';
+const CURRENT_VERSION = '1.0.8';
 
 async function checkForUpdate() {
   try {
