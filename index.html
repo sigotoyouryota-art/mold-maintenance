@@ -688,7 +688,7 @@ const T = {
     history:'メンテ履歴', dandori:'段取り設定', master:'マスタ設定', logout:'ログアウト',
     settings:'設定',
     allLine:'全ライン', lineA:'Aライン', lineB:'Bライン', lineC:'Cライン',
-    totalMolds:'管理金型数', needMaint:'要メンテ', caution:'注意', normal:'正常',
+    totalMolds:'成形中金型数', needMaint:'要メンテ', caution:'注意', normal:'正常',
     machineNo:'機番', partName:'品名', partNo:'品番', type:'分類', line:'ライン',
     progress:'進捗', remainShot:'残りshot', remainTime:'残り時間', pct:'%', status:'ステータス',
     shotInput:'ショット数入力', update:'ショットを更新する', cancel:'キャンセル',
@@ -764,7 +764,7 @@ const T = {
     history:'Lịch sử BT', dandori:'Cài đặt đổi khuôn', master:'Cài đặt master', logout:'Đăng xuất',
     settings:'Cài đặt',
     allLine:'Tất cả', lineA:'Dây A', lineB:'Dây B', lineC:'Dây C',
-    totalMolds:'Tổng khuôn', needMaint:'Cần BT', caution:'Cảnh báo', normal:'Bình thường',
+    totalMolds:'Khuôn đang SX', needMaint:'Cần BT', caution:'Cảnh báo', normal:'Bình thường',
     machineNo:'Máy', partName:'Tên', partNo:'Mã', type:'Loại', line:'Dây',
     progress:'Tiến độ', remainShot:'Shot còn lại', remainTime:'Thời gian', pct:'%', status:'Trạng thái',
     shotInput:'Nhập số shot', update:'Cập nhật shot', cancel:'Hủy',
@@ -840,7 +840,7 @@ const T = {
     history:'Maint. history', dandori:'Setup config', master:'Master settings', logout:'Logout',
     settings:'Settings',
     allLine:'All lines', lineA:'Line A', lineB:'Line B', lineC:'Line C',
-    totalMolds:'Total molds', needMaint:'Needs maint.', caution:'Warning', normal:'Normal',
+    totalMolds:'Active molds', needMaint:'Needs maint.', caution:'Warning', normal:'Normal',
     machineNo:'Machine', partName:'Name', partNo:'Part No.', type:'Type', line:'Line',
     progress:'Progress', remainShot:'Remaining', remainTime:'Time left', pct:'%', status:'Status',
     shotInput:'Shot count input', update:'Update shot', cancel:'Cancel',
@@ -1187,6 +1187,9 @@ async function renderDashboard(el) {
   const danger = state.molds.filter(m=>calcStatus(m)==='danger').length;
   const warning = state.molds.filter(m=>calcStatus(m)==='warning').length;
   const normal = state.molds.filter(m=>calcStatus(m)==='normal').length;
+  // 成形中（段取り設定済み）金型数
+  const activeMoldCount = activeMoldIds.size || state.molds.length;
+  const activeCount = activeMoldIds ? activeMoldIds.size : 0;
   const activeCount = activeMoldIds.size;
   el.innerHTML = `
   <div class="kpi-row">
@@ -1525,35 +1528,109 @@ async function loadHistory() {
     if (state.histFilter === 'OH') query += '&maintenance_type=eq.OH';
     else if (state.histFilter === 'simple') query += '&maintenance_type=eq.simple';
     const logs = await sb('maintenance_logs', 'GET', null, query);
-    if (!logs.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
-    el.innerHTML = logs.map(log => {
+
+    const filtered = (logs||[]).filter(log => {
+      if (['all','OH','simple'].includes(state.histFilter)) return true;
+      return (log.machines?.lines?.name||'-') === state.histFilter;
+    });
+
+    if (!filtered.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
+
+    const getRow = (log) => {
       const isOH = log.maintenance_type === 'OH';
       const lineName = log.machines?.lines?.name || '-';
-      const matchLine = state.histFilter !== 'all' && state.histFilter !== 'OH' && state.histFilter !== 'simple';
-      if (matchLine && lineName !== state.histFilter) return '';
+      // 機番取得：JOINが取れない場合はstate.moldsから補完
+      const moldState = state.molds.find(m=>m.id===log.mold_id);
+      const machineNo = log.machines?.machine_no || moldState?.machine_no || '';
+      const machineNoDisp = machineNo ? machineNo : '-';
       const dt = new Date(log.performed_at);
       const dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-      return `<div class="hist-card ${isOH?'':'simple'}">
-        <div class="hist-row1">#${log.machines?.machine_no||'?'}　${log.molds?.part_name||'-'}　${lineName}</div>
+      const shot = fmtNum(log.maint_shot_at_maintenance||log.shot_at_maintenance||0);
+      const sel = histSelectedIds.has(log.id);
+      const chkStyle = `width:18px;height:18px;border-radius:4px;border:2px solid ${sel?'var(--info-text)':'var(--border2)'};background:${sel?'var(--info-bg)':'transparent'};display:flex;align-items:center;justify-content:center`;
+      const chkInner = sel ? '<span style="font-size:10px;color:var(--info-text);font-weight:700">✓</span>' : '';
+      return { isOH, lineName, machineNo, dateStr, timeStr, shot, sel, chkStyle, chkInner };
+    };
+
+    // PC テーブル
+    const tableHTML = `<div class="table-wrap"><table>
+      <tr>${histEditMode?'<th></th>':''}<th>日時</th><th>機番</th><th>品名</th><th>品番</th><th>ライン</th><th>種別</th><th>実施shot</th><th>作業者/直</th></tr>
+      ${filtered.map(log => {
+        const r = getRow(log);
+        return `<tr data-lid="${log.id}" style="${r.sel?'background:var(--info-bg);':''}" onclick="${histEditMode?`histToggle('${log.id}')`:''}" ${histEditMode?'style="cursor:pointer"':''}>
+          ${histEditMode?`<td><div style="${r.chkStyle}">${r.chkInner}</div></td>`:''}
+          <td style="font-size:11px">${r.dateStr} ${r.timeStr}</td>
+          <td style="font-weight:600">#${r.machineNo}</td>
+          <td>${log.molds?.part_name||'-'}</td>
+          <td style="font-size:11px;color:var(--text3)">${log.molds?.part_no||'-'}</td>
+          <td>${r.lineName}</td>
+          <td><span class="hist-tag ${r.isOH?'hist-tag-oh':'hist-tag-simple'}">${r.isOH?'OH':'簡易'}</span></td>
+          <td>${r.shot} shot</td>
+          <td style="font-size:11px;color:var(--text3)">${log.users?.name||'-'} / ${log.shift||'-'}</td>
+        </tr>`;
+      }).join('')}
+    </table></div>`;
+
+    // スマホ カード
+    const cardsHTML = `<div style="display:flex;flex-direction:column;gap:5px">${filtered.map(log => {
+      const r = getRow(log);
+      const card = `<div class="hist-card ${r.isOH?'':'simple'}" style="flex:1">
+        <div class="hist-row1">#${r.machineNo}　${log.molds?.part_name||'-'}　${r.lineName}</div>
         <div class="hist-row2">
-          <div style="display:flex;gap:4px">
-            <span class="hist-tag ${isOH?'hist-tag-oh':'hist-tag-simple'}">${isOH?'OH':'簡易'}</span>
+          <div style="display:flex;gap:3px">
+            <span class="hist-tag ${r.isOH?'hist-tag-oh':'hist-tag-simple'}">${r.isOH?'OH':'簡易'}</span>
             <span class="hist-tag ${log.is_reset?'hist-tag-reset':'hist-tag-keep'}">${log.is_reset?'リセット':'継続'}</span>
           </div>
-          <span style="font-size:10px;color:var(--text3)">${fmtNum(log.shot_at_maintenance)} → ${log.is_reset?'0':fmtNum(log.shot_at_maintenance)} shot</span>
+          <span style="font-size:9px;color:var(--text3)">${r.shot} shot</span>
         </div>
         <div class="hist-row3">
           <span style="font-size:10px;color:var(--text3)">${log.molds?.part_no||'-'} / ${log.molds?.mold_categories?.name||'-'}</span>
-          <span style="font-size:10px;color:var(--text4)">${log.users?.name||'-'} / ${log.shift}</span>
+          <span style="font-size:10px;color:var(--text4)">${log.users?.name||'-'} / ${log.shift||'-'}</span>
         </div>
-        <div class="hist-row4">${dateStr}</div>
+        <div class="hist-row4">${r.dateStr} ${r.timeStr}</div>
       </div>`;
-    }).join('');
+
+      if (histEditMode) {
+        return `<div style="display:flex;gap:8px;align-items:center" onclick="histToggle('${log.id}')">
+          <div data-chk="${log.id}" style="${r.chkStyle};flex-shrink:0;cursor:pointer">${r.chkInner}</div>
+          ${card}
+        </div>`;
+      }
+      return card;
+    }).join('')}</div>`;
+
+    el.innerHTML = tableHTML + cardsHTML;
+    if (histEditMode) updateHistDeleteBar();
   } catch(e) {
-    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger-text)">読み込みエラー</div>`;
+    console.error('loadHistory:', e);
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger-text)">読み込みエラー: ${e.message}</div>`;
   }
 }
+
+function histToggle(id) {
+  const sel = histSelectedIds.has(id);
+  if (sel) histSelectedIds.delete(id); else histSelectedIds.add(id);
+  const now = histSelectedIds.has(id);
+  // テーブル行更新
+  document.querySelectorAll(`tr[data-lid="${id}"]`).forEach(tr => {
+    tr.style.background = now ? 'var(--info-bg)' : '';
+    const chk = tr.querySelector('td div');
+    if (chk) {
+      chk.style.borderColor = now ? 'var(--info-text)' : 'var(--border2)';
+      chk.style.background = now ? 'var(--info-bg)' : 'transparent';
+      chk.innerHTML = now ? '<span style="font-size:10px;color:var(--info-text);font-weight:700">✓</span>' : '';
+    }
+  });
+  // カードチェック更新
+  document.querySelectorAll(`[data-chk="${id}"]`).forEach(chk => {
+    chk.style.borderColor = now ? 'var(--info-text)' : 'var(--border2)';
+    chk.style.background = now ? 'var(--info-bg)' : 'transparent';
+    chk.innerHTML = now ? '<span style="font-size:12px;color:var(--info-text);font-weight:700;line-height:1">✓</span>' : '';
+  });
+  updateHistDeleteBar();
+}
+
 
 function setHistFilter(filter, el) {
   state.histFilter = filter;
@@ -2089,6 +2166,7 @@ async function executeMaintenance() {
     }, `?id=eq.${mold.id}`);
     await sb('maintenance_logs','POST',{
       mold_id: mold.id,
+      machine_id: mold.machine_id || null,
       maintenance_type: state.maintType,
       shot_at_maintenance: currentTotalShot,
       maint_shot_at_maintenance: currentMaintShot,
@@ -3498,8 +3576,8 @@ function renderSchedule(el) {
         ${['1S','2S','3S'].map(s=>`<button class="seg-btn ${s===scheduleShift?'active':''}" onclick="setSchedShift('${s}',this)" style="padding:5px 14px;font-size:11px">${s}</button>`).join('')}
       </div>
       <div style="display:flex;gap:2px;background:var(--bg3);border-radius:6px;padding:3px" id="sched-view-seg">
-        <button class="seg-btn ${scheduleView==='card'?'active':''}" onclick="setSchedView('card',this)" style="padding:5px 10px;font-size:11px">📋 ${t('viewCard')}</button>
-        <button class="seg-btn ${scheduleView==='timeline'?'active':''}" onclick="setSchedView('timeline',this)" style="padding:5px 10px;font-size:11px">📊 ${t('viewTimeline')}</button>
+        <button class="seg-btn ${scheduleView==='card'?'active':''}" onclick="setSchedView('card',this)" style="padding:4px 8px;font-size:10px" title="${t('viewCard')}">📋</button>
+        <button class="seg-btn ${scheduleView==='timeline'?'active':''}" onclick="setSchedView('timeline',this)" style="padding:4px 8px;font-size:10px" title="${t('viewTimeline')}">📊</button>
       </div>
     </div>
   </div>
@@ -3638,8 +3716,8 @@ function renderScheduleBody() {
     }).join('') + (scheduled.length===0?`<div style="text-align:center;padding:40px;color:var(--text3)">この直にメンテ予定はありません</div>`:'');
   } else {
     // タイムライン表示
-    const timelineHTML = `<div style="overflow-x:auto">
-      <div style="min-width:400px">
+    const timelineHTML = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <div style="min-width:500px;padding-right:16px">
         <div style="display:flex;margin-bottom:6px;padding-left:80px">
           ${[0,1,2,3,4,5,6,7].map(i=>{
             const h = (shiftStart.getHours() + i) % 24;
@@ -3665,11 +3743,11 @@ function renderScheduleBody() {
               <div style="font-size:10px;font-weight:600;color:var(--text)">#${mold.machine_no||'?'}　${mold.part_name}</div>
               <div style="font-size:9px;color:var(--text3)">${mold.category_name||'-'}</div>
             </div>
-            <div style="flex:1;height:26px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden">
+            <div style="flex:1;height:26px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden;min-width:0">
               <div style="position:absolute;left:0;top:0;width:${runWidth}%;height:100%;background:${status==='danger'?'#7f1d1d60':status==='warning'?'#78350f50':'#1e335860'};border-right:1px solid ${color}"></div>
-              ${maintOffset!==null?`<div style="position:absolute;left:${maintOffset}%;top:2px;width:${maintWidth}%;height:22px;background:var(--accent);border-radius:3px;display:flex;align-items:center;justify-content:center"><span style="font-size:8px;font-weight:600;color:#1c1917;white-space:nowrap">${dur}分</span></div>`:''}
+              ${maintOffset!==null?`<div style="position:absolute;left:${maintOffset}%;top:2px;width:${Math.min(maintWidth, 100-maintOffset)}%;height:22px;background:var(--accent);border-radius:3px;display:flex;align-items:center;justify-content:center;overflow:hidden"><span style="font-size:8px;font-weight:600;color:#1c1917;white-space:nowrap;padding:0 3px">${dur}分</span></div>`:''}
               <div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:1.5px;background:#ef4444;opacity:0.8"></div>
-              <div style="position:absolute;left:3px;top:50%;transform:translateY(-50%);font-size:8px;color:${color};font-weight:500">${pct}%　残${fmtTime(remMin)}</div>
+              <div style="position:absolute;left:3px;top:50%;transform:translateY(-50%);font-size:8px;color:${color};font-weight:500;white-space:nowrap;overflow:hidden;max-width:calc(${maintOffset!==null?maintOffset:95}% - 6px)">${pct}%　残${fmtTime(remMin)}</div>
             </div>
           </div>`;
         }).join('')}
