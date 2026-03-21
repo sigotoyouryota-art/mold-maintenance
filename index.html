@@ -1486,20 +1486,7 @@ function toggleHistEditMode() {
   if (el) renderHistory(el);
 }
 
-function toggleHistSelect(id, el) {
-  if (histSelectedIds.has(id)) {
-    histSelectedIds.delete(id);
-    el.style.background = 'transparent';
-    el.style.borderColor = 'var(--border2)';
-    el.innerHTML = '';
-  } else {
-    histSelectedIds.add(id);
-    el.style.background = 'var(--info-bg)';
-    el.style.borderColor = 'var(--info-text)';
-    el.innerHTML = '<span style="font-size:10px;color:var(--info-text);font-weight:700">✓</span>';
-  }
-  updateHistDeleteBar();
-}
+
 
 function updateHistDeleteBar() {
   const bar = document.getElementById('hist-delete-bar');
