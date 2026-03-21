@@ -924,6 +924,8 @@ function toggleTheme() {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem('theme', state.theme);
   applyTheme();
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = state.theme === 'dark' ? '☾' : '☀';
 }
 
 // ===== 言語 =====
