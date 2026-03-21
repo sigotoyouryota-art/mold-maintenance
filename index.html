@@ -1593,7 +1593,7 @@ function renderMasterMolds(el) {
     </div>
   </div>
   <div class="table-wrap"><table>
-    <tr><th>品番</th><th>品名</th><th>分類</th><th>機番</th><th>ライン</th><th>メンテ間隔</th><th>サイクル</th><th>アラート設定</th><th>操作</th></tr>
+    <tr><th>品番</th><th>品名</th><th>分類</th><th>機番</th><th>ライン</th><th>メンテ間隔</th><th>サイクル</th><th>簡易所要時間</th><th>OH所要時間</th><th>アラート設定</th><th>操作</th></tr>
     ${state.molds.map(m=>`<tr>
       <td style="font-weight:600;color:var(--text)">${m.part_no}</td>
       <td>${m.part_name}</td>
@@ -1602,6 +1602,8 @@ function renderMasterMolds(el) {
       <td>${m.line_name||'-'}</td>
       <td>${fmtNum(m.maintenance_interval)} shot</td>
       <td>${m.cycle_time_sec}秒</td>
+      <td style="color:var(--accent);font-weight:500">${m.simple_maint_time_min||20}分</td>
+      <td style="color:var(--text3)">${m.oh_maint_time_min||60}分</td>
       <td style="font-size:10px;color:var(--text3)">${fmtNum(m.alert_shot_danger)}shot前</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-secondary btn-sm" onclick="editMold('${m.id}')">編集</button>
@@ -2507,23 +2509,29 @@ async function importMoldRow(row) {
     updated_at: new Date().toISOString(),
   };
 
-  // 品番+型番の組み合わせでユニーク判定（型番なしの場合は品番のみ）
+  // 品番+型番+機番 の3つでユニーク判定
   const modelNo = (row['型番']||row['model_no']||'').toString().trim();
-  let existing;
-  if (modelNo) {
-    // 型番あり：品番+型番で一致するものを探す
-    existing = state.molds.find(m=>
-      String(m.part_no)===String(partNo) &&
-      String(m.model_no||'')===String(modelNo)
-    );
-  } else {
-    // 型番なし：品番のみで一致
-    existing = state.molds.find(m=>
-      String(m.part_no)===String(partNo) &&
-      !m.model_no
-    );
-  }
   if (modelNo) data.model_no = modelNo;
+
+  // 機番マッチ（先頭0対応）
+  const machNoStr = String(machineNo||'');
+  const machNoNorm = machNoStr.replace(/^0+/,'')||'0';
+
+  let existing;
+  existing = state.molds.find(m => {
+    // 品番一致
+    if (String(m.part_no) !== String(partNo)) return false;
+    // 型番一致（両方空はOK、片方だけ空はNG）
+    const mModelNo = String(m.model_no||'');
+    if (mModelNo !== modelNo) return false;
+    // 機番一致（先頭0考慮）
+    const mMachineNo = String(machine?.machine_no||'');
+    const mMachineNorm = mMachineNo.replace(/^0+/,'')||'0';
+    const mId = m.machine_id || m.machine_no;
+    // machine_idかmachine_noどちらかで一致
+    if (machine?.id && m.machine_id) return m.machine_id === machine.id;
+    return mMachineNorm === machNoNorm;
+  });
 
   if (existing) {
     await sb('molds','PATCH',data,`?id=eq.${existing.id}`);
