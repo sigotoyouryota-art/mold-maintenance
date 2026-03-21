@@ -1413,9 +1413,10 @@ function renderMasterMachines(el) {
   el.innerHTML = `
   <div class="toolbar">
     <div></div>
-    <div style="display:flex;gap:6px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn btn-secondary" onclick="exportMaster('machines')">↓ CSVエクスポート</button>
       <button class="btn btn-secondary" onclick="openImportModal('machines')">↑ CSVインポート</button>
+      <button class="btn btn-secondary" onclick="openBulkMachineModal()">＋＋ 一括追加</button>
       <button class="btn btn-primary" onclick="openAddMachineModal()">＋ 機械追加</button>
     </div>
   </div>
@@ -1785,7 +1786,7 @@ async function saveMold() {
     }
     closeModal('modal-mold-edit');
     await loadMolds();
-    showSection('master');
+    showMasterTabByIndex(0);
   } catch(e) {
     errEl.textContent = 'エラー: ' + e.message;
     errEl.style.display = 'block';
@@ -1802,7 +1803,7 @@ async function deleteMold(id) {
     await sb('molds','PATCH',{is_active:false,updated_at:new Date().toISOString()},`?id=eq.${id}`);
     showToast('削除しました', 'success');
     await loadMolds();
-    showSection('master');
+    showMasterTabByIndex(0);
   } catch(e) { showToast('削除エラー', 'error'); }
 }
 
@@ -1871,7 +1872,7 @@ async function saveMachine() {
     }
     closeModal('modal-machine-edit');
     await loadMachines();
-    showSection('master');
+    showMasterTabByIndex(1);
   } catch(e) {
     errEl.textContent = 'エラー: ' + e.message;
     errEl.style.display = 'block';
@@ -1887,7 +1888,7 @@ async function deleteMachine(id) {
     await sb('machines','DELETE',null,`?id=eq.${id}`);
     showToast('削除しました', 'success');
     await loadMachines();
-    showSection('master');
+    showMasterTabByIndex(1);
   } catch(e) { showToast('削除エラー（この機番に紐づく金型があります）', 'error'); }
 }
 
@@ -1950,7 +1951,7 @@ async function saveUser() {
     }
     closeModal('modal-user-edit');
     state.users = await sb('users','GET',null,'?is_active=eq.true&order=name');
-    showSection('master');
+    showMasterTabByIndex(3);
   } catch(e) {
     errEl.textContent = 'エラー: ' + e.message;
     errEl.style.display = 'block';
@@ -1966,7 +1967,7 @@ async function deleteUser(id) {
     await sb('users','PATCH',{is_active:false},`?id=eq.${id}`);
     showToast('削除しました', 'success');
     state.users = await sb('users','GET',null,'?order=name');
-    showSection('master');
+    showMasterTabByIndex(3);
   } catch(e) { showToast('削除エラー', 'error'); }
 }
 
@@ -1998,7 +1999,7 @@ async function saveAlertSettings() {
     showToast('アラート設定を更新しました', 'success');
     closeModal('modal-alert-edit');
     await loadMolds();
-    showSection('master');
+    showMasterTabByIndex(4);
   } catch(e) {
     errEl.textContent = 'エラー: ' + e.message;
     errEl.style.display = 'block';
@@ -2013,7 +2014,7 @@ async function openAddLineModal() {
     await sb('lines','POST',{name:name.trim(), sort_order:state.lines.length+1});
     showToast('ラインを追加しました', 'success');
     await loadLines();
-    showSection('master');
+    showMasterTabByIndex(2);
   } catch(e) { showToast('追加エラー（同名のラインが存在する可能性があります）', 'error'); }
 }
 
@@ -2026,7 +2027,7 @@ async function editLine(id) {
     await sb('lines','PATCH',{name:name.trim()},`?id=eq.${id}`);
     showToast('ライン名を更新しました', 'success');
     await loadLines();
-    showSection('master');
+    showMasterTabByIndex(2);
   } catch(e) { showToast('更新エラー', 'error'); }
 }
 
@@ -2151,7 +2152,8 @@ async function executeImport() {
     showToast(`インポート完了 ${success}件成功${error?` / ${error}件エラー`:''}`, error?'':'success');
     await Promise.all([loadMolds(), loadLines(), loadMachines()]);
     state.users = await sb('users','GET',null,'?is_active=eq.true&order=name');
-    showSection('master');
+    const tabIdx = {molds:0, machines:1, users:3}[state.importType] || 0;
+    showMasterTabByIndex(tabIdx);
   } catch(e) {
     showToast('インポートエラー: '+e.message, 'error');
   } finally {
@@ -2614,6 +2616,118 @@ function copyURL() {
   });
 }
 
+
+// ===== 機械一括追加 =====
+function openBulkMachineModal() {
+  document.getElementById('bulk-machine-rows').innerHTML = '';
+  document.getElementById('bulk-machine-error').style.display = 'none';
+  // 初期5行
+  for (let i = 0; i < 5; i++) addBulkMachineRow();
+  openModal('modal-machine-bulk');
+}
+
+function addBulkMachineRow() {
+  const container = document.getElementById('bulk-machine-rows');
+  const lineOptions = state.lines.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:80px 1fr 80px 1fr;gap:4px;align-items:center';
+  row.className = 'bulk-machine-row';
+  row.innerHTML = `
+    <input type="text" class="form-control bulk-machine-no" placeholder="例) 4" style="padding:5px 8px;font-size:12px">
+    <select class="form-control bulk-machine-line" style="padding:5px 8px;font-size:12px">
+      <option value="">選択</option>
+      ${lineOptions}
+    </select>
+    <div style="display:flex;align-items:center;justify-content:center">
+      <div class="toggle-wrap bulk-dandori-toggle" onclick="this.classList.toggle('on')" style="cursor:pointer"><div class="toggle-dot"></div></div>
+    </div>
+    <input type="text" class="form-control bulk-machine-note" placeholder="備考（任意）" style="padding:5px 8px;font-size:12px">
+  `;
+  container.appendChild(row);
+}
+
+async function saveBulkMachines() {
+  const rows = document.querySelectorAll('.bulk-machine-row');
+  const errEl = document.getElementById('bulk-machine-error');
+  const btn = document.getElementById('bulk-machine-save-btn');
+
+  // 入力チェック
+  const validRows = [];
+  for (const row of rows) {
+    const no = row.querySelector('.bulk-machine-no').value.trim();
+    const lineName = row.querySelector('.bulk-machine-line').value;
+    if (!no && !lineName) continue; // 空行はスキップ
+    if (no && !lineName) {
+      errEl.textContent = `機番 ${no} のラインが選択されていません`;
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!no && lineName) {
+      errEl.textContent = 'ラインが選択されていますが機番が空です';
+      errEl.style.display = 'block';
+      return;
+    }
+    const isDandori = row.querySelector('.bulk-dandori-toggle').classList.contains('on');
+    const note = row.querySelector('.bulk-machine-note').value.trim();
+    const line = state.lines.find(l=>l.name===lineName);
+    validRows.push({ machine_no: no, line_id: line?.id||null, is_dandori: isDandori, note });
+  }
+
+  if (!validRows.length) {
+    errEl.textContent = '追加するデータがありません';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  errEl.style.display = 'none';
+  btn.textContent = '追加中...';
+  btn.style.opacity = '0.6';
+
+  let success = 0, updated = 0, error = 0;
+  for (const data of validRows) {
+    try {
+      const existing = state.machines.find(m=>m.machine_no===data.machine_no);
+      if (existing) {
+        await sb('machines','PATCH',data,`?id=eq.${existing.id}`);
+        updated++;
+      } else {
+        await sb('machines','POST',data);
+        success++;
+      }
+    } catch(e) { error++; }
+  }
+
+  closeModal('modal-machine-bulk');
+  await loadMachines();
+  showMasterTabByIndex(1);
+
+  let msg = '';
+  if (success) msg += `${success}件追加 `;
+  if (updated) msg += `${updated}件更新 `;
+  if (error) msg += `${error}件エラー`;
+  showToast(msg.trim(), error ? '' : 'success');
+
+  btn.textContent = '一括追加する';
+  btn.style.opacity = '1';
+}
+
+
+// ===== マスタタブ切替ヘルパー =====
+function showMasterTabByIndex(idx) {
+  showSection('master');
+  setTimeout(() => {
+    const tabs = document.querySelectorAll('.master-tab');
+    if (tabs[idx]) {
+      tabs.forEach(t => t.classList.remove('active'));
+      tabs[idx].classList.add('active');
+      const body = document.getElementById('master-body');
+      if (!body) return;
+      const renders = [renderMasterMolds, renderMasterMachines, renderMasterLines, renderMasterUsers, renderMasterAlerts];
+      if (renders[idx]) renders[idx](body);
+    }
+  }, 100);
+}
+
 // ===== 初期化 =====
 applyTheme();
 setLang(state.lang);
@@ -2840,6 +2954,35 @@ if (state.currentUser) {
     <div id="shortcut-guide-content"></div>
     <div style="margin-top:16px">
       <div class="btn btn-secondary" onclick="closeModal('modal-shortcut')" style="width:100%;text-align:center;padding:10px">閉じる</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 機械一括追加モーダル -->
+<div class="modal-overlay" id="modal-machine-bulk">
+  <div class="modal" style="max-width:500px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:600;color:var(--text)">機械を一括追加</div>
+      <div style="cursor:pointer;color:var(--text3);font-size:20px;line-height:1" onclick="closeModal('modal-machine-bulk')">×</div>
+    </div>
+    <div style="background:var(--info-bg);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--info-text)">
+      機番・ライン・段替えを1行ずつ入力してください。同じ機番が既にある場合は上書き更新されます。
+    </div>
+    <div style="display:grid;grid-template-columns:80px 1fr 80px 1fr;gap:6px;margin-bottom:6px;padding:0 2px">
+      <div style="font-size:10px;color:var(--text3);font-weight:500">★機番</div>
+      <div style="font-size:10px;color:var(--text3);font-weight:500">★ライン</div>
+      <div style="font-size:10px;color:var(--text3);font-weight:500">段替え</div>
+      <div style="font-size:10px;color:var(--text3);font-weight:500">備考</div>
+    </div>
+    <div id="bulk-machine-rows" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto"></div>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="addBulkMachineRow()" style="flex:1">＋ 行を追加</button>
+    </div>
+    <div id="bulk-machine-error" style="font-size:11px;color:var(--danger-text);margin-top:8px;display:none"></div>
+    <div class="modal-btns" style="margin-top:12px">
+      <div class="btn btn-secondary" onclick="closeModal('modal-machine-bulk')">キャンセル</div>
+      <div class="btn btn-primary" onclick="saveBulkMachines()" id="bulk-machine-save-btn">一括追加する</div>
     </div>
   </div>
 </div>
