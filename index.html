@@ -3627,21 +3627,21 @@ function buildSchedule(shift) {
   if (endH === 24) { shiftEnd.setDate(shiftEnd.getDate()+1); shiftEnd.setHours(0,0,0,0); }
   else shiftEnd.setHours(endH, 0, 0, 0);
 
-  // ① 各金型のデッドライン（ショット超過する前に開始しなければならない時刻）を計算
+  // ① 各金型のデッドライン計算（全金型対象）
+  const shiftDurMin = (shiftEnd - shiftStart) / 60000;
   const moldsWithDeadline = state.molds
-    .filter(m => calcStatus(m) !== 'normal' || calcEstimatedRemainingMin(m) < (endH - startH) * 60)
     .map(mold => {
       const remMin = calcEstimatedRemainingMin(mold);
       const dur = mold.simple_maint_time_min || 20;
       const status = calcStatus(mold);
-      // デッドライン = 今から残り時間後（ショット超過の瞬間）- 所要時間
+      // デッドライン = ショット超過する直前に開始しなければならない時刻
       const deadlineMs = now.getTime() + remMin * 60000 - dur * 60000;
-      const deadline = new Date(deadlineMs);
-      return { mold, remMin, dur, status, deadline, deadlineMs };
+      return { mold, remMin, dur, status, deadline: new Date(deadlineMs), deadlineMs };
     })
-    // デッドラインの早い順に並べる（緊急度順）
+    // この直の終了時刻までにメンテが必要な金型のみ対象
+    .filter(({ deadlineMs }) => deadlineMs < shiftEnd.getTime())
+    // デッドラインの早い順に並べる
     .sort((a, b) => {
-      // dangerは最優先
       const order = { danger: 0, warning: 1, normal: 2 };
       if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
       return a.deadlineMs - b.deadlineMs;
