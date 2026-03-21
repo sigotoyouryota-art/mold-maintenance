@@ -2050,7 +2050,7 @@ async function exportMaster(type) {
       filename = '金型マスタ.csv';
     } else if (type === 'machines') {
       data = state.machines.map(m => ({...m, line_name: state.lines.find(l=>l.id===m.line_id)?.name||''}));
-      headers = ['機番','ライン','段替え号機','備考'];
+      headers = ['機番','ライン','段替え号機(○)','備考'];
       filename = '機械マスタ.csv';
     } else if (type === 'users') {
       data = state.users;
@@ -2059,7 +2059,7 @@ async function exportMaster(type) {
     }
     const rows = {
       molds: data.map(m=>[m.part_no,m.part_name,m.model_no||'',m.category_name||'',m.machine_no||'',m.line_name||'',m.maintenance_interval,m.cycle_time_sec,m.alert_shot_danger,m.alert_shot_warning,m.alert_min_danger,m.alert_min_warning]),
-      machines: data.map(m=>[m.machine_no,m.line_name,m.is_dandori?'○':'','',m.note||'']),
+      machines: data.map(m=>[m.machine_no,m.line_name,m.is_dandori?'○':'',m.note||'']),
       users: data.map(u=>[u.name,u.role,u.is_active?'○':'']),
     };
     const csv = [headers, ...(rows[type]||[])].map(r=>r.map(v=>typeof v==='string'&&v.includes(',')?`"${v}"`:v).join(',')).join('\n');
@@ -2161,22 +2161,38 @@ async function executeImport() {
 }
 
 async function importMoldRow(row) {
-  const partNo = row['品番']||row['part_no']; if (!partNo) return;
-  const partName = row['品名']||row['part_name']; if (!partName) return;
-  const catName = row['分類']||row['category_name']||'';
-  const machineNo = row['機番']||row['machine_no']||'';
+  const partNo = (row['品番']||row['part_no']||'').toString().trim();
+  if (!partNo) return;
+  const partName = (row['品名']||row['part_name']||'').toString().trim();
+  if (!partName) return;
+
+  // 分類名取得（category_idの場合は逆引き）
+  let catName = row['分類']||row['category_name']||'';
+  if (!catName && row['category_id']) {
+    const cat = state.categories.find(c=>c.id===row['category_id']);
+    catName = cat?.name||'';
+  }
+  // 機番取得（machine_idの場合は逆引き）
+  let machineNo = (row['機番']||row['machine_no']||'').toString().trim();
+  if (!machineNo && row['machine_id']) {
+    const machine = state.machines.find(m=>m.id===row['machine_id']);
+    machineNo = machine?.machine_no||'';
+  }
+
   const cat = state.categories.find(c=>c.name===catName);
   const machine = state.machines.find(m=>m.machine_no===machineNo);
+
   const data = {
     part_no: partNo, part_name: partName,
-    model_no: row['型番']||row['model_no']||null,
-    category_id: cat?.id||null, machine_id: machine?.id||null,
+    model_no: (row['型番']||row['model_no']||'').toString().trim()||null,
+    category_id: cat?.id||row['category_id']||null,
+    machine_id: machine?.id||row['machine_id']||null,
     maintenance_interval: parseInt(row['メンテ間隔(shot)']||row['maintenance_interval'])||5000,
     cycle_time_sec: parseInt(row['サイクル(秒)']||row['cycle_time_sec'])||30,
-    alert_shot_danger: parseInt(row['要メンテ(shot前)'])||500,
-    alert_shot_warning: parseInt(row['注意(shot前)'])||1000,
-    alert_min_danger: parseInt(row['要メンテ(分前)'])||120,
-    alert_min_warning: parseInt(row['注意(分前)'])||480,
+    alert_shot_danger: parseInt(row['要メンテ(shot前)']||row['alert_shot_danger'])||500,
+    alert_shot_warning: parseInt(row['注意(shot前)']||row['alert_shot_warning'])||1000,
+    alert_min_danger: parseInt(row['要メンテ(分前)']||row['alert_min_danger'])||120,
+    alert_min_warning: parseInt(row['注意(分前)']||row['alert_min_warning'])||480,
     is_active: true, updated_at: new Date().toISOString(),
   };
   const existing = state.molds.find(m=>m.part_no===partNo);
@@ -2188,20 +2204,40 @@ async function importMoldRow(row) {
 }
 
 async function importMachineRow(row) {
-  const no = row['機番']||row['machine_no']; if (!no) return;
-  const lineName = row['ライン']||row['line_name']||'';
+  // 日本語・英語両方のヘッダーに対応
+  const no = (row['機番']||row['machine_no']||'').toString().trim();
+  if (!no) return;
+
+  // ライン名を取得（line_idの場合はlineから名前を逆引き）
+  let lineName = row['ライン']||row['line_name']||'';
+  // line_idがある場合はIDからライン名を取得
+  if (!lineName && row['line_id']) {
+    const line = state.lines.find(l=>l.id===row['line_id']);
+    lineName = line?.name||'';
+  }
   const line = state.lines.find(l=>l.name===lineName);
-  const isDandori = (row['段替え号機']||'').trim() === '○';
-  const data = { machine_no: no, line_id: line?.id||null, is_dandori: isDandori, note: row['備考']||'' };
+
+  // 段替え判定（○、true、1のいずれかに対応）
+  const dandoriVal = (row['段替え号機']||row['is_dandori']||'').toString().trim();
+  const isDandori = dandoriVal==='○' || dandoriVal==='true' || dandoriVal==='1';
+
+  const data = {
+    machine_no: no,
+    line_id: line?.id||null,
+    is_dandori: isDandori,
+    note: (row['備考']||row['note']||'').toString().trim()
+  };
   const existing = state.machines.find(m=>m.machine_no===no);
   if (existing) await sb('machines','PATCH',data,`?id=eq.${existing.id}`);
   else await sb('machines','POST',data);
 }
 
 async function importUserRow(row) {
-  const name = row['名前']||row['name']; if (!name) return;
-  const role = row['権限']||row['role']||'worker';
-  const isActive = (row['有効']||'○').trim() === '○';
+  const name = (row['名前']||row['name']||'').toString().trim();
+  if (!name) return;
+  const role = (row['権限']||row['role']||'worker').toString().trim();
+  const activeVal = (row['有効']||row['is_active']||'○').toString().trim();
+  const isActive = activeVal==='○' || activeVal==='true' || activeVal==='1';
   const data = { name, role: role==='admin'?'admin':'worker', is_active: isActive };
   const existing = state.users.find(u=>u.name===name);
   if (existing) await sb('users','PATCH',data,`?id=eq.${existing.id}`);
