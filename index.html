@@ -2301,20 +2301,34 @@ function parseImportCSV(text) {
   text = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines = text.trim().split('\n').filter(l=>l.trim());
   if (lines.length < 2) { document.getElementById('import-status').textContent = 'データが見つかりません'; return; }
-  const headers = lines[0].split(',').map(h=>h.trim().replace(/^[★]/, ''));
+
+  // タブ区切りかカンマ区切りかを自動判定
+  const firstLine = lines[0];
+  const tabCount = (firstLine.match(/\t/g)||[]).length;
+  const commaCount = (firstLine.match(/,/g)||[]).length;
+  const delimiter = tabCount > commaCount ? '\t' : ',';
+
+  const headers = lines[0].split(delimiter).map(h=>h.trim().replace(/^[★]/, '').replace(/^"|"$/g,''));
+
   importRows = lines.slice(1).map(line => {
-    // クォートで囲まれたカンマを含む値にも対応
-    const vals = [];
-    let cur = '', inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (c === '"') { inQ = !inQ; }
-      else if (c === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
-      else { cur += c; }
+    let vals = [];
+    if (delimiter === '\t') {
+      // タブ区切りはシンプルに分割
+      vals = line.split('\t').map(v=>v.trim().replace(/^"|"$/g,''));
+    } else {
+      // カンマ区切りはクォート対応
+      let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQ = !inQ; }
+        else if (c === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+        else { cur += c; }
+      }
+      vals.push(cur.trim());
+      vals = vals.map(v=>v.replace(/^"|"$/g,''));
     }
-    vals.push(cur.trim());
     const obj = {};
-    headers.forEach((h,i) => obj[h] = (vals[i]||'').replace(/^"|"$/g,''));
+    headers.forEach((h,i) => obj[h] = vals[i]||'');
     return obj;
   }).filter(r => Object.values(r).some(v=>v));
 
@@ -2376,40 +2390,51 @@ async function executeImport() {
 }
 
 async function importMoldRow(row) {
+  // ヘッダー名の揺れを全て吸収
   const partNo = (row['品番']||row['part_no']||'').toString().trim();
   if (!partNo) return;
   const partName = (row['品名']||row['part_name']||'').toString().trim();
   if (!partName) return;
 
-  // 分類名取得（category_idの場合は逆引き）
-  let catName = row['分類']||row['category_name']||'';
+  // 分類名（日本語・英語・category_id全対応）
+  let catName = (row['分類']||row['category_name']||'').toString().trim();
   if (!catName && row['category_id']) {
-    const cat = state.categories.find(c=>c.id===row['category_id']);
-    catName = cat?.name||'';
+    catName = state.categories.find(c=>c.id===row['category_id'])?.name||'';
   }
-  // 機番取得（machine_idの場合は逆引き）
+
+  // 機番（数値・文字列・machine_id全対応）
   let machineNo = (row['機番']||row['machine_no']||'').toString().trim();
   if (!machineNo && row['machine_id']) {
-    const machine = state.machines.find(m=>m.id===row['machine_id']);
-    machineNo = machine?.machine_no||'';
+    machineNo = state.machines.find(m=>m.id===row['machine_id'])?.machine_no||'';
   }
 
   const cat = state.categories.find(c=>c.name===catName);
-  const machine = state.machines.find(m=>m.machine_no===machineNo);
+  const machine = state.machines.find(m=>String(m.machine_no)===String(machineNo));
+
+  // メンテ間隔・サイクル（各種表記対応）
+  const interval = parseInt(row['メンテ間隔(shot)']||row['メンテ間隔']||row['maintenance_interval']||'5000')||5000;
+  const cycle = parseInt(row['サイクル(秒)']||row['サイクルタイム']||row['cycle_time_sec']||'30')||30;
+  const dangerShot = parseInt(row['要メンテ(shot前)']||row['alert_shot_danger']||'500')||500;
+  const warnShot = parseInt(row['注意(shot前)']||row['alert_shot_warning']||'1000')||1000;
+  const dangerMin = parseInt(row['要メンテ(分前)']||row['alert_min_danger']||'120')||120;
+  const warnMin = parseInt(row['注意(分前)']||row['alert_min_warning']||'480')||480;
 
   const data = {
-    part_no: partNo, part_name: partName,
+    part_no: partNo,
+    part_name: partName,
     model_no: (row['型番']||row['model_no']||'').toString().trim()||null,
-    category_id: cat?.id||row['category_id']||null,
-    machine_id: machine?.id||row['machine_id']||null,
-    maintenance_interval: parseInt(row['メンテ間隔(shot)']||row['maintenance_interval'])||5000,
-    cycle_time_sec: parseInt(row['サイクル(秒)']||row['cycle_time_sec'])||30,
-    alert_shot_danger: parseInt(row['要メンテ(shot前)']||row['alert_shot_danger'])||500,
-    alert_shot_warning: parseInt(row['注意(shot前)']||row['alert_shot_warning'])||1000,
-    alert_min_danger: parseInt(row['要メンテ(分前)']||row['alert_min_danger'])||120,
-    alert_min_warning: parseInt(row['注意(分前)']||row['alert_min_warning'])||480,
-    is_active: true, updated_at: new Date().toISOString(),
+    category_id: cat?.id||null,
+    machine_id: machine?.id||null,
+    maintenance_interval: interval,
+    cycle_time_sec: cycle,
+    alert_shot_danger: dangerShot,
+    alert_shot_warning: warnShot,
+    alert_min_danger: dangerMin,
+    alert_min_warning: warnMin,
+    is_active: true,
+    updated_at: new Date().toISOString(),
   };
+
   const existing = state.molds.find(m=>String(m.part_no)===String(partNo));
   if (existing) {
     await sb('molds','PATCH',data,`?id=eq.${existing.id}`);
