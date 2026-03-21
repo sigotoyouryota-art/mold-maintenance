@@ -491,8 +491,8 @@ select.form-control { cursor: pointer; }
       <div class="sidebar-item" onclick="showSection('history')" id="nav-history"><div class="sidebar-dot"></div><span id="nav-label-history">メンテ履歴</span></div>
       <div class="sidebar-item" onclick="showSection('dandori')" id="nav-dandori"><div class="sidebar-dot"></div><span id="nav-label-dandori">段取り設定</span></div>
       <div class="sidebar-item" id="nav-master" onclick="showSection('master')" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-master">マスタ設定</span></div>
-      <div class="sidebar-item" id="nav-report" onclick="generateMonthlyReport()" style="display:none"><div class="sidebar-dot"></div><span>月次レポート</span></div>
-      <div class="sidebar-item" id="nav-backup" onclick="backupAllData()" style="display:none"><div class="sidebar-dot"></div><span>バックアップ</span></div>
+      <div class="sidebar-item" id="nav-report" onclick="generateMonthlyReport()" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-report">月次レポート</span></div>
+      <div class="sidebar-item" id="nav-backup" onclick="backupAllData()" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-backup">バックアップ</span></div>
       <div class="sidebar-item" onclick="doLogout()" style="margin-top:auto"><div class="sidebar-dot"></div><span id="nav-label-logout">ログアウト</span></div>
     </div>
     <div class="main-content" id="main-content">
@@ -706,6 +706,16 @@ const T = {
     addHomeScreen:'📱 ホーム画面に追加する', adminMenu:'管理者メニュー',
     monthlyReport:'月次レポート出力', backup:'データバックアップ',
     version:'製造3課',
+    shotUpdate:'ショット更新', maintDone2:'メンテ完了',
+    lineAlertStatus:'ライン別アラート状況', top5Title:'進捗率が高い金型 TOP5',
+    noAlert:'アラートはありません ✓',
+    navDashboard:'ダッシュボード', navList:'一覧', navAlert:'アラート',
+    navHistory:'メンテ履歴', navDandori:'段取り設定', navMaster:'マスタ設定',
+    navReport:'月次レポート', navBackup:'バックアップ', navLogout:'ログアウト',
+    navSettings:'設定',
+    dandoriSave:'の設定を保存', dandoriAutoLoaded:'前回構成を自動引継済み',
+    confirm:'この内容で登録しますか',
+    shotUpdated:'ショット数を更新しました',
   },
   vi: {
     appName:'Quản Lý Bảo Trì Khuôn', login:'Đăng nhập', selectShift:'Chọn ca', selectWorker:'Chọn công nhân',
@@ -745,6 +755,16 @@ const T = {
     addHomeScreen:'📱 Thêm vào màn hình chính', adminMenu:'Menu quản trị',
     monthlyReport:'Xuất báo cáo tháng', backup:'Sao lưu dữ liệu',
     version:'Phân xưởng 3',
+    shotUpdate:'Cập nhật shot', maintDone2:'Hoàn thành BT',
+    lineAlertStatus:'Cảnh báo theo dây', top5Title:'Top 5 khuôn gần BT nhất',
+    noAlert:'Không có cảnh báo ✓',
+    navDashboard:'Tổng quan', navList:'Danh sách', navAlert:'Cảnh báo',
+    navHistory:'Lịch sử BT', navDandori:'Cài đặt đổi khuôn', navMaster:'Cài đặt master',
+    navReport:'Báo cáo tháng', navBackup:'Sao lưu', navLogout:'Đăng xuất',
+    navSettings:'Cài đặt',
+    dandoriSave:'Lưu cài đặt', dandoriAutoLoaded:'Đã kế thừa cấu hình hôm qua',
+    confirm:'Xác nhận nội dung',
+    shotUpdated:'Đã cập nhật số shot',
   },
   en: {
     appName:'Mold Maintenance', login:'Login', selectShift:'Select shift', selectWorker:'Select worker',
@@ -784,6 +804,16 @@ const T = {
     addHomeScreen:'📱 Add to home screen', adminMenu:'Admin menu',
     monthlyReport:'Monthly report', backup:'Data backup',
     version:'Section 3',
+    shotUpdate:'Update shot', maintDone2:'Complete maint.',
+    lineAlertStatus:'Alert by line', top5Title:'Top 5 molds near maint.',
+    noAlert:'No alerts ✓',
+    navDashboard:'Dashboard', navList:'List', navAlert:'Alert',
+    navHistory:'Maint. history', navDandori:'Setup config', navMaster:'Master settings',
+    navReport:'Monthly report', navBackup:'Backup', navLogout:'Logout',
+    navSettings:'Settings',
+    dandoriSave:'Save config', dandoriAutoLoaded:'Previous config auto-loaded',
+    confirm:'Confirm details',
+    shotUpdated:'Shot count updated',
   }
 };
 function t(key) { return T[state.lang][key] || key; }
@@ -814,6 +844,34 @@ function setLang(lang) {
 function applyLabels() {
   document.querySelectorAll('[data-t]').forEach(el => {
     el.textContent = t(el.dataset.t);
+  });
+  // サイドバーラベル
+  const sidebarLabels = {
+    'nav-label-dashboard': 'navDashboard',
+    'nav-label-list': 'navList',
+    'nav-label-alert': 'navAlert',
+    'nav-label-history': 'navHistory',
+    'nav-label-dandori': 'navDandori',
+    'nav-label-master': 'navMaster',
+    'nav-label-report': 'navReport',
+    'nav-label-backup': 'navBackup',
+    'nav-label-logout': 'navLogout',
+  };
+  Object.entries(sidebarLabels).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t(key);
+  });
+  // ボトムナビラベル
+  const bnLabels = {
+    'bn-label-dashboard': 'navDashboard',
+    'bn-label-list': 'navList',
+    'bn-label-alert': 'navAlert',
+    'bn-label-history': 'navHistory',
+    'bn-label-dandori': 'navDandori',
+  };
+  Object.entries(bnLabels).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t(key);
   });
 }
 
@@ -1004,9 +1062,9 @@ function renderDashboard(el) {
     <div class="kpi-card"><div class="kpi-label">${t('normal')}</div><div class="kpi-value" style="color:var(--success)">${normal}</div></div>
   </div>
   <div style="padding:10px 16px">
-    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">ライン別アラート状況</div>
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">${t('lineAlertStatus')}</div>
     ${renderLineAlertBars()}
-    <div style="font-size:13px;font-weight:600;color:var(--text);margin:16px 0 10px">進捗率が高い金型 TOP5</div>
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin:16px 0 10px">${t('top5Title')}</div>
     ${renderTop5()}
   </div>`;
 }
@@ -1128,7 +1186,7 @@ function renderListBody() {
         <span style="color:${statusColor(m.status)}">${fmtTime(m.remaining_min)}</span>
         <span style="color:${statusColor(m.status)}">${m.progress_pct}%</span>
       </div>
-      <div class="mold-card-btn ${m.status==='danger'?'hot':''}" onclick="openShotModal('${m.id}')">ショット入力 / メンテ完了</div>
+      <div class="mold-card-btn ${m.status==='danger'?'hot':''}" onclick="openShotModal('${m.id}')">${t('shotUpdate')} / ${t('maintDone2')}</div>
     </div>`).join('')}</div>`;
 
   el.innerHTML = tableHTML + cardsHTML;
@@ -1177,7 +1235,7 @@ function renderAlertBody() {
   if (state.alertFilter !== 'all') molds = molds.filter(m=>m.line_name===state.alertFilter);
   const el = document.getElementById('alert-body');
   if (!el) return;
-  if (!molds.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">アラートはありません ✓</div>`; return; }
+  if (!molds.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noAlert')}</div>`; return; }
 
   if (state.alertViewMode === 'simple') {
     el.innerHTML = molds.map(m=>`
@@ -1187,7 +1245,7 @@ function renderAlertBody() {
           <div style="font-size:10px;color:${statusColor(m.status)};margin-top:1px">残 ${fmtNum(m.remaining_shot)}shot・${fmtTime(m.remaining_min)}・${m.progress_pct}%</div>
         </div>
         ${statusBadge(m.status)}
-        <div class="btn btn-sm ${m.status==='danger'?'btn-success':'btn-secondary'}" onclick="${m.status==='danger'?`openMaintenanceFromAlert('${m.id}')`:`openShotModal('${m.id}')`}">${m.status==='danger'?'完了':'入力'}</div>
+        <div class="btn btn-sm ${m.status==='danger'?'btn-success':'btn-secondary'}" onclick="${m.status==='danger'?`openMaintenanceFromAlert('${m.id}')`:`openShotModal('${m.id}')`}">${m.status==='danger'?t('maintDone2'):t('shotUpdate')}</div>
       </div>`).join('');
   } else {
     el.innerHTML = molds.map(m=>`
@@ -1294,7 +1352,7 @@ async function renderDandori(el) {
       </label>
       <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text4)">
         <div style="width:6px;height:6px;border-radius:50%;background:var(--success)"></div>
-        ${t('prevConfig')}
+        ${t('dandoriAutoLoaded')}
       </div>
     </div>
   </div>
@@ -1654,7 +1712,7 @@ async function submitShot() {
       logged_by: state.currentUser.id,
     });
     closeModal('modal-shot');
-    showToast('ショット数を更新しました', 'success');
+    showToast(t('shotUpdated'), 'success');
     await loadMolds();
     showSection(state.currentSection);
   } catch(e) {
@@ -1757,7 +1815,7 @@ async function executeMaintenance() {
       performed_by: state.currentUser.id,
     });
     closeModal('modal-maint-confirm');
-    showToast('メンテ完了を登録しました', 'success');
+    showToast(t('maintDone'), 'success');
     await loadMolds();
     showSection(state.currentSection);
   } catch(e) {
@@ -2140,7 +2198,11 @@ async function exportMaster(type) {
       machines: data.map(m=>[m.machine_no,m.line_name,m.is_dandori?'○':'',m.note||'']),
       users: data.map(u=>[u.name,u.role,u.is_active?'○':'']),
     };
-    const csv = [headers, ...(rows[type]||[])].map(r=>r.map(v=>typeof v==='string'&&v.includes(',')?`"${v}"`:v).join(',')).join('\n');
+    const csv = [headers, ...(rows[type]||[])].map(r=>r.map(v=>{
+      const s = String(v==null?'':v);
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
+    }).join(',')).join('\n');
+    // UTF-8 BOM付きで出力（ExcelもそのままUTF-8で開ける）
     const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2168,26 +2230,42 @@ function handleImportFile(e) {
   const file = e.target.files[0];
   if (!file) return;
   const ext = file.name.split('.').pop().toLowerCase();
-  if (ext === 'csv') {
-    // まずShift-JISで読み込んでみて、文字化けしていたらUTF-8で再試行
-    const readerSJIS = new FileReader();
-    readerSJIS.onload = ev => {
-      const textSJIS = ev.target.result;
-      // Shift-JISで正常に読めているか判定（日本語文字が含まれているか）
-      const hasJapanese = /[\u3000-\u9fff]/.test(textSJIS);
-      if (hasJapanese) {
-        parseImportCSV(textSJIS);
-      } else {
-        // UTF-8で再試行
-        const readerUTF = new FileReader();
-        readerUTF.onload = ev2 => parseImportCSV(ev2.target.result);
-        readerUTF.readAsText(file, 'UTF-8');
-      }
-    };
-    readerSJIS.readAsText(file, 'Shift-JIS');
-  } else {
+  if (ext !== 'csv') {
     showToast('CSVファイルを選択してください', 'error');
+    return;
   }
+  // バイナリで読んでBOMを確認してから文字コードを判定
+  const binReader = new FileReader();
+  binReader.onload = ev => {
+    const arr = new Uint8Array(ev.target.result);
+    let encoding = 'UTF-8';
+    // UTF-8 BOM: EF BB BF
+    if (arr[0]===0xEF && arr[1]===0xBB && arr[2]===0xBF) {
+      encoding = 'UTF-8';
+    }
+    // UTF-16 LE BOM: FF FE
+    else if (arr[0]===0xFF && arr[1]===0xFE) {
+      encoding = 'UTF-16LE';
+    }
+    // Shift-JISかUTF-8か判定（BOMなし）
+    else {
+      // UTF-8の場合は多バイトシーケンスが正規パターンに従う
+      let isUTF8 = true;
+      for (let i = 0; i < Math.min(arr.length, 1000); i++) {
+        if (arr[i] > 0x7F) {
+          if ((arr[i] & 0xE0) === 0xC0) { i += 1; }
+          else if ((arr[i] & 0xF0) === 0xE0) { i += 2; }
+          else if ((arr[i] & 0xF8) === 0xF0) { i += 3; }
+          else { isUTF8 = false; break; }
+        }
+      }
+      encoding = isUTF8 ? 'UTF-8' : 'Shift-JIS';
+    }
+    const textReader = new FileReader();
+    textReader.onload = ev2 => parseImportCSV(ev2.target.result);
+    textReader.readAsText(file, encoding);
+  };
+  binReader.readAsArrayBuffer(file);
 }
 
 function parseImportCSV(text) {
