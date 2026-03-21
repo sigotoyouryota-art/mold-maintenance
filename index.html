@@ -1031,6 +1031,7 @@ async function loadMachines() {
 function showSection(section) {
   state.currentSection = section;
   localStorage.setItem('lastSection', section);
+  startRealtimeUpdate();
   // ナビ更新
   document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.bn-item').forEach(el => el.classList.remove('active'));
@@ -1086,9 +1087,9 @@ function fmtNum(n) { return Number(n).toLocaleString(); }
 
 // ===== ダッシュボード =====
 function renderDashboard(el) {
-  const danger = state.molds.filter(m=>m.status==='danger').length;
-  const warning = state.molds.filter(m=>m.status==='warning').length;
-  const normal = state.molds.filter(m=>m.status==='normal').length;
+  const danger = state.molds.filter(m=>calcStatus(m)==='danger').length;
+  const warning = state.molds.filter(m=>calcStatus(m)==='warning').length;
+  const normal = state.molds.filter(m=>calcStatus(m)==='normal').length;
   el.innerHTML = `
   <div class="kpi-row">
     <div class="kpi-card"><div class="kpi-label">${t('totalMolds')}</div><div class="kpi-value">${state.molds.length}</div></div>
@@ -1107,8 +1108,8 @@ function renderDashboard(el) {
 function renderLineAlertBars() {
   return state.lines.map(line => {
     const lineMolds = state.molds.filter(m=>m.line_name===line.name);
-    const d = lineMolds.filter(m=>m.status==='danger').length;
-    const w = lineMolds.filter(m=>m.status==='warning').length;
+    const d = lineMolds.filter(m=>calcStatus(m)==='danger').length;
+    const w = lineMolds.filter(m=>calcStatus(m)==='warning').length;
     const total = lineMolds.length;
     if (!total) return '';
     const dPct = d/total*100, wPct = w/total*100;
@@ -1124,18 +1125,21 @@ function renderLineAlertBars() {
 }
 
 function renderTop5() {
-  const top5 = [...state.molds].sort((a,b)=>b.progress_pct-a.progress_pct).slice(0,5);
-  return top5.map(m=>`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;background:var(--bg2);border-radius:6px;padding:8px 10px;border-left:3px solid ${statusColor(m.status)}">
+  const top5 = [...state.molds].sort((a,b)=>calcEstimatedProgress(b)-calcEstimatedProgress(a)).slice(0,5);
+  return top5.map(m=>{
+    const pct = calcEstimatedProgress(m);
+    const status = calcStatus(m);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;background:var(--bg2);border-radius:6px;padding:8px 10px;border-left:3px solid ${statusColor(status)}">
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:600;color:var(--text)">#${m.machine_no||'?'}　${m.part_name}</div>
         <div style="font-size:10px;color:var(--text3)">${m.part_no} / ${m.category_name||'-'} / ${m.line_name||'-'}</div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        ${statusBadge(m.status)}
-        <div style="font-size:11px;color:${statusColor(m.status)};margin-top:3px">${m.progress_pct}%</div>
+        ${statusBadge(status)}
+        <div style="font-size:11px;color:${statusColor(status)};margin-top:3px">${pct}%</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ===== 一覧 =====
@@ -1190,39 +1194,53 @@ function renderListBody() {
   // PC テーブル
   const tableHTML = `<div class="table-wrap"><table>
     <tr><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>${t('type')}</th><th>${t('line')}</th><th>${t('progress')}</th><th>${t('remainShot')}</th><th>${t('remainTime')}</th><th>${t('pct')}</th><th>${t('status')}</th><th></th></tr>
-    ${molds.map(m=>`<tr>
-      <td style="font-weight:600">#${m.machine_no||'?'}</td>
-      <td style="font-weight:500">${m.part_name}</td>
-      <td style="color:var(--text3);font-size:11px">${m.part_no}</td>
-      <td>${typeBadge(m.category_name)}</td>
-      <td>${m.line_name||'-'}</td>
-      <td><div class="progress-wrap"><div class="progress-fill" style="width:${m.progress_pct}%;background:${statusColor(m.status)}"></div></div></td>
-      <td style="color:${statusColor(m.status)};font-weight:600">${fmtNum(m.remaining_shot)}</td>
-      <td style="color:${statusColor(m.status)}">${fmtTime(m.remaining_min)}</td>
-      <td style="color:${statusColor(m.status)}">${m.progress_pct}%</td>
-      <td>${statusBadge(m.status)}</td>
-      <td><span style="font-size:11px;color:var(--accent);cursor:pointer" onclick="openShotModal('${m.id}')">入力 ›</span></td>
-    </tr>`).join('')}
+    ${molds.map(m=>{
+      const est = calcEstimatedShot(m);
+      const rem = calcEstimatedRemaining(m);
+      const remMin = calcEstimatedRemainingMin(m);
+      const pct = calcEstimatedProgress(m);
+      const status = calcStatus(m);
+      const color = statusColor(status);
+      return `<tr data-mold-id="${m.id}">
+        <td style="font-weight:600">#${m.machine_no||'?'}</td>
+        <td style="font-weight:500">${m.part_name}</td>
+        <td style="color:var(--text3);font-size:11px">${m.part_no}</td>
+        <td>${typeBadge(m.category_name)}</td>
+        <td>${m.line_name||'-'}</td>
+        <td><div class="progress-wrap"><div class="progress-fill rt-progress" style="width:${pct}%;background:${color}"></div></div></td>
+        <td class="rt-remain-shot" style="color:${color};font-weight:600">${fmtNum(rem)}</td>
+        <td class="rt-remain-time" style="color:${color}">${fmtTime(remMin)}</td>
+        <td class="rt-pct" style="color:${color}">${pct}%</td>
+        <td class="rt-status">${statusBadge(status)}</td>
+        <td><span style="font-size:11px;color:var(--accent);cursor:pointer" onclick="openShotModal('${m.id}')">入力 ›</span></td>
+      </tr>`;
+    }).join('')}
   </table></div>`;
 
   // スマホ カード
-  const cardsHTML = `<div class="mold-cards">${molds.map(m=>`
-    <div class="mold-card ${m.status}">
+  const cardsHTML = `<div class="mold-cards">${molds.map(m=>{
+    const rem = calcEstimatedRemaining(m);
+    const remMin = calcEstimatedRemainingMin(m);
+    const pct = calcEstimatedProgress(m);
+    const status = calcStatus(m);
+    const color = statusColor(status);
+    return `<div class="mold-card ${status}" data-mold-id="${m.id}">
       <div class="mold-card-top">
         <div>
           <div class="mold-card-name">#${m.machine_no||'?'}　${m.part_name}</div>
           <div class="mold-card-part">${m.part_no} / ${m.category_name||'-'} / ${m.line_name||'-'}</div>
         </div>
-        ${statusBadge(m.status)}
+        ${statusBadge(status)}
       </div>
-      <div class="mold-card-bar"><div style="height:100%;border-radius:2px;background:${statusColor(m.status)};width:${m.progress_pct}%"></div></div>
-      <div class="mold-card-meta">
-        <span style="color:${statusColor(m.status)}">残 ${fmtNum(m.remaining_shot)}shot</span>
-        <span style="color:${statusColor(m.status)}">${fmtTime(m.remaining_min)}</span>
-        <span style="color:${statusColor(m.status)}">${m.progress_pct}%</span>
+      <div class="mold-card-bar"><div class="rt-bar-fill" style="height:100%;border-radius:2px;background:${color};width:${pct}%"></div></div>
+      <div class="mold-card-meta rt-meta">
+        <span style="color:${color}">残 ${fmtNum(rem)}shot</span>
+        <span style="color:${color}">${fmtTime(remMin)}</span>
+        <span style="color:${color}">${pct}%</span>
       </div>
-      <div class="mold-card-btn ${m.status==='danger'?'hot':''}" onclick="openShotModal('${m.id}')">${t('shotUpdate')} / ${t('maintDone2')}</div>
-    </div>`).join('')}</div>`;
+      <div class="mold-card-btn ${status==='danger'?'hot':''}" onclick="openShotModal('${m.id}')">${t('shotUpdate')} / ${t('maintDone2')}</div>
+    </div>`;
+  }).join('')}</div>`;
 
   el.innerHTML = tableHTML + cardsHTML;
 }
@@ -1266,7 +1284,7 @@ function setAlertViewMode(mode, el) {
 }
 
 function renderAlertBody() {
-  let molds = state.molds.filter(m=>m.status==='danger'||m.status==='warning');
+  let molds = state.molds.filter(m=>calcStatus(m)==='danger'||calcStatus(m)==='warning');
   if (state.alertFilter !== 'all') molds = molds.filter(m=>m.line_name===state.alertFilter);
   const el = document.getElementById('alert-body');
   if (!el) return;
@@ -1674,7 +1692,9 @@ function openShotModal(moldId) {
   const mold = state.molds.find(m=>m.id===moldId);
   if (!mold) return;
   state.currentMold = mold;
-  state.shotInputValue = String(mold.current_shot || 0);
+  // リアルタイム推定値を初期値として使用
+  const estimatedShot = calcEstimatedShot(mold);
+  state.shotInputValue = String(estimatedShot);
 
   document.getElementById('shot-machine').textContent = `#${mold.machine_no||'?'}　${mold.line_name||'-'}`;
   document.getElementById('shot-part-no').textContent = mold.part_no;
@@ -3022,8 +3042,8 @@ function showMasterTabByIndex(idx) {
 function sortMolds(molds, mode) {
   const arr = [...molds];
   switch(mode) {
-    case 'maint_asc':  return arr.sort((a,b) => b.progress_pct - a.progress_pct);
-    case 'maint_desc': return arr.sort((a,b) => a.progress_pct - b.progress_pct);
+    case 'maint_asc':  return arr.sort((a,b) => calcEstimatedProgress(b) - calcEstimatedProgress(a));
+    case 'maint_desc': return arr.sort((a,b) => calcEstimatedProgress(a) - calcEstimatedProgress(b));
     case 'machine_asc': return arr.sort((a,b) => (a.machine_no||'').localeCompare(b.machine_no||'', undefined, {numeric:true}));
     case 'machine_desc': return arr.sort((a,b) => (b.machine_no||'').localeCompare(a.machine_no||'', undefined, {numeric:true}));
     default: return arr;
@@ -3038,6 +3058,125 @@ const SORT_LABELS = {
 function setListSort(mode) {
   state.listSortMode = mode;
   renderListBody();
+}
+
+
+// ===== リアルタイムショット計算エンジン =====
+// 計算式: 推定現在shot = last_shot + floor((現在時刻 - 最終入力時刻) / サイクルタイム秒)
+// 画面を1秒ごとに更新
+
+let realtimeTimer = null;
+
+function calcEstimatedShot(mold) {
+  const baseShot = mold.current_shot || 0;
+  const lastUpdated = mold.last_shot_updated_at;
+  const cycleTime = mold.cycle_time_sec || 30;
+  if (!lastUpdated) return baseShot;
+  const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
+  const additionalShots = Math.floor(Math.max(0, elapsedSec) / cycleTime);
+  return baseShot + additionalShots;
+}
+
+function calcEstimatedProgress(mold) {
+  const estimated = calcEstimatedShot(mold);
+  const interval = mold.maintenance_interval || 5000;
+  return Math.min(100, Math.round(estimated / interval * 1000) / 10);
+}
+
+function calcEstimatedRemaining(mold) {
+  const estimated = calcEstimatedShot(mold);
+  const interval = mold.maintenance_interval || 5000;
+  return Math.max(0, interval - estimated);
+}
+
+function calcEstimatedRemainingMin(mold) {
+  const remaining = calcEstimatedRemaining(mold);
+  return Math.round(remaining * (mold.cycle_time_sec || 30) / 60);
+}
+
+function calcStatus(mold) {
+  const remaining = calcEstimatedRemaining(mold);
+  const remainingMin = calcEstimatedRemainingMin(mold);
+  if (remaining <= (mold.alert_shot_danger||500) || remainingMin <= (mold.alert_min_danger||120)) return 'danger';
+  if (remaining <= (mold.alert_shot_warning||1000) || remainingMin <= (mold.alert_min_warning||480)) return 'warning';
+  return 'normal';
+}
+
+function startRealtimeUpdate() {
+  stopRealtimeUpdate();
+  realtimeTimer = setInterval(() => {
+    updateRealtimeDisplay();
+  }, 3000); // 3秒ごとに更新
+}
+
+function stopRealtimeUpdate() {
+  if (realtimeTimer) { clearInterval(realtimeTimer); realtimeTimer = null; }
+}
+
+function updateRealtimeDisplay() {
+  // 現在表示中のセクションに応じて更新
+  if (!state.molds.length) return;
+
+  // アラートバッジ更新
+  const dangerCount = state.molds.filter(m => calcStatus(m) === 'danger').length;
+  const warnCount = state.molds.filter(m => calcStatus(m) === 'warning').length;
+  const totalAlert = dangerCount + warnCount;
+  const badge = document.getElementById('alert-count-badge');
+  if (badge) {
+    badge.textContent = totalAlert;
+    badge.style.display = totalAlert > 0 ? 'inline' : 'none';
+  }
+
+  // 一覧テーブルのリアルタイム更新
+  state.molds.forEach(mold => {
+    const estimated = calcEstimatedShot(mold);
+    const remaining = calcEstimatedRemaining(mold);
+    const remainMin = calcEstimatedRemainingMin(mold);
+    const pct = calcEstimatedProgress(mold);
+    const status = calcStatus(mold);
+    const color = statusColor(status);
+
+    // テーブル行の更新（data-mold-id属性で特定）
+    const row = document.querySelector(`tr[data-mold-id="${mold.id}"]`);
+    if (row) {
+      const progBar = row.querySelector('.rt-progress');
+      const remainShotEl = row.querySelector('.rt-remain-shot');
+      const remainTimeEl = row.querySelector('.rt-remain-time');
+      const pctEl = row.querySelector('.rt-pct');
+      const statusEl = row.querySelector('.rt-status');
+      if (progBar) { progBar.style.width = pct + '%'; progBar.style.background = color; }
+      if (remainShotEl) { remainShotEl.textContent = fmtNum(remaining); remainShotEl.style.color = color; }
+      if (remainTimeEl) { remainTimeEl.textContent = fmtTime(remainMin); remainTimeEl.style.color = color; }
+      if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = color; }
+      if (statusEl) statusEl.innerHTML = statusBadge(status);
+    }
+
+    // スマホカードの更新
+    const card = document.querySelector(`.mold-card[data-mold-id="${mold.id}"]`);
+    if (card) {
+      card.className = `mold-card ${status}`;
+      const bar = card.querySelector('.rt-bar-fill');
+      const meta = card.querySelector('.rt-meta');
+      if (bar) { bar.style.width = pct + '%'; bar.style.background = color; }
+      if (meta) meta.innerHTML = `
+        <span style="color:${color}">残 ${fmtNum(remaining)}shot</span>
+        <span style="color:${color}">${fmtTime(remainMin)}</span>
+        <span style="color:${color}">${pct}%</span>`;
+    }
+
+    // アラートカードの更新
+    const alertCard = document.querySelector(`.alert-rt-card[data-mold-id="${mold.id}"]`);
+    if (alertCard) {
+      const newStatus = calcStatus(mold);
+      alertCard.style.borderColor = statusColor(newStatus);
+      const bar = alertCard.querySelector('.rt-progress');
+      if (bar) { bar.style.width = pct + '%'; bar.style.background = color; }
+      const stats = alertCard.querySelectorAll('.rt-stat-val');
+      if (stats[0]) { stats[0].textContent = fmtNum(remaining); stats[0].style.color = color; }
+      if (stats[1]) { stats[1].textContent = fmtTime(remainMin); stats[1].style.color = color; }
+      if (stats[2]) { stats[2].textContent = pct + '%'; stats[2].style.color = color; }
+    }
+  });
 }
 
 // ===== 初期化 =====
