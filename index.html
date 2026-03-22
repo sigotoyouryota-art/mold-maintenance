@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.3.8">
+<meta name="app-version" content="1.3.9">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -542,6 +542,7 @@ select.form-control { cursor: pointer; }
       <div class="sidebar-item active" onclick="showSection('dashboard')" id="nav-dashboard"><div class="sidebar-dot"></div><span id="nav-label-dashboard">ダッシュボード</span></div>
       <div class="sidebar-item" onclick="showSection('list')" id="nav-list"><div class="sidebar-dot"></div><span id="nav-label-list">一覧</span></div>
       <div class="sidebar-item" onclick="showSection('schedule')" id="nav-schedule"><div class="sidebar-dot"></div><span id="nav-label-schedule">スケジュール</span></div>
+      <div class="sidebar-item" onclick="showSection('shotUpdate')" id="nav-shotUpdate"><div class="sidebar-dot"></div><span id="nav-label-shotUpdate">ショット数更新</span></div>
       <div class="sidebar-item" onclick="showSection('history')" id="nav-history"><div class="sidebar-dot"></div><span id="nav-label-history">メンテ履歴</span></div>
       <div class="sidebar-item" onclick="showSection('alert')" id="nav-alert" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-alert">アラート</span> <span id="alert-count-badge" style="font-size:9px;background:var(--danger-bg);color:var(--danger-text);padding:1px 5px;border-radius:3px;margin-left:2px;display:none"></span></div>
       <div class="sidebar-item" onclick="showSection('dandori')" id="nav-dandori"><div class="sidebar-dot"></div><span id="nav-label-dandori">段取り設定</span></div>
@@ -564,6 +565,8 @@ select.form-control { cursor: pointer; }
     <div class="bn-item active" onclick="showSection('dashboard')" id="bn-dashboard"><span class="bn-icon">📊</span><span class="bn-label" id="bn-label-dashboard">DB</span></div>
     <div class="bn-item" onclick="showSection('list')" id="bn-list"><span class="bn-icon">≡</span><span class="bn-label" id="bn-label-list">一覧</span></div>
     <div class="bn-item" onclick="showSection('schedule')" id="bn-schedule"><span class="bn-icon">📅</span><span class="bn-label" id="bn-label-schedule">予定</span></div>
+    <div class="bn-item" onclick="showSection('shotUpdate')" id="bn-shotUpdate"><span class="bn-icon">🔢</span><span class="bn-label" id="bn-label-shotUpdate">更新</span></div>
+    <div class="bn-item" onclick="showSection('shotUpdate')" id="bn-shotUpdate"><span class="bn-icon">🔢</span><span class="bn-label" id="bn-label-shotUpdate">更新</span></div>
     <div class="bn-item" onclick="showSection('dandori')" id="bn-dandori"><span class="bn-icon">⚙</span><span class="bn-label" id="bn-label-dandori-bn">段取り</span></div>
     <div class="bn-item" onclick="showSection('history')" id="bn-history"><span class="bn-icon">📋</span><span class="bn-label" id="bn-label-history">履歴</span></div>
     <div class="bn-item" onclick="showSection('analysis')" id="bn-analysis"><span class="bn-icon">📈</span><span class="bn-label" id="bn-label-analysis-bn">分析</span></div>
@@ -769,7 +772,7 @@ const T = {
     maintInterval:'メンテ間隔(shot)', cycleTime2:'サイクル(秒)',
 
     lineAlert:'ライン別アラート状況', top5:'進捗率が高い金型 TOP5',
-    shotUpdateDone:'ショット数を更新しました', maintDone:'メンテ完了を登録しました',
+    shotUpdateDone:'ショット数を更新しました', shotUpdateTitle:'ショット数更新', shotUpdateBack:'一覧へ戻る', maintDone:'メンテ完了を登録しました',
     loggedIn:'ログイン中', theme:'テーマ', language:'言語',
     addHomeScreen:'📱 ホーム画面に追加する', adminMenu:'管理者メニュー',
     monthlyReport:'月次レポート出力', backup:'データバックアップ',
@@ -1198,6 +1201,7 @@ function showSection(section) {
     alert: renderAlert,
     history: renderHistory,
     schedule: renderSchedule,
+    shotUpdate: renderShotUpdate,
     analysis: (el) => {
       if (state.currentUser?.role !== 'admin') {
         el.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text3)">
@@ -3716,6 +3720,197 @@ function updateRealtimeDisplay() {
 }
 
 
+
+// ===== ショット数更新画面 =====
+let shotUpdateView = 'grid'; // 'grid' | 'input'
+let shotUpdateMachineId = null;
+let shotUpdateInputVal = '';
+let shotUpdateDoneIds = new Set();
+
+function renderShotUpdate(el) {
+  if (shotUpdateView === 'input' && shotUpdateMachineId) {
+    renderShotUpdateInput(el);
+  } else {
+    renderShotUpdateGrid(el);
+  }
+}
+
+function renderShotUpdateGrid(el) {
+  const doneCount = shotUpdateDoneIds.size;
+  const totalMachines = state.machines.length;
+
+  // 機番昇順でソート
+  const sorted = [...state.machines].sort((a, b) => {
+    const an = parseInt(String(a.machine_no||'0').replace(/\D/g,''))||0;
+    const bn = parseInt(String(b.machine_no||'0').replace(/\D/g,''))||0;
+    return an - bn;
+  });
+
+  // ラインフィルター
+  const lines = ['全て', ...new Set(state.machines.map(m => m.line_name).filter(Boolean).sort())];
+
+  const gridItems = sorted.map(m => {
+    const isDone = shotUpdateDoneIds.has(m.id);
+    const moldCount = state.molds.filter(mo => mo.machine_id === m.id).length;
+    // ステータスは表示しない（機番昇順のみ）
+    const border = isDone
+      ? '0.5px solid var(--success-text)'
+      : '0.5px solid var(--border)';
+    const bg = isDone ? 'var(--success-bg)' : 'var(--bg2)';
+    const textColor = isDone ? 'var(--success-text)' : 'var(--text)';
+    const sub = isDone ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">済✓</div>'
+      : moldCount > 0 ? `<div style="width:5px;height:5px;border-radius:50%;background:var(--border2);margin:3px auto 0"></div>` : '<div style="font-size:9px;color:var(--text4);margin-top:2px">金型なし</div>';
+    const cursor = moldCount > 0 ? 'pointer' : 'default';
+    const onclick = moldCount > 0 ? `onclick="openShotUpdateInput('${m.id}')"` : '';
+    return `<div style="padding:9px 4px;border:${border};border-radius:8px;text-align:center;background:${bg};cursor:${cursor}" ${onclick}>
+      <div style="font-size:14px;font-weight:500;color:${textColor}">#${m.machine_no||'?'}</div>
+      ${sub}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+  <div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">ショット数更新</div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <div style="display:flex;gap:3px;background:var(--bg3);border-radius:6px;padding:3px" id="su-line-seg">
+        ${lines.map((l,i) => `<button class="seg-btn ${i===0?'active':''}" onclick="setSuLineFilter('${l}',this)" style="padding:5px 10px;font-size:11px">${l}</button>`).join('')}
+      </div>
+      <span style="margin-left:auto;font-size:12px;color:var(--text3)">${doneCount} / ${totalMachines} 完了</span>
+    </div>
+  </div>
+  <div style="height:3px;background:var(--border)"><div style="height:100%;width:${totalMachines>0?Math.round(doneCount/totalMachines*100):0}%;background:var(--info-text);transition:width 0.3s"></div></div>
+  <div id="su-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px">${gridItems}</div>
+  <div style="padding:4px 12px 12px;display:flex;gap:10px;justify-content:center">
+    <div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--success-text)"></div><span style="font-size:10px;color:var(--text3)">更新済</span></div>
+    <div style="display:flex;align-items:center;gap:3px"><div style="width:5px;height:5px;border-radius:50%;background:var(--border2)"></div><span style="font-size:10px;color:var(--text3)">未入力</span></div>
+  </div>`;
+}
+
+function setSuLineFilter(line, btn) {
+  document.querySelectorAll('#su-line-seg .seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const grid = document.getElementById('su-grid');
+  if (!grid) return;
+  grid.querySelectorAll('[data-line]').forEach(el => {
+    el.style.display = (line === '全て' || el.dataset.line === line) ? '' : 'none';
+  });
+}
+
+function openShotUpdateInput(machineId) {
+  shotUpdateMachineId = machineId;
+  shotUpdateInputVal = '';
+  shotUpdateView = 'input';
+  const el = document.getElementById('main-content');
+  if (el) renderShotUpdateInput(el);
+}
+
+function renderShotUpdateInput(el) {
+  const machine = state.machines.find(m => m.id === shotUpdateMachineId);
+  if (!machine) { shotUpdateView = 'grid'; renderShotUpdateGrid(el); return; }
+
+  // 段取り設定から現在の金型を取得（dandori設定）
+  const dandoriMold = state.molds.find(m => m.machine_id === machine.id && m.is_active);
+  const molds = state.molds.filter(m => m.machine_id === machine.id);
+  const currentMold = dandoriMold || molds[0];
+  const prevShot = currentMold ? (currentMold.maint_shot || currentMold.current_shot || 0) : 0;
+  const prevTime = currentMold?.maint_shot_updated_at || currentMold?.last_shot_updated_at;
+  const prevTimeStr = prevTime ? new Date(prevTime).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
+
+  const doneCount = shotUpdateDoneIds.size;
+  const totalMachines = state.machines.length;
+  const idx = [...state.machines].sort((a,b)=>{
+    const an=parseInt(String(a.machine_no||'0').replace(/\D/g,''))||0;
+    const bn=parseInt(String(b.machine_no||'0').replace(/\D/g,''))||0;
+    return an-bn;
+  }).findIndex(m=>m.id===machine.id);
+
+  el.innerHTML = `
+  <div style="background:var(--bg3);border-bottom:0.5px solid var(--border);height:46px;display:flex;align-items:center;padding:0 14px;justify-content:space-between">
+    <div style="font-size:13px;color:var(--info-text);cursor:pointer" onclick="backToSuGrid()">← 一覧</div>
+    <div style="font-size:14px;font-weight:600;color:var(--text)">#${machine.machine_no||'?'} 入力</div>
+    <div style="font-size:11px;color:var(--text3)">${doneCount}/${totalMachines}</div>
+  </div>
+  <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+
+    <!-- 金型表示 + 変更ボタン -->
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg4);border-radius:8px;padding:8px 11px">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)">${currentMold ? currentMold.part_name + (currentMold.part_no ? '　'+currentMold.part_no : '') : '金型なし'}</div>
+        <div style="font-size:10px;color:var(--text3)">前回: ${fmtNum(prevShot)}　（${prevTimeStr}）</div>
+      </div>
+      ${molds.length > 1 ? `<div style="padding:4px 10px;border:0.5px solid var(--border);border-radius:6px;font-size:11px;color:var(--info-text);cursor:pointer" onclick="showSuMoldSelect('${machine.id}')">変更</div>` : ''}
+    </div>
+
+    <!-- 入力フィールド -->
+    <div style="border:2px solid var(--info-text);border-radius:10px;padding:10px 16px;text-align:center;background:var(--bg2)">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:2px">現在の累計ショット数</div>
+      <div id="su-input-display" style="font-size:36px;font-weight:600;color:${shotUpdateInputVal ? 'var(--text)' : 'var(--text4)'};letter-spacing:2px">${shotUpdateInputVal ? Number(shotUpdateInputVal).toLocaleString() : '—'}</div>
+    </div>
+
+    <!-- テンキー -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px" id="su-keypad">
+      ${[1,2,3,4,5,6,7,8,9,'⌫',0,'000'].map(k => {
+        const isBack = k === '⌫';
+        const color = isBack ? '#ef4444' : k==='000' ? 'var(--text3)' : 'var(--text)';
+        return `<div style="height:46px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:7px;font-size:${k==='000'?'14px':'20px'};font-weight:500;color:${color};cursor:pointer" onclick="suKeyPress('${k}')">${k}</div>`;
+      }).join('')}
+    </div>
+
+    <!-- 保存ボタン -->
+    <div style="padding:13px;background:var(--info-text);border-radius:10px;text-align:center;font-size:15px;font-weight:600;color:#fff;cursor:pointer;opacity:${shotUpdateInputVal?'1':'0.5'}" onclick="saveShotUpdate('${currentMold?.id||''}')">
+      保存してグリッドへ戻る
+    </div>
+  </div>`;
+}
+
+function suKeyPress(key) {
+  if (key === '⌫') {
+    shotUpdateInputVal = shotUpdateInputVal.slice(0, -1);
+  } else if (key === '000') {
+    shotUpdateInputVal = shotUpdateInputVal ? shotUpdateInputVal + '000' : '';
+  } else {
+    shotUpdateInputVal += String(key);
+  }
+  // 表示更新
+  const disp = document.getElementById('su-input-display');
+  if (disp) {
+    disp.textContent = shotUpdateInputVal ? Number(shotUpdateInputVal).toLocaleString() : '—';
+    disp.style.color = shotUpdateInputVal ? 'var(--text)' : 'var(--text4)';
+  }
+  // 保存ボタンのopacity
+  const btn = document.querySelector('[onclick^="saveShotUpdate"]');
+  if (btn) btn.style.opacity = shotUpdateInputVal ? '1' : '0.5';
+}
+
+async function saveShotUpdate(moldId) {
+  if (!shotUpdateInputVal) return;
+  const val = parseInt(shotUpdateInputVal);
+  if (isNaN(val) || val < 0) return;
+  try {
+    await sb('molds', 'PATCH',
+      { maint_shot: val, maint_shot_updated_at: new Date().toISOString(), last_shot_updated_at: new Date().toISOString() },
+      '?id=eq.' + moldId
+    );
+    // ローカルのmoldsも更新
+    const mold = state.molds.find(m => m.id === moldId);
+    if (mold) { mold.maint_shot = val; mold.maint_shot_updated_at = new Date().toISOString(); }
+    shotUpdateDoneIds.add(shotUpdateMachineId);
+    showToast('#' + (state.machines.find(m=>m.id===shotUpdateMachineId)?.machine_no||'?') + ' 保存完了（' + val.toLocaleString() + ' shot）', 'success');
+    backToSuGrid();
+  } catch(e) {
+    showToast('保存に失敗しました', 'error');
+  }
+}
+
+function backToSuGrid() {
+  shotUpdateView = 'grid';
+  shotUpdateInputVal = '';
+  shotUpdateMachineId = null;
+  const el = document.getElementById('main-content');
+  if (el) renderShotUpdateGrid(el);
+}
+
+
 // ===== スケジュール画面 =====
 const SHIFT_HOURS = { '1S': [8,16], '2S': [16,24], '3S': [0,8] };
 let scheduleShift = 'all';
@@ -4415,7 +4610,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.3.8';
+const CURRENT_VERSION = '1.3.9';
 
 async function checkForUpdate() {
   try {
