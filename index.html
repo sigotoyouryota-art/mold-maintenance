@@ -1259,6 +1259,8 @@ function renderTop5() {
 
 // ===== 一覧 =====
 async function renderList(el) {
+  // 先にダンドリ情報を取得
+  await loadDandoriForList();
   const lines = [null, ...state.lines];
   el.innerHTML = `
   <div class="seg-wrap" id="list-seg">
@@ -1280,7 +1282,6 @@ async function renderList(el) {
     </div>
   </div>
   <div id="list-body"></div>`;
-  await loadDandoriForList();
   renderListBody();
 }
 
@@ -1321,7 +1322,11 @@ function renderListBody() {
   // 稼働中（段取り設定済み）と未設定に分ける
   const active = sorted.filter(m=>activeMoldIds.has(m.id));
   const inactive = sorted.filter(m=>!activeMoldIds.has(m.id));
-  document.getElementById('list-count').textContent = `${sorted.length}台（稼働中 ${active.length}台）`;
+  // 段取り未設定が全台の場合は「稼働中」セクションを作らず全台を通常表示
+  const hasDandori = active.length > 0;
+  document.getElementById('list-count').textContent = hasDandori
+    ? `${sorted.length}台（稼働中 ${active.length}台）`
+    : `${sorted.length}台`;
   if (!sorted.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
 
   // PC テーブル
@@ -1354,10 +1359,12 @@ function renderListBody() {
 
   const tableHTML = `<div class="table-wrap"><table>
     <tr><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>型番</th><th>${t('type')}</th><th>${t('line')}</th><th>${t('progress')}</th><th>${t('remainShot')}</th><th>${t('remainTime')}</th><th>${t('pct')}</th><th>${t('status')}</th><th></th></tr>
-    ${active.length>0?`<tr><td colspan="12" style="background:var(--bg3);font-size:10px;font-weight:500;color:var(--info-text);padding:5px 8px">● 稼働中（段取り設定済み）${active.length}台</td></tr>`:''}
-    ${active.map(m=>makeRow(m,false)).join('')}
-    ${inactive.length>0?`<tr><td colspan="12" style="background:var(--bg3);font-size:10px;color:var(--text4);padding:5px 8px">段取り未設定 ${inactive.length}台</td></tr>`:''}
-    ${inactive.map(m=>makeRow(m,true)).join('')}
+    ${hasDandori ? `
+      ${active.length>0?`<tr><td colspan="12" style="background:var(--bg3);font-size:10px;font-weight:500;color:var(--info-text);padding:5px 8px">● 稼働中（段取り設定済み）${active.length}台</td></tr>`:''}
+      ${active.map(m=>makeRow(m,false)).join('')}
+      ${inactive.length>0?`<tr><td colspan="12" style="background:var(--bg3);font-size:10px;color:var(--text4);padding:5px 8px">段取り未設定 ${inactive.length}台</td></tr>`:''}
+      ${inactive.map(m=>makeRow(m,true)).join('')}
+    ` : sorted.map(m=>makeRow(m,false)).join('')}
   </table></div>`;
 
   // スマホカード
@@ -1389,10 +1396,12 @@ function renderListBody() {
   };
 
   const cardsHTML = `<div class="mold-cards">
-    ${active.length>0?`<div style="font-size:10px;font-weight:500;color:var(--info-text);padding:4px 2px 6px;display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:var(--success)"></div>稼働中 ${active.length}台</div>`:''}
-    ${active.map(m=>makeCard(m,false)).join('')}
-    ${inactive.length>0?`<div class="section-sep" style="font-size:10px;color:var(--text4);padding:8px 2px 4px;margin-top:4px;border-top:0.5px solid var(--border)">段取り未設定 ${inactive.length}台</div>`:''}
-    ${inactive.map(m=>makeCard(m,true)).join('')}
+    ${hasDandori ? `
+      ${active.length>0?`<div style="font-size:10px;font-weight:500;color:var(--info-text);padding:4px 2px 6px;display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:var(--success)"></div>稼働中 ${active.length}台</div>`:''}
+      ${active.map(m=>makeCard(m,false)).join('')}
+      ${inactive.length>0?`<div class="section-sep" style="font-size:10px;color:var(--text4);padding:8px 2px 4px;margin-top:4px;border-top:0.5px solid var(--border)">段取り未設定 ${inactive.length}台</div>`:''}
+      ${inactive.map(m=>makeCard(m,true)).join('')}
+    ` : sorted.map(m=>makeCard(m,false)).join('')}
   </div>`;
 
   el.innerHTML = tableHTML + cardsHTML;
@@ -3559,38 +3568,47 @@ function updateRealtimeDisplay() {
 
   // 一覧テーブルのリアルタイム更新（DOM操作で高速更新）
   state.molds.forEach(mold => {
-    const remaining = calcEstimatedRemaining(mold);
-    const remainMin = calcEstimatedRemainingMin(mold);
-    const pct = calcEstimatedProgress(mold);
     const status = calcStatus(mold);
+    const isOverdue = status === 'overdue';
+    const overShot = isOverdue ? calcOverShot(mold) : 0;
+    const remaining = isOverdue ? 0 : calcEstimatedRemaining(mold);
+    const remainMin = isOverdue ? 0 : calcEstimatedRemainingMin(mold);
+    const pct = isOverdue ? 100 : calcEstimatedProgress(mold);
     const color = statusColor(status);
 
     // PCテーブル行
     const row = document.querySelector(`tr[data-mold-id="${mold.id}"]`);
     if (row) {
+      row.style.background = isOverdue ? 'var(--danger-bg)20' : '';
       const progBar = row.querySelector('.rt-progress');
       const remainShotEl = row.querySelector('.rt-remain-shot');
       const remainTimeEl = row.querySelector('.rt-remain-time');
       const pctEl = row.querySelector('.rt-pct');
       const statusEl = row.querySelector('.rt-status');
       if (progBar) { progBar.style.width = pct + '%'; progBar.style.background = color; }
-      if (remainShotEl) { remainShotEl.textContent = fmtNum(remaining); remainShotEl.style.color = color; }
-      if (remainTimeEl) { remainTimeEl.textContent = fmtTime(remainMin); remainTimeEl.style.color = color; }
-      if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = color; }
+      if (remainShotEl) {
+        remainShotEl.innerHTML = isOverdue
+          ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span>`
+          : fmtNum(remaining);
+        remainShotEl.style.color = color;
+      }
+      if (remainTimeEl) { remainTimeEl.textContent = isOverdue ? '-' : fmtTime(remainMin); remainTimeEl.style.color = color; }
+      if (pctEl) { pctEl.textContent = isOverdue ? '超過' : pct + '%'; pctEl.style.color = color; }
       if (statusEl) statusEl.innerHTML = statusBadge(status);
     }
 
     // スマホカード
     const card = document.querySelector(`.mold-card[data-mold-id="${mold.id}"]`);
     if (card) {
-      card.className = `mold-card ${status}`;
+      card.className = `mold-card ${isOverdue ? 'danger' : status}`;
       const bar = card.querySelector('.rt-bar-fill');
       const meta = card.querySelector('.rt-meta');
       if (bar) { bar.style.width = pct + '%'; bar.style.background = color; }
-      if (meta) meta.innerHTML = `
-        <span style="color:${color}">残 ${fmtNum(remaining)}shot</span>
-        <span style="color:${color}">${fmtTime(remainMin)}</span>
-        <span style="color:${color}">${pct}%</span>`;
+      if (meta) {
+        meta.innerHTML = isOverdue
+          ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span><span style="color:var(--text3)">累計${fmtNum(calcEstimatedTotalShot(mold))}</span>`
+          : `<span style="color:${color}">残 ${fmtNum(remaining)}shot</span><span style="color:${color}">${fmtTime(remainMin)}</span><span style="color:${color}">${pct}%</span>`;
+      }
     }
   });
 }
