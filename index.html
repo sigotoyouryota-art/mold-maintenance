@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.4.1">
+<meta name="app-version" content="1.4.2">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3781,7 +3781,7 @@ function renderShotUpdateGrid(el) {
     <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">ショット数更新</div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <div style="display:flex;gap:3px;background:var(--bg3);border-radius:6px;padding:3px" id="su-line-seg">
-        ${lines.map(l => `<button class="seg-btn ${l===suLineFilter?'active':''}" onclick="setSuLineFilter('${l}',this)" style="padding:5px 10px;font-size:11px">${l}</button>`).join('')}
+        ${lines.map(l => `<button class="seg-btn ${l===suLineFilter?'active':''}" data-line-filter="${l}" onclick="setSuLineFilter(this.dataset.lineFilter,this)" style="padding:5px 10px;font-size:11px">${l}</button>`).join('')}
       </div>
       <span style="margin-left:auto;font-size:12px;color:var(--text3)">${doneCount} / ${totalMachines} 完了</span>
     </div>
@@ -3796,7 +3796,7 @@ function renderShotUpdateGrid(el) {
 
 
 function setSuLineFilter(line, btn) {
-  window.suLineFilterVal = line;
+  window.suLineFilterVal = line || '全て';
   document.querySelectorAll('#su-line-seg .seg-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const grid = document.getElementById('su-grid');
@@ -3848,7 +3848,7 @@ function renderShotUpdateInput(el) {
         <div style="font-size:14px;font-weight:600;color:var(--text)">${currentMold ? currentMold.part_name + (currentMold.part_no ? '　'+currentMold.part_no : '') : '金型なし'}</div>
         <div style="font-size:10px;color:var(--text3)">前回: ${fmtNum(prevShot)}　（${prevTimeStr}）</div>
       </div>
-      ${molds.length > 1 ? `<div style="padding:4px 10px;border:0.5px solid var(--border);border-radius:6px;font-size:11px;color:var(--info-text);cursor:pointer" onclick="showSuMoldSelect('${machine.id}')">変更</div>` : ''}
+      ${molds.length > 1 ? `<div style="padding:4px 10px;border:0.5px solid var(--border);border-radius:6px;font-size:11px;color:var(--info-text);cursor:pointer" data-mid="${machine.id}" onclick="showSuMoldSelect(this.dataset.mid)">変更</div>` : ''}
     </div>
 
     <!-- 入力フィールド -->
@@ -3862,12 +3862,12 @@ function renderShotUpdateInput(el) {
       ${[1,2,3,4,5,6,7,8,9,'⌫',0,'000'].map(k => {
         const isBack = k === '⌫';
         const color = isBack ? '#ef4444' : k==='000' ? 'var(--text3)' : 'var(--text)';
-        return `<div style="height:46px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:7px;font-size:${k==='000'?'14px':'20px'};font-weight:500;color:${color};cursor:pointer" onclick="suKeyPress('${k}')">${k}</div>`;
+        return `<div data-key="${k}" style="height:46px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:7px;font-size:${k==='000'?'14px':'20px'};font-weight:500;color:${color};cursor:pointer" onclick="suKeyPress(this.dataset.key)">${k}</div>`;
       }).join('')}
     </div>
 
     <!-- 保存ボタン -->
-    <div style="padding:13px;background:var(--info-text);border-radius:10px;text-align:center;font-size:15px;font-weight:600;color:#fff;cursor:pointer;opacity:${shotUpdateInputVal?'1':'0.5'}" onclick="saveShotUpdate('${currentMold?.id||''}')">
+    <div style="padding:13px;background:var(--info-text);border-radius:10px;text-align:center;font-size:15px;font-weight:600;color:#fff;cursor:pointer;opacity:${shotUpdateInputVal?'1':'0.5'}" data-mold-id="${currentMold?.id||''}" onclick="saveShotUpdate(this.dataset.moldId)">
       保存してグリッドへ戻る
     </div>
   </div>`;
@@ -4620,7 +4620,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.4.1';
+const CURRENT_VERSION = '1.4.2';
 
 async function checkForUpdate() {
   try {
