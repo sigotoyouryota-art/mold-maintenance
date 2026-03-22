@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.2.0">
+<meta name="app-version" content="1.2.1">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3496,6 +3496,27 @@ function calcEstimatedRemaining(mold) {
   return Math.max(0, interval - estimated);
 }
 
+function calcEstimatedOverMin(mold) {
+  const estimated = calcEstimatedShot(mold);
+  const interval = mold.maintenance_interval || 5000;
+  const overShots = Math.max(0, estimated - interval);
+  return Math.round(overShots * (mold.cycle_time_sec || 30) / 60);
+}
+
+function calcEstimatedRemainingRaw(mold) {
+  // クリップなし（負の値＝超過分を返す）
+  const estimated = calcEstimatedShot(mold);
+  const interval = mold.maintenance_interval || 5000;
+  return interval - estimated;
+}
+
+function calcEstimatedOverMin(mold) {
+  // 超過している場合の超過分（分）を返す
+  const remainingRaw = calcEstimatedRemainingRaw(mold);
+  if (remainingRaw >= 0) return 0;
+  return Math.round(Math.abs(remainingRaw) * (mold.cycle_time_sec || 30) / 60);
+}
+
 function calcEstimatedRemainingMin(mold) {
   const remaining = calcEstimatedRemaining(mold);
   return Math.round(remaining * (mold.cycle_time_sec || 30) / 60);
@@ -3516,6 +3537,11 @@ function calcOverShot(mold) {
   const estimated = calcEstimatedShot(mold);
   const interval = mold.maintenance_interval || 5000;
   return Math.max(0, estimated - interval);
+}
+
+function calcEstimatedOverMin(mold) {
+  const overShots = calcOverShot(mold);
+  return Math.round(overShots * (mold.cycle_time_sec || 30) / 60);
 }
 
 function startRealtimeUpdate() {
@@ -4311,7 +4337,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.2.0';
+const CURRENT_VERSION = '1.2.1';
 
 async function checkForUpdate() {
   try {
