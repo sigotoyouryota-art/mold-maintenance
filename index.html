@@ -4488,38 +4488,59 @@ function renderAllScheduleBody(el) {
     let html = '';
     allShiftData.forEach(({ shift, scheduled }) => {
       if (!scheduled.length) return;
-      html += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0 6px">
-        <div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>
-        <span style="font-size:11px;font-weight:600;color:var(--info-text)">${SHIFT_LABELS[shift]}</span>
-      </div>`;
+      // 直ラベル
+      html += '<div style="display:flex;align-items:center;gap:8px;margin:10px 0 6px">'
+        + '<div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>'
+        + '<span style="font-size:11px;font-weight:600;color:var(--info-text)">' + SHIFT_LABELS[shift] + '</span>'
+        + '</div>';
+      // カード生成（renderScheduleBodyと同じロジック）
+      let globalRankIdx = 0;
       html += scheduled.map(s => {
-        const color = statusColor(s.status);
-        const isOverdueMold = s.status === 'overdue';
-        const isNow = (s.schedStart - new Date()) / 60000 < 30 && (s.status === 'danger' || isOverdueMold);
-        const timeLabel = isOverdueMold ? '異常・超過中' : (isNow ? '今すぐ!' : `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`);
-        const pctRaw = calcEstimatedProgress(s.mold);
-        const pctCap = Math.min(100, pctRaw);
-        const overShot = isOverdueMold ? calcOverShot(s.mold) : 0;
-        return `<div onclick="openMaintenanceFromAlert('${s.mold.id}')" style="margin-left:11px;margin-bottom:6px;background:var(--bg2);border-radius:10px;padding:10px 12px;border-left:4px solid ${color};cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.06)${isOverdueMold?';background:var(--danger-bg)10':''}">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-            <div style="font-size:15px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
-            ${statusBadge(s.status)}
-          </div>
-          <div style="height:3px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:4px">
-            <div style="width:${pctCap}%;height:100%;border-radius:2px;background:${color}"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-size:10px;color:${color};font-weight:600">${timeLabel}</div>
-            <div style="font-size:10px;color:var(--text3)">
-              ${isOverdueMold ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過 ${Math.round(pctRaw)}%</span>` : ''}
-              ${s.dur}分
-            </div>
-          </div>
-        </div>`;
+        globalRankIdx++;
+        const isOverdueCard = s.status === 'overdue';
+        const isMaint = s.status === 'danger';
+        const isWarn = s.status === 'warning';
+        const borderColor = isOverdueCard ? 'var(--overdue-border)' : isMaint ? 'var(--danger-border)' : isWarn ? 'var(--warning)' : 'var(--success)';
+        const bgBottom = isOverdueCard ? 'var(--overdue-bg)' : isMaint ? 'var(--danger-row-bg)' : isWarn ? 'var(--warning-bg)' : 'var(--success-bg)';
+        const trackBg = isOverdueCard ? 'var(--overdue-bar-bg)' : isMaint ? 'var(--danger-bar-bg)' : isWarn ? 'var(--warning-bg)' : 'var(--success-bg)';
+        const shadowColor = isOverdueCard ? 'rgba(220,38,38,0.20)' : isMaint ? 'rgba(234,88,12,0.16)' : 'rgba(0,0,0,0.06)';
+        const timeColor = isOverdueCard ? 'var(--overdue-text)' : isMaint ? 'var(--maint-text)' : isWarn ? 'var(--warning-text)' : 'var(--success-text)';
+        const pct = Math.min(130, calcEstimatedProgress(s.mold));
+        const circumference = 182;
+        const offset = isOverdueCard ? -29 : Math.max(0, circumference * (1 - pct / 100));
+        const shotNum = isOverdueCard ? fmtNum(calcOverShot(s.mold)) : fmtNum(calcEstimatedRemaining(s.mold));
+        const shotSuffix = isOverdueCard ? 'shot超過' : 'shot残';
+        const timeLabel = isOverdueCard ? (calcEstimatedOverMin(s.mold) + '分超過') : ('残り' + fmtTime(calcEstimatedRemainingMin(s.mold)));
+        const timeStr = fmtHM(s.schedStart) + '〜' + fmtHM(s.schedEnd);
+        let c = '<div style="border-radius:12px;overflow:hidden;border:2px solid ' + borderColor + ';box-shadow:0 4px 20px ' + shadowColor + ';margin-bottom:10px;cursor:pointer" onclick="openMaintenanceFromAlert(\'' + s.mold.id + '\')">';
+        c += '<div style="padding:11px 14px;background:var(--bg2);border-bottom:1.5px solid ' + borderColor + '30;display:flex;align-items:center;justify-content:space-between">';
+        c += '<div style="display:flex;align-items:center;gap:8px">';
+        c += '<div style="width:26px;height:26px;border-radius:50%;background:' + borderColor + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">' + globalRankIdx + '</div>';
+        c += '<div style="font-size:15px;font-weight:800;color:var(--text)">#' + (s.mold.machine_no||'?') + '　' + s.mold.part_name + '</div>';
+        c += '<span style="font-size:10px;color:var(--text4)">' + (s.mold.line_name||'') + '</span>';
+        c += '</div>' + statusBadge(s.status) + '</div>';
+        c += '<div style="display:flex;align-items:center;background:' + bgBottom + '">';
+        c += '<div style="padding:13px 14px;flex-shrink:0"><div style="position:relative;width:70px;height:70px">';
+        c += '<svg width="70" height="70" viewBox="0 0 70 70">';
+        c += '<circle cx="35" cy="35" r="29" fill="none" stroke="' + trackBg + '" stroke-width="6"/>';
+        c += '<circle cx="35" cy="35" r="29" fill="none" stroke="' + borderColor + '" stroke-width="6" stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '" stroke-linecap="round" transform="rotate(-90 35 35)"/>';
+        c += '</svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">';
+        c += '<div style="font-size:13px;font-weight:900;color:' + borderColor + '">' + pct + '%</div></div></div></div>';
+        c += '<div style="flex:1;padding:13px 8px;display:flex;flex-direction:column;justify-content:space-between;gap:6px">';
+        c += '<div><div style="font-size:21px;font-weight:900;color:' + borderColor + ';line-height:1">' + shotNum + '<span style="font-size:12px;font-weight:600;color:' + timeColor + '"> ' + shotSuffix + '</span></div>';
+        c += '<div style="font-size:14px;font-weight:700;color:' + timeColor + ';margin-top:3px">' + timeLabel + '</div></div>';
+        c += '<div style="background:' + trackBg + ';border:1px solid ' + borderColor + '50;border-radius:5px;padding:4px 8px;display:flex;align-items:center;justify-content:center">';
+        c += '<span style="font-size:12px;font-weight:700;color:' + timeColor + '">' + timeStr + '</span></div></div>';
+        c += '<div style="padding:13px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-left:1.5px solid ' + borderColor + '40;flex-shrink:0">';
+        c += '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + borderColor + '" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+        c += '<div style="font-size:22px;font-weight:900;color:' + borderColor + ';line-height:1">' + s.dur + '</div>';
+        c += '<div style="font-size:10px;font-weight:700;color:' + timeColor + '">分</div></div></div></div>';
+        return c;
       }).join('');
     });
     el.innerHTML = hint + html;
-  } else {
+
+    } else {
     // タイムライン表示（全直）- 統一版
     let html = '';
     let globalRankIdx = 0;
