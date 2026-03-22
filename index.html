@@ -2069,6 +2069,13 @@ async function renderMasterUsers(el) {
 }
 
 function renderMasterUsersTable(el) {
+  // デバッグ: state.usersの内容確認
+  if (state.users && state.users.length > 0) {
+    var u0 = state.users[0];
+    alert('state.users[0] のキー: ' + Object.keys(u0).join(', ') + '\n値サンプル: id=' + u0.id + ', name=' + u0.name + ', role=' + u0.role);
+  } else {
+    alert('state.users が空です (length=' + (state.users ? state.users.length : 'null') + ')');
+  }
   var s = masterSortState['users'] || {key:'name', dir:'asc'};
 
   function sortArrow(k) {
