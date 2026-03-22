@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.4.2">
+<meta name="app-version" content="1.4.3">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3736,62 +3736,83 @@ function renderShotUpdate(el) {
 
 function renderShotUpdateGrid(el) {
   const doneCount = shotUpdateDoneIds.size;
+  const suLineFilter = window.suLineFilterVal || '全て';
 
-  // 機番ごとにmoldsをグループ化（machine_noで昇順）
   const machineMap = {};
-  state.molds.forEach(m => {
-    const key = m.machine_no || '?';
-    if (!machineMap[key]) machineMap[key] = { machine_no: key, machine_id: m.machine_id, line_name: m.line_name, molds: [] };
-    machineMap[key].molds.push(m);
+  state.molds.forEach(function(m) {
+    const key = String(m.machine_no || '?');
+    if (!machineMap[key]) machineMap[key] = { machine_no: key, line_name: m.line_name };
   });
 
-  // 機番昇順でソート
-  const sorted = Object.values(machineMap).sort((a, b) => {
-    const an = parseInt(String(a.machine_no).replace(/[^0-9]/g,'')) || 0;
-    const bn = parseInt(String(b.machine_no).replace(/[^0-9]/g,'')) || 0;
-    return an - bn;
+  const sorted = Object.values(machineMap).sort(function(a, b) {
+    return (parseInt(a.machine_no) || 0) - (parseInt(b.machine_no) || 0);
   });
 
   const totalMachines = sorted.length;
+  const lineNamesFromMolds = new Set(sorted.map(function(m) { return m.line_name; }).filter(Boolean));
+  const lineNamesFromState = new Set((state.lines || []).map(function(l) { return l.name; }).filter(Boolean));
+  const allLineNames = Array.from(new Set([...lineNamesFromMolds, ...lineNamesFromState])).sort();
+  const lines = ['全て'].concat(allLineNames);
+  const pct = totalMachines > 0 ? Math.round(doneCount / totalMachines * 100) : 0;
 
-  // ラインフィルター（state.linesと両方から収集）
-  const lineNamesFromMolds = new Set(sorted.map(m => m.line_name).filter(Boolean));
-  const lineNamesFromState = new Set((state.lines||[]).map(l => l.name).filter(Boolean));
-  const allLineNames = [...new Set([...lineNamesFromMolds, ...lineNamesFromState])].sort();
-  const lines = ['全て', ...allLineNames];
-  let suLineFilter = window.suLineFilterVal || '全て';
+  let lineTabHTML = '';
+  lines.forEach(function(l) {
+    const active = l === suLineFilter ? ' active' : '';
+    lineTabHTML += '<button class="seg-btn' + active + '" style="padding:5px 10px;font-size:11px">' + l + '</button>';
+  });
 
-  const gridItems = sorted.map(m => {
+  let gridHTML = '';
+  sorted.forEach(function(m) {
     const isDone = shotUpdateDoneIds.has(m.machine_no);
     const hidden = (suLineFilter !== '全て' && m.line_name !== suLineFilter) ? 'display:none;' : '';
     const border = isDone ? '0.5px solid var(--success-text)' : '0.5px solid var(--border)';
     const bg = isDone ? 'var(--success-bg)' : 'var(--bg2)';
-    const textColor = isDone ? 'var(--success-text)' : 'var(--text)';
+    const tc = isDone ? 'var(--success-text)' : 'var(--text)';
     const sub = isDone
-      ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">済✓</div>'
+      ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">\u6e08\u2713</div>'
       : '<div style="width:5px;height:5px;border-radius:50%;background:var(--border2);margin:3px auto 0"></div>';
-    return `<div data-line="${m.line_name||''}" style="${hidden}padding:9px 4px;border:${border};border-radius:8px;text-align:center;background:${bg};cursor:pointer" onclick="openShotUpdateInput('${m.machine_no}')">
-      <div style="font-size:14px;font-weight:500;color:${textColor}">#${m.machine_no}</div>
-      ${sub}
-    </div>`;
-  }).join('');
+    gridHTML += '<div class="su-machine-btn" data-mno="' + m.machine_no + '" data-line="' + (m.line_name || '') + '"'
+      + ' style="' + hidden + 'padding:9px 4px;border:' + border + ';border-radius:8px;text-align:center;background:' + bg + ';cursor:pointer">'
+      + '<div style="font-size:14px;font-weight:500;color:' + tc + '">#' + m.machine_no + '</div>'
+      + sub + '</div>';
+  });
 
-  el.innerHTML = `
-  <div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">
-    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">ショット数更新</div>
-    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-      <div style="display:flex;gap:3px;background:var(--bg3);border-radius:6px;padding:3px" id="su-line-seg">
-        ${lines.map(l => `<button class="seg-btn ${l===suLineFilter?'active':''}" data-line-filter="${l}" onclick="setSuLineFilter(this.dataset.lineFilter,this)" style="padding:5px 10px;font-size:11px">${l}</button>`).join('')}
-      </div>
-      <span style="margin-left:auto;font-size:12px;color:var(--text3)">${doneCount} / ${totalMachines} 完了</span>
-    </div>
-  </div>
-  <div style="height:3px;background:var(--border)"><div style="height:100%;width:${totalMachines>0?Math.round(doneCount/totalMachines*100):0}%;background:var(--info-text);transition:width 0.3s"></div></div>
-  <div id="su-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;padding:10px 12px;max-width:100%">${gridItems}</div>
-  <div style="padding:4px 12px 12px;display:flex;gap:10px;justify-content:center">
-    <div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--success-text)"></div><span style="font-size:10px;color:var(--text3)">更新済</span></div>
-    <div style="display:flex;align-items:center;gap:3px"><div style="width:5px;height:5px;border-radius:50%;background:var(--border2)"></div><span style="font-size:10px;color:var(--text3)">未入力</span></div>
-  </div>`;
+  el.innerHTML = '<div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">\u30b7\u30e7\u30c3\u30c8\u6570\u66f4\u65b0</div>'
+    + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+    + '<div style="display:flex;gap:3px;background:var(--bg3);border-radius:6px;padding:3px" id="su-line-seg">' + lineTabHTML + '</div>'
+    + '<span style="margin-left:auto;font-size:12px;color:var(--text3)">' + doneCount + ' / ' + totalMachines + ' \u5b8c\u4e86</span>'
+    + '</div></div>'
+    + '<div style="height:3px;background:var(--border)"><div style="height:100%;width:' + pct + '%;background:var(--info-text);transition:width 0.3s"></div></div>'
+    + '<div id="su-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;padding:10px 12px">' + gridHTML + '</div>'
+    + '<div style="padding:4px 12px 12px;display:flex;gap:10px;justify-content:center">'
+    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--success-text)"></div><span style="font-size:10px;color:var(--text3)">\u66f4\u65b0\u6e08</span></div>'
+    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:5px;height:5px;border-radius:50%;background:var(--border2)"></div><span style="font-size:10px;color:var(--text3)">\u672a\u5165\u529b</span></div>'
+    + '</div>';
+
+  // addEventListener でクリックイベントを登録
+  var grid = document.getElementById('su-grid');
+  if (grid) {
+    grid.addEventListener('click', function(e) {
+      var btn = e.target.closest('.su-machine-btn');
+      if (btn) openShotUpdateInput(btn.getAttribute('data-mno'));
+    });
+  }
+  var seg = document.getElementById('su-line-seg');
+  if (seg) {
+    var btns = seg.querySelectorAll('.seg-btn');
+    lines.forEach(function(l, i) {
+      btns[i].addEventListener('click', function() {
+        window.suLineFilterVal = l;
+        btns.forEach(function(b) { b.classList.remove('active'); });
+        btns[i].classList.add('active');
+        grid.querySelectorAll('.su-machine-btn').forEach(function(item) {
+          var itemLine = item.getAttribute('data-line');
+          item.style.display = (l === '\u5168\u3066' || itemLine === l) ? '' : 'none';
+        });
+      });
+    });
+  }
 }
 
 
@@ -3816,62 +3837,65 @@ function openShotUpdateInput(machineNo) {
 
 function renderShotUpdateInput(el) {
   const machineNo = shotUpdateMachineId;
-  const molds = state.molds.filter(m => String(m.machine_no) === String(machineNo));
+  const molds = state.molds.filter(function(m) { return String(m.machine_no) === String(machineNo); });
   if (!molds.length) { shotUpdateView = 'grid'; renderShotUpdateGrid(el); return; }
 
-  // dandori設定から現在の金型を取得、なければ先頭
-  const dandoriMoldId = dandoriData[molds[0]?.machine_id];
-  const currentMold = (dandoriMoldId ? molds.find(m => m.id === dandoriMoldId) : null) || molds[0];
+  const dandoriMoldId = dandoriData[molds[0] && molds[0].machine_id];
+  const currentMold = (dandoriMoldId ? molds.find(function(m) { return m.id === dandoriMoldId; }) : null) || molds[0];
   const prevShot = currentMold ? (currentMold.maint_shot || currentMold.current_shot || 0) : 0;
-  const prevTime = currentMold?.maint_shot_updated_at || currentMold?.last_shot_updated_at;
-  const prevTimeStr = prevTime ? new Date(prevTime).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
-
+  const prevTime = currentMold && (currentMold.maint_shot_updated_at || currentMold.last_shot_updated_at);
+  const prevTimeStr = prevTime ? new Date(prevTime).toLocaleString('ja-JP', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
+  const moldId = (currentMold && currentMold.id) || '';
+  const moldName = currentMold ? (currentMold.part_name + (currentMold.part_no ? '\u3000' + currentMold.part_no : '')) : '\u91d1\u578b\u306a\u3057';
   const doneCount = shotUpdateDoneIds.size;
-  const totalMachines = state.machines.length;
-  const idx = [...state.machines].sort((a,b)=>{
-    const an=parseInt(String(a.machine_no||'0').replace(/\D/g,''))||0;
-    const bn=parseInt(String(b.machine_no||'0').replace(/\D/g,''))||0;
-    return an-bn;
-  }).findIndex(m=>m.id===machine.id);
+  const machineNos = new Set(state.molds.map(function(m) { return m.machine_no; }));
+  const totalMachines = machineNos.size;
+  const displayVal = shotUpdateInputVal ? Number(shotUpdateInputVal).toLocaleString() : '\u2014';
+  const inputColor = shotUpdateInputVal ? 'var(--text)' : 'var(--text4)';
+  const btnOpacity = shotUpdateInputVal ? '1' : '0.5';
 
-  el.innerHTML = `
-  <div style="background:var(--bg3);border-bottom:0.5px solid var(--border);height:46px;display:flex;align-items:center;padding:0 14px;justify-content:space-between">
-    <div style="font-size:13px;color:var(--info-text);cursor:pointer" onclick="backToSuGrid()">← 一覧</div>
-    <div style="font-size:14px;font-weight:600;color:var(--text)">#${machine.machine_no||'?'} 入力</div>
-    <div style="font-size:11px;color:var(--text3)">${doneCount}/${totalMachines}</div>
-  </div>
-  <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+  const keys = [1,2,3,4,5,6,7,8,9,'\u232b',0,'000'];
+  let keypadHTML = '';
+  keys.forEach(function(k) {
+    const color = k === '\u232b' ? '#ef4444' : k === '000' ? 'var(--text3)' : 'var(--text)';
+    const fs = k === '000' ? '14px' : '20px';
+    keypadHTML += '<div class="su-key" data-k="' + k + '" style="height:46px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:7px;font-size:' + fs + ';font-weight:500;color:' + color + ';cursor:pointer">' + k + '</div>';
+  });
 
-    <!-- 金型表示 + 変更ボタン -->
-    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg4);border-radius:8px;padding:8px 11px">
-      <div>
-        <div style="font-size:14px;font-weight:600;color:var(--text)">${currentMold ? currentMold.part_name + (currentMold.part_no ? '　'+currentMold.part_no : '') : '金型なし'}</div>
-        <div style="font-size:10px;color:var(--text3)">前回: ${fmtNum(prevShot)}　（${prevTimeStr}）</div>
-      </div>
-      ${molds.length > 1 ? `<div style="padding:4px 10px;border:0.5px solid var(--border);border-radius:6px;font-size:11px;color:var(--info-text);cursor:pointer" data-mid="${machine.id}" onclick="showSuMoldSelect(this.dataset.mid)">変更</div>` : ''}
-    </div>
+  const changeBtn = molds.length > 1
+    ? '<div class="su-change-btn" style="padding:4px 10px;border:0.5px solid var(--border);border-radius:6px;font-size:11px;color:var(--info-text);cursor:pointer">\u5909\u66f4</div>'
+    : '';
 
-    <!-- 入力フィールド -->
-    <div style="border:2px solid var(--info-text);border-radius:10px;padding:10px 16px;text-align:center;background:var(--bg2)">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:2px">現在の累計ショット数</div>
-      <div id="su-input-display" style="font-size:36px;font-weight:600;color:${shotUpdateInputVal ? 'var(--text)' : 'var(--text4)'};letter-spacing:2px">${shotUpdateInputVal ? Number(shotUpdateInputVal).toLocaleString() : '—'}</div>
-    </div>
+  el.innerHTML = '<div style="background:var(--bg3);border-bottom:0.5px solid var(--border);height:46px;display:flex;align-items:center;padding:0 14px;justify-content:space-between">'
+    + '<div id="su-back-btn" style="font-size:13px;color:var(--info-text);cursor:pointer">\u2190 \u4e00\u89a7</div>'
+    + '<div style="font-size:14px;font-weight:600;color:var(--text)">#' + machineNo + ' \u5165\u529b</div>'
+    + '<div style="font-size:11px;color:var(--text3)">' + doneCount + '/' + totalMachines + '</div>'
+    + '</div>'
+    + '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg4);border-radius:8px;padding:8px 11px">'
+    + '<div><div style="font-size:14px;font-weight:600;color:var(--text)">' + moldName + '</div>'
+    + '<div style="font-size:10px;color:var(--text3)">\u524d\u56de: ' + fmtNum(prevShot) + '\u3000\uff08' + prevTimeStr + '\uff09</div></div>'
+    + changeBtn + '</div>'
+    + '<div style="border:2px solid var(--info-text);border-radius:10px;padding:10px 16px;text-align:center;background:var(--bg2)">'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:2px">\u73fe\u5728\u306e\u7d2f\u8a08\u30b7\u30e7\u30c3\u30c8\u6570</div>'
+    + '<div id="su-input-display" style="font-size:36px;font-weight:600;color:' + inputColor + ';letter-spacing:2px">' + displayVal + '</div>'
+    + '</div>'
+    + '<div id="su-keypad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">' + keypadHTML + '</div>'
+    + '<div id="su-save-btn" data-mold-id="' + moldId + '" style="padding:13px;background:var(--info-text);border-radius:10px;text-align:center;font-size:15px;font-weight:600;color:#fff;cursor:pointer;opacity:' + btnOpacity + '">'
+    + '\u4fdd\u5b58\u3057\u3066\u30b0\u30ea\u30c3\u30c9\u3078\u623b\u308b'
+    + '</div></div>';
 
-    <!-- テンキー -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px" id="su-keypad">
-      ${[1,2,3,4,5,6,7,8,9,'⌫',0,'000'].map(k => {
-        const isBack = k === '⌫';
-        const color = isBack ? '#ef4444' : k==='000' ? 'var(--text3)' : 'var(--text)';
-        return `<div data-key="${k}" style="height:46px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:7px;font-size:${k==='000'?'14px':'20px'};font-weight:500;color:${color};cursor:pointer" onclick="suKeyPress(this.dataset.key)">${k}</div>`;
-      }).join('')}
-    </div>
-
-    <!-- 保存ボタン -->
-    <div style="padding:13px;background:var(--info-text);border-radius:10px;text-align:center;font-size:15px;font-weight:600;color:#fff;cursor:pointer;opacity:${shotUpdateInputVal?'1':'0.5'}" data-mold-id="${currentMold?.id||''}" onclick="saveShotUpdate(this.dataset.moldId)">
-      保存してグリッドへ戻る
-    </div>
-  </div>`;
+  // addEventListener でイベント登録
+  document.getElementById('su-back-btn').addEventListener('click', backToSuGrid);
+  document.getElementById('su-keypad').addEventListener('click', function(e) {
+    var key = e.target.closest('.su-key');
+    if (key) suKeyPress(key.getAttribute('data-k'));
+  });
+  document.getElementById('su-save-btn').addEventListener('click', function() {
+    saveShotUpdate(this.getAttribute('data-mold-id'));
+  });
 }
+
 
 function suKeyPress(key) {
   if (key === '⌫') {
@@ -4620,7 +4644,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.4.2';
+const CURRENT_VERSION = '1.4.3';
 
 async function checkForUpdate() {
   try {
