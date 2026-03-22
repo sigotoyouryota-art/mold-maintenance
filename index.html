@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.1.3">
+<meta name="app-version" content="1.1.4">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -1171,14 +1171,26 @@ function showSection(section) {
 
 // ===== ステータスカラー =====
 function statusColor(s) {
-  if (s==='overdue') return 'var(--danger-text)';
-  if (s==='danger') return 'var(--danger-text)';
+  if (s==='overdue') return '#ef4444';  // 異常：真っ赤
+  if (s==='danger') return '#f97316';   // 要メンテ：オレンジ赤
   if (s==='warning') return 'var(--warning-text)';
   return 'var(--success-text)';
 }
+function statusBg(s) {
+  if (s==='overdue') return '#5c0a0a';
+  if (s==='danger') return '#431407';
+  if (s==='warning') return '#78350f40';
+  return '#1e335840';
+}
+function statusMainColor(s) {
+  if (s==='overdue') return '#ef4444';
+  if (s==='danger') return '#f97316';
+  if (s==='warning') return '#f59e0b';
+  return '#22c55e';
+}
 function statusBadge(s) {
-  if (s==='overdue') return `<span class="badge badge-danger" style="border:0.5px solid var(--danger-text)">異常</span>`;
-  if (s==='danger') return `<span class="badge badge-danger">${t('needMaint')}</span>`;
+  if (s==='overdue') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#ef4444;color:#fff;font-weight:700;border:1px solid #fca5a5">異常</span>`;
+  if (s==='danger') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#f97316;color:#fff;font-weight:700">要メンテ</span>`;
   if (s==='warning') return `<span class="badge badge-warning">${t('caution')}</span>`;
   return `<span class="badge badge-success">${t('normal')}</span>`;
 }
@@ -3837,11 +3849,14 @@ function renderScheduleBody() {
     el.innerHTML = infoBar + hint + scheduled.map(s => {
       const color = statusColor(s.status);
       const minsUntilStart = (s.schedStart - new Date()) / 60000;
-      const isNow = minsUntilStart < 30 && s.status === 'danger';
+      const isOverdueCard = s.status === 'overdue';
+      const isNow = minsUntilStart < 30 && (s.status === 'danger' || isOverdueCard);
+      const cardTimeColor = isOverdueCard ? '#ef4444' : (isNow ? '#f97316' : color);
+      const cardTimeLabel = isOverdueCard ? '異常・超過中' : (isNow ? t('rightNow') : fmtHM(s.schedStart));
       return `<div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px;cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">
         <div style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;width:44px">
-          <div style="font-size:${isNow?'10px':'11px'};font-weight:600;color:${isNow?'var(--danger-text)':color};white-space:nowrap">${isNow?t('rightNow'):fmtHM(s.schedStart)}</div>
-          <div style="font-size:9px;color:var(--text4);white-space:nowrap">〜${fmtHM(s.schedEnd)}</div>
+          <div style="font-size:${isNow||isOverdueCard?'10px':'11px'};font-weight:600;color:${cardTimeColor};white-space:nowrap">${cardTimeLabel}</div>
+          <div style="font-size:9px;color:var(--text4);white-space:nowrap">${isOverdueCard ? '' : '〜'+fmtHM(s.schedEnd)}</div>
           <div style="width:1.5px;flex:1;background:${color};opacity:0.35;margin-top:3px"></div>
         </div>
         <div style="flex:1;background:var(--bg2);border-radius:8px;padding:9px 11px;border-left:3px solid ${color}">
@@ -3850,7 +3865,7 @@ function renderScheduleBody() {
             ${statusBadge(s.status)}
           </div>
           <div style="height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:5px">
-            <div style="width:${calcEstimatedProgress(s.mold)}%;height:100%;border-radius:2px;background:${color}"></div>
+            <div style="width:${Math.min(100,calcEstimatedProgress(s.mold))}%;height:100%;border-radius:2px;background:${statusMainColor(s.status)}"></div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -4287,7 +4302,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.1.3';
+const CURRENT_VERSION = '1.1.4';
 
 async function checkForUpdate() {
   try {
