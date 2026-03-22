@@ -4240,7 +4240,7 @@ function buildSchedule(shift) {
     shiftEnd.setHours(endH, 0, 0, 0);
   }
 
-  // 3S: 終了(08:00) <= 開始(00:00) にならないよう翌日補正
+  // 3S: 終了(08:00) <= 開始(00:00) になる場合は翌日補正
   if (shiftEnd <= shiftStart) {
     shiftEnd.setDate(shiftEnd.getDate() + 1);
   }
@@ -4256,64 +4256,132 @@ function buildSchedule(shift) {
   const nowMs        = now.getTime();
   const isCurrentShift = nowMs >= shiftStartMs && nowMs < shiftEndMs;
 
-  // 配置の基準時刻（現在の直なら今、未来の直なら直開始）
+  // 配置開始基準時刻（現在の直なら今、未来の直なら直の開始）
   const baseMs = isCurrentShift ? nowMs : shiftStartMs;
 
-  // ===== ① 各金型のデッドラインを計算 =====
-  // deadline = 今からremMin分後 - 所要時間
-  // （これより遅く開始するとメンテ間隔を超過する）
+  // ===== ① 全金型のデッドラインを計算 =====
+  // deadlineMs = 今から残り時間後 - メンテ所要時間
+  // → これより遅く開始するとshot超過する
   const moldsWithDeadline = state.molds.map(mold => {
-    const status = calcStatus(mold);
-    const dur    = (mold.simple_maint_time_min || 20) * 60000;
-    const remMin = status === 'overdue' ? 0 : calcEstimatedRemainingMin(mold);
+    const status  = calcStatus(mold);
+    const dur     = (mold.simple_maint_time_min || 20) * 60000; // ms
+    const remMin  = status === 'overdue' ? 0 : calcEstimatedRemainingMin(mold);
     const deadlineMs = nowMs + remMin * 60000 - dur;
-    return { mold, remMin, dur, status, deadlineMs };
+    const overMin = status === 'overdue' ? calcEstimatedOverMin(mold) : 0;
+    return { mold, remMin, dur, status, deadlineMs, overMin };
   });
 
-  // ===== ② この直に属する金型だけ抽出 =====
-  // ルール:
-  //   overdue / 既にdeadline超過 → 現在の直のみ（重複防止）
-  //   それ以外 → deadlineが「この直の時間帯」に収まるものだけ
-  //   （deadlineが shiftStart <= deadline < shiftEnd）
-  const targets = moldsWithDeadline.filter(({ deadlineMs, status }) => {
-    if (status === 'overdue')      return isCurrentShift;
-    if (deadlineMs <= nowMs)       return isCurrentShift;
-    return deadlineMs >= shiftStartMs && deadlineMs < shiftEndMs;
-  }).sort((a, b) => {
-    const order = { overdue: 0, danger: 1, warning: 2, normal: 3 };
-    const ao = order[a.status] ?? 3;
-    const bo = order[b.status] ?? 3;
-    if (ao !== bo) return ao - bo;
-    return a.deadlineMs - b.deadlineMs; // deadline早い順
+  // ===== ② overdue を分離 =====
+  // overdue → 現在の直のみ・超過時間が長い順
+  const overdueList = moldsWithDeadline
+    .filter(t => t.status === 'overdue')
+    .filter(() => isCurrentShift)
+    .sort((a, b) => b.overMin - a.overMin); // 超過時間が長い順（⑥）
+
+  // ===== ③ 非overdueのうち「この直に属する金型」を抽出 =====
+  // 「この直に属する」= deadlineがこの直の時間帯に収まる
+  //   shiftStartMs <= deadlineMs < shiftEndMs
+  // deadlineが過去（既に超過直前）→ 現在の直のみ
+  const nonOverdueList = moldsWithDeadline
+    .filter(t => t.status !== 'overdue')
+    .filter(t => {
+      if (t.deadlineMs <= nowMs) return isCurrentShift; // 超過直前は現在の直のみ
+      return t.deadlineMs >= shiftStartMs && t.deadlineMs < shiftEndMs;
+    });
+
+  // ===== ④ 非overdueをソート =====
+  // deadline早い順 → deadline同着なら所要時間が短い順（④⑤）
+  nonOverdueList.sort((a, b) => {
+    if (a.deadlineMs !== b.deadlineMs) return a.deadlineMs - b.deadlineMs;
+    return a.dur - b.dur;
   });
 
-  if (!targets.length) return { scheduled: [], shiftStart, shiftEnd };
+  // ===== ⑤ 非overdueを後ろから逆算配置（全員deadlineに間に合わせる） =====
+  // 最後の金型から逆算し、前の金型は後ろの金型の開始時刻から所要時間分さかのぼる
+  const nonOverdueTimes = new Array(nonOverdueList.length);
+  for (let i = nonOverdueList.length - 1; i >= 0; i--) {
+    const t = nonOverdueList[i];
+    if (i === nonOverdueList.length - 1) {
+      // 最後の金型：deadlineに合わせてギリギリ配置（直の終端を超えない範囲で）
+      const latestStart = Math.min(t.deadlineMs, shiftEndMs - t.dur);
+      const start = Math.max(baseMs, latestStart);
+      nonOverdueTimes[i] = { start, end: start + t.dur };
+    } else {
+      // 後ろの金型の開始時刻から所要時間分さかのぼる
+      const nextStart = nonOverdueTimes[i + 1].start;
+      const idealStart = Math.min(t.deadlineMs, nextStart - t.dur);
+      const start = Math.max(baseMs, idealStart);
+      nonOverdueTimes[i] = { start, end: start + t.dur };
+    }
+  }
 
-  // ===== ③ 前から順に詰めてスタート時刻を確定（重複なし） =====
-  // cursor = 次の金型を置ける最早時刻
+  // ===== ⑥ overdueを先頭に配置（baseMs から順に詰める） =====
   let cursor = baseMs;
-  const schedTimes = targets.map(t => {
-    // できるだけdeadlineに間に合うよう早めに配置
-    // 開始は max(cursor, できるだけ早く) かつ直の終端を超えない
-    const latestStart = Math.min(t.deadlineMs, shiftEndMs - t.dur);
-    const start = Math.max(cursor, Math.min(latestStart, shiftEndMs - t.dur));
+  const overdueTimes = overdueList.map(t => {
+    const start = cursor;
     const end   = start + t.dur;
-    cursor = end; // 次の金型はこの後
-    return { start: new Date(start), end: new Date(end) };
+    cursor = end;
+    return { start, end };
   });
 
-  // ===== ④ 直の時間帯に収まるものだけ返す =====
+  // overdueの終了後に非overdueが重ならないよう先頭を押し出す
+  const overdueEndMs = cursor;
+  if (nonOverdueList.length > 0 && overdueEndMs > nonOverdueTimes[0].start) {
+    // 非overdueを前倒しで再計算（overdueの終了以降にシフト）
+    let nc = overdueEndMs;
+    for (let i = 0; i < nonOverdueList.length; i++) {
+      const t = nonOverdueList[i];
+      // 後ろから逆算した理想開始と、overdueEndMsの大きい方
+      const start = Math.max(nc, nonOverdueTimes[i].start);
+      nonOverdueTimes[i] = { start, end: start + t.dur };
+      nc = start + t.dur;
+    }
+  }
+
+  // ===== ⑦ 全スケジュール統合 =====
+  const allTargets  = [...overdueList,    ...nonOverdueList];
+  const allTimes    = [...overdueTimes,   ...nonOverdueTimes];
+
+  // ===== ⑧ 直またぎ判定と結果生成 =====
   const scheduled = [];
-  for (let i = 0; i < targets.length; i++) {
-    const { mold, status, remMin } = targets[i];
-    const dur = targets[i].dur / 60000;
-    const { start, end } = schedTimes[i];
-    if (end.getTime()   <= shiftStartMs) continue;
-    if (start.getTime() >= shiftEndMs)   continue;
+  for (let i = 0; i < allTargets.length; i++) {
+    const { mold, status, remMin, dur } = allTargets[i];
+    const { start, end } = allTimes[i];
+    if (!start && start !== 0) continue;
+
+    const startMs = typeof start === 'number' ? start : start.getTime ? start.getTime() : start;
+    const endMs   = typeof end   === 'number' ? end   : end.getTime   ? end.getTime()   : end;
+
+    // 直の時間帯と全く重ならない → スキップ
+    if (endMs <= shiftStartMs) continue;
+    if (startMs >= shiftEndMs) continue;
+
+    // 直またぎ判定
+    // ② の結論：
+    //   直内に収まる → そのまま
+    //   直またぎだが次の直の頭に収まりdeadline余裕あり → 次の直で配置（この直にはスキップ）
+    //   直またぎだがdeadlineを超えてしまう → 直またぎでもこの直に入れる（crossShift=true）
+    const crossShift = endMs > shiftEndMs;
+    if (crossShift) {
+      const deadline = allTargets[i].deadlineMs;
+      // 次の直の頭に置いたらdeadlineに間に合うか？
+      // 次の直の開始 = shiftEndMs（現在の直の終了＝次の直の開始）
+      const nextShiftStart = shiftEndMs;
+      const nextShiftEnd   = nextShiftStart + 8 * 3600000;
+      const nextEnd        = nextShiftStart + dur;
+      const canFitNext     = nextEnd <= nextShiftEnd && nextEnd <= deadline;
+      if (canFitNext) {
+        // 次の直に回せる → この直ではスキップ
+        continue;
+      }
+      // 次の直に回せない → 直またぎでもこの直に入れる（警告フラグ付き）
+    }
+
     scheduled.push({
-      mold, status, dur, remMin,
-      schedStart: new Date(Math.max(start.getTime(), shiftStartMs)),
-      schedEnd:   new Date(Math.min(end.getTime(),   shiftEndMs)),
+      mold, status, dur: dur / 60000, remMin,
+      schedStart: new Date(Math.max(startMs, shiftStartMs)),
+      schedEnd:   new Date(endMs),
+      crossShift, // 直またぎフラグ（⑦ 警告表示用）
     });
   }
 
@@ -4492,9 +4560,21 @@ function renderScheduleBody() {
         <div style="font-size:12px;font-weight:700;color:${color}">${remDisplay}</div>
       </div>`;
 
+      const crossBadge = s.crossShift
+        ? `<div style="background:#7c3aed;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;margin-bottom:7px;display:inline-block;margin-left:6px">⚠ 直またぎ</div>`
+        : '';
       if (isOverdue) {
         return `<div style="border:2px solid var(--overdue-border,var(--overdue-text));border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--bg2);box-shadow:var(--card-shadow-overdue,0 2px 8px rgba(239,68,68,0.15));cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">
-          <div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;margin-bottom:7px;display:inline-block">緊急 — ショット超過中</div>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:7px">
+            <div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;display:inline-block">緊急 — ショット超過中</div>
+            ${crossBadge}
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:8px">${metaHTML}${trackHTML}</div>
+        </div>`;
+      }
+      if (s.crossShift) {
+        return `<div style="margin-bottom:10px;cursor:pointer;padding:10px 12px;border:2px solid #7c3aed;border-radius:10px;background:var(--bg2)" onclick="openMaintenanceFromAlert('${s.mold.id}')">
+          <div style="margin-bottom:7px">${crossBadge}</div>
           <div style="display:flex;align-items:flex-start;gap:8px">${metaHTML}${trackHTML}</div>
         </div>`;
       }
@@ -4508,6 +4588,7 @@ function renderScheduleBody() {
       <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--overdue-text)"></div><span style="font-size:11px;color:var(--text3)">緊急（超過）</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--maint-text)"></div><span style="font-size:11px;color:var(--text3)">要メンテ</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#fbbf24"></div><span style="font-size:11px;color:var(--text3)">注意</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#7c3aed"></div><span style="font-size:11px;color:var(--text3)">直またぎ</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:12px;background:#ef4444"></div><span style="font-size:11px;color:var(--text3)">現在時刻</span></div>
     </div>`;
 
@@ -5033,9 +5114,20 @@ function renderAllScheduleBody(el) {
           </div>
           <div style="font-size:12px;font-weight:700;color:${color}">${remDisplay}</div>
         </div>`;
+        const crossBadgeAll = s.crossShift
+          ? `<div style="background:#7c3aed;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;display:inline-block;margin-left:6px">⚠ 直またぎ</div>`
+          : '';
         if (isOverdue) {
           html += `<div style="border:2px solid var(--overdue-border,var(--overdue-text));border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--bg2);box-shadow:var(--card-shadow-overdue,0 2px 8px rgba(239,68,68,0.15));cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">
-            <div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;margin-bottom:7px;display:inline-block">緊急 — ショット超過中</div>
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:7px">
+              <div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;display:inline-block">緊急 — ショット超過中</div>
+              ${crossBadgeAll}
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px">${metaHTML}${trackHTML}</div>
+          </div>`;
+        } else if (s.crossShift) {
+          html += `<div style="margin-bottom:10px;cursor:pointer;padding:10px 12px;border:2px solid #7c3aed;border-radius:10px;background:var(--bg2)" onclick="openMaintenanceFromAlert('${s.mold.id}')">
+            <div style="margin-bottom:7px">${crossBadgeAll}</div>
             <div style="display:flex;align-items:flex-start;gap:8px">${metaHTML}${trackHTML}</div>
           </div>`;
         } else {
@@ -5051,6 +5143,7 @@ function renderAllScheduleBody(el) {
       <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#ef4444"></div><span style="font-size:11px;color:var(--text3)">緊急（超過）</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--maint-text)"></div><span style="font-size:11px;color:var(--text3)">要メンテ</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#fbbf24"></div><span style="font-size:11px;color:var(--text3)">注意</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#7c3aed"></div><span style="font-size:11px;color:var(--text3)">直またぎ</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:12px;background:#ef4444"></div><span style="font-size:11px;color:var(--text3)">現在時刻</span></div>
     </div>`;
     el.innerHTML = hint + html;
