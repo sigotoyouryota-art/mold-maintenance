@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.1.0">
+<meta name="app-version" content="1.1.1">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -1289,9 +1289,21 @@ let activeMoldIds = new Set();
 
 async function loadDandoriForList() {
   try {
+    // 最新の段取り設定を取得（日付に関係なく最新構成を引き継ぎ）
+    // まず当日分を取得、なければ直近の設定を使用
     const today = new Date().toISOString().split('T')[0];
-    const settings = await sb('dandori_settings','GET',null,
+    let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=mold_id`);
+    
+    if (!settings || settings.length === 0) {
+      // 当日分がなければ直近7日間の設定を取得
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoStr = weekAgo.toISOString().split('T')[0];
+      settings = await sb('dandori_settings','GET',null,
+        `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=mold_id&order=setting_date.desc&limit=100`);
+    }
+    
     activeMoldIds = new Set((settings||[]).map(s=>s.mold_id));
   } catch(e) {
     activeMoldIds = new Set();
@@ -3625,7 +3637,7 @@ function renderSchedule(el) {
     <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">${t('scheduleTitle')}</div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <div style="display:flex;gap:2px;background:var(--bg3);border-radius:6px;padding:3px" id="sched-shift-seg">
-        ${['1S','2S','3S'].map(s=>`<button class="seg-btn ${s===scheduleShift?'active':''}" onclick="setSchedShift('${s}',this)" style="padding:5px 14px;font-size:11px">${s}</button>`).join('')}
+        ${['all','1S','2S','3S'].map(s=>`<button class="seg-btn ${s===scheduleShift?'active':''}" onclick="setSchedShift('${s}',this)" style="padding:5px 10px;font-size:11px">${s==='all'?'全て':s}</button>`).join('')}
       </div>
       <div style="display:flex;gap:2px;background:var(--bg3);border-radius:6px;padding:3px" id="sched-view-seg">
         <button class="seg-btn ${scheduleView==='card'?'active':''}" onclick="setSchedView('card',this)" style="padding:4px 8px;font-size:10px" title="${t('viewCard')}">📋</button>
@@ -4258,7 +4270,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.1.0';
+const CURRENT_VERSION = '1.1.1';
 
 async function checkForUpdate() {
   try {
