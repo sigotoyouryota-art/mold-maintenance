@@ -2065,41 +2065,75 @@ function renderMasterUsers(el) {
 
 function renderMasterUsersTable(el) {
   var s = masterSortState['users'] || {key:'name', dir:'asc'};
-  function si(k, l) {
-    var arrow = s.key === k ? (s.dir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
-    return '<th style="cursor:pointer;white-space:nowrap" data-sk="' + k + '" onclick="masterCurrentTab=\'users\';setMasterSort(this.dataset.sk)">' + l + arrow + '</th>';
+
+  function sortArrow(k) {
+    return s.key === k ? (s.dir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
   }
-  var thead = '<tr><th>ID</th>' + si('name','\u540d\u524d') + si('role','\u6a29\u9650') + si('last_login_at','\u6700\u7d42\u30ed\u30b0\u30a4\u30f3') + '<th>\u64cd\u4f5c</th></tr>';
 
   var sorted = sortMasterData(state.users || [], s.key, s.dir);
-  var rows = '';
+
+  var thead = '<tr>'
+    + '<th>ID</th>'
+    + '<th class="su-th" style="cursor:pointer" data-sk="name">\u540d\u524d' + sortArrow('name') + '</th>'
+    + '<th class="su-th" style="cursor:pointer" data-sk="role">\u6a29\u9650' + sortArrow('role') + '</th>'
+    + '<th class="su-th" style="cursor:pointer" data-sk="last_login_at">\u6700\u7d42\u30ed\u30b0\u30a4\u30f3' + sortArrow('last_login_at') + '</th>'
+    + '<th>\u64cd\u4f5c</th>'
+    + '</tr>';
+
+  var tbody = '';
   if (sorted.length === 0) {
-    rows = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">\u30e6\u30fc\u30b6\u30fc\u304c\u767b\u9332\u3055\u308c\u3066\u3044\u307e\u305b\u3093</td></tr>';
+    tbody = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">\u30e6\u30fc\u30b6\u30fc\u304c\u767b\u9332\u3055\u308c\u3066\u3044\u307e\u305b\u3093</td></tr>';
   } else {
     sorted.forEach(function(u) {
       var lastLogin = u.last_login_at || u.updated_at;
-      var lastStr = lastLogin ? new Date(lastLogin).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
-      rows += '<tr>'
+      var lastStr = lastLogin
+        ? new Date(lastLogin).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
+        : '-';
+      tbody += '<tr>'
         + '<td style="font-size:10px;color:var(--text4);font-family:monospace">' + (u.id || '').slice(0,8) + '</td>'
         + '<td style="font-weight:600">' + (u.name || '') + '</td>'
-        + '<td><span class="badge ' + (u.role === 'admin' ? 'badge-warning' : 'badge-gray') + '">' + (u.role === 'admin' ? '\u7ba1\u7406\u8005' : '\u4f5c\u696d\u8005') + '</span></td>'
+        + '<td><span class="badge ' + (u.role === 'admin' ? 'badge-warning' : 'badge-gray') + '">'
+        + (u.role === 'admin' ? '\u7ba1\u7406\u8005' : '\u4f5c\u696d\u8005') + '</span></td>'
         + '<td style="font-size:12px;color:var(--text3)">' + lastStr + '</td>'
         + '<td><div style="display:flex;gap:4px">'
-        + '<button class="btn btn-secondary btn-sm" data-uid="' + u.id + '" onclick="editUser(this.dataset.uid)">\u7de8\u96c6</button>'
-        + '<button class="btn btn-danger btn-sm" data-uid="' + u.id + '" onclick="deleteUser(this.dataset.uid)">\u524a\u9664</button>'
+        + '<button class="btn btn-secondary btn-sm su-edit-btn" data-uid="' + u.id + '">\u7de8\u96c6</button>'
+        + '<button class="btn btn-danger btn-sm su-del-btn" data-uid="' + u.id + '" data-name="' + (u.name||'') + '">\u524a\u9664</button>'
         + '</div></td></tr>';
     });
   }
 
   el.innerHTML = '<div class="toolbar"><div></div>'
     + '<div style="display:flex;gap:6px">'
-    + '<button class="btn btn-secondary" onclick="exportMaster(\'users\')">\u2193 CSV\u30a8\u30af\u30b9\u30dd\u30fc\u30c8</button>'
-    + '<button class="btn btn-secondary" onclick="openImportModal(\'users\')">\u2191 CSV\u30a4\u30f3\u30dd\u30fc\u30c8</button>'
-    + '<button class="btn btn-primary" onclick="openAddUserModal()">\uff0b \u30e6\u30fc\u30b6\u30fc\u8ffd\u52a0</button>'
+    + '<button class="btn btn-secondary" id="su-export-btn">\u2193 CSV\u30a8\u30af\u30b9\u30dd\u30fc\u30c8</button>'
+    + '<button class="btn btn-secondary" id="su-import-btn">\u2191 CSV\u30a4\u30f3\u30dd\u30fc\u30c8</button>'
+    + '<button class="btn btn-primary" id="su-add-btn">\uff0b \u30e6\u30fc\u30b6\u30fc\u8ffd\u52a0</button>'
     + '</div></div>'
-    + '<div class="table-wrap"><table>'
-    + thead + rows
-    + '</table></div>';
+    + '<div class="table-wrap"><table>' + thead + tbody + '</table></div>';
+
+  // addEventListener でイベント登録（インラインonclickを完全排除）
+  el.querySelectorAll('.su-th').forEach(function(th) {
+    th.addEventListener('click', function() {
+      masterCurrentTab = 'users';
+      setMasterSort(this.dataset.sk);
+    });
+  });
+  el.querySelectorAll('.su-edit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { editUser(this.dataset.uid); });
+  });
+  el.querySelectorAll('.su-del-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var uid = this.dataset.uid;
+      var name = this.dataset.name || '\u3053\u306e\u30e6\u30fc\u30b6\u30fc';
+      if (!confirm('\u300c' + name + '\u300d\u3092\u524a\u9664\u3057\u307e\u3059\u304b\uff1f\n\u3053\u306e\u64cd\u4f5c\u306f\u53d6\u308a\u6d88\u305b\u307e\u305b\u3093\u3002')) return;
+      deleteUser(uid);
+    });
+  });
+  var exportBtn = document.getElementById('su-export-btn');
+  if (exportBtn) exportBtn.addEventListener('click', function() { exportMaster('users'); });
+  var importBtn = document.getElementById('su-import-btn');
+  if (importBtn) importBtn.addEventListener('click', function() { openImportModal('users'); });
+  var addBtn = document.getElementById('su-add-btn');
+  if (addBtn) addBtn.addEventListener('click', openAddUserModal);
 }
 
 function renderMasterAlerts(el) {
@@ -2626,14 +2660,11 @@ async function saveUser() {
 }
 
 async function deleteUser(id) {
-  const u = state.users.find(u => u.id === id);
-  const name = u?.name || 'このユーザー';
-  if (!confirm('「' + name + '」を削除しますか？\nこの操作は取り消せません。')) return;
   try {
     await sb('users', 'PATCH', { is_active: false }, '?id=eq.' + id);
     state.users = await sb('users', 'GET', null, '?order=name');
     showToast('削除しました', 'success');
-    const body = document.getElementById('master-body');
+    var body = document.getElementById('master-body');
     if (body) renderMasterUsersTable(body);
   } catch(e) {
     console.error(e);
