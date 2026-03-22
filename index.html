@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.2.3">
+<meta name="app-version" content="1.2.4">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3921,13 +3921,17 @@ function renderScheduleBody() {
     const nowOffset = Math.max(0, Math.min(100, (new Date() - shiftStart) / 60000 / shiftDur * 100));
 
     // 時間軸（時のみ・2時間ごと）
-    const makeAxis = () => [0,2,4,6,8].map((i,idx) => {
-      const h = (shiftStart.getHours() + i) % 24;
-      const align = idx===0?'':idx===4?'text-align:right':'text-align:center';
-      return `<div style="flex:1;font-size:10px;color:var(--text4);${align}">${String(h).padStart(2,'0')}</div>`;
-    }).join('');
-    const axisHTML = `<div style="display:flex;padding-left:124px;margin-bottom:6px">${makeAxis()}</div>`;
-    const axisBottomHTML = `<div style="display:flex;padding-left:124px;margin-top:8px;padding-top:6px;border-top:0.5px solid var(--border)">${makeAxis()}</div>`;
+    const makeAxis = () => {
+      const labels = [0,2,4,6,8].map((i) => {
+        const h = (shiftStart.getHours() + i) % 24;
+        const pct = (i / 8) * 100;
+        const anchor = i===0 ? 'left:0;transform:none' : i===8 ? 'right:0;transform:none;left:auto' : `left:${pct}%;transform:translateX(-50%)`;
+        return `<div style="position:absolute;${anchor};font-size:10px;color:var(--text4);white-space:nowrap">${String(h).padStart(2,'0')}:00</div>`;
+      }).join('');
+      return `<div style="position:relative;height:16px">${labels}</div>`;
+    };
+    const axisHTML = `<div style="padding-left:124px;margin-bottom:6px">${makeAxis()}</div>`;
+    const axisBottomHTML = `<div style="padding-left:124px;margin-top:8px;padding-top:6px;border-top:0.5px solid var(--border)">${makeAxis()}</div>`;
 
     const gridLines = [1,2,3,4,5,6,7].map(i =>
       `<div style="position:absolute;left:${(i/8)*100}%;top:0;bottom:0;width:1px;background:var(--border);opacity:0.4"></div>`
@@ -4343,7 +4347,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.2.3';
+const CURRENT_VERSION = '1.2.4';
 
 async function checkForUpdate() {
   try {
@@ -4463,12 +4467,13 @@ function renderAllScheduleBody(el) {
       </div>`;
 
       // 時間軸（上）
-      const axisInner = [0,2,4,6,8].map((i,idx) => {
+      const axisInner = [0,2,4,6,8].map((i) => {
         const h = (shiftStart.getHours() + i) % 24;
-        const align = idx===0?'':idx===4?'text-align:right':'text-align:center';
-        return `<div style="flex:1;font-size:10px;color:var(--text4);${align}">${String(h).padStart(2,'0')}</div>`;
+        const pct = (i / 8) * 100;
+        const anchor = i===0 ? 'left:0;transform:none' : i===8 ? 'right:0;transform:none;left:auto' : `left:${pct}%;transform:translateX(-50%)`;
+        return `<div style="position:absolute;${anchor};font-size:10px;color:var(--text4);white-space:nowrap">${String(h).padStart(2,'0')}:00</div>`;
       }).join('');
-      html += `<div style="display:flex;padding-left:124px;margin-bottom:6px">${axisInner}</div>`;
+      html += `<div style="padding-left:124px;margin-bottom:6px"><div style="position:relative;height:16px">${axisInner}</div></div>`;
 
       const gridLines = [1,2,3,4,5,6,7].map(i =>
         `<div style="position:absolute;left:${(i/8)*100}%;top:0;bottom:0;width:1px;background:var(--border);opacity:0.4"></div>`
@@ -4525,7 +4530,7 @@ function renderAllScheduleBody(el) {
       });
 
       // 時間軸（下）
-      html += `<div style="display:flex;padding-left:124px;margin-top:4px;padding-bottom:8px;border-bottom:0.5px solid var(--border)">${axisInner}</div>`;
+      html += `<div style="padding-left:124px;margin-top:4px;padding-bottom:8px;border-bottom:0.5px solid var(--border)"><div style="position:relative;height:16px">${axisInner}</div></div>`;
     });
 
     html += `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
