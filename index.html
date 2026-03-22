@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.2.4">
+<meta name="app-version" content="1.2.5">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3783,8 +3783,8 @@ function buildSchedule(shift) {
   // また既に要メンテ（deadline < now）のものも含める
   const targets = moldsWithDeadline
     .filter(({ deadlineMs, status }) => {
-      // 要メンテは常に含める
-      if (status === 'danger') return true;
+      // 超過中・要メンテは常に含める
+      if (status === 'overdue' || status === 'danger') return true;
       // デッドラインが直の終了より前なら対象
       return deadlineMs < shiftEnd.getTime();
     })
@@ -3802,22 +3802,27 @@ function buildSchedule(shift) {
   const n = targets.length;
   const schedTimes = new Array(n);
 
-  // 最後の金型：ギリギリ開始
-  const lastDeadline = targets[n-1].deadlineMs;
+  // 最後の金型：ギリギリ開始（overdueはmax(shiftStart,now)）
+  const effectiveStart = (t) => {
+    const s = t.status === 'overdue'
+      ? Math.max(shiftStart.getTime(), now.getTime())
+      : t.deadlineMs;
+    return Math.max(shiftStart.getTime(), s);
+  };
   schedTimes[n-1] = {
-    start: new Date(lastDeadline),
-    end: new Date(lastDeadline + targets[n-1].dur * 60000)
+    start: new Date(effectiveStart(targets[n-1])),
+    end: new Date(effectiveStart(targets[n-1]) + targets[n-1].dur * 60000)
   };
 
   // 後ろから前へ逆算
   for (let i = n - 2; i >= 0; i--) {
     const nextStart = schedTimes[i + 1].start.getTime();
     const myDur = targets[i].dur * 60000;
-    const myDeadline = targets[i].deadlineMs;
-    // 前の金型が終わる前に自分が終わる必要 → 前の金型の開始 - 自分の所要時間
+    const myDeadline = targets[i].status === 'overdue'
+      ? Math.max(shiftStart.getTime(), now.getTime())
+      : targets[i].deadlineMs;
     const mustStartBy = nextStart - myDur;
-    // 希望はギリギリ（deadline）、でもかぶるなら前倒し
-    const actualStart = Math.min(myDeadline, mustStartBy);
+    const actualStart = Math.max(shiftStart.getTime(), Math.min(myDeadline, mustStartBy));
     schedTimes[i] = {
       start: new Date(actualStart),
       end: new Date(actualStart + myDur)
@@ -4347,7 +4352,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.2.4';
+const CURRENT_VERSION = '1.2.5';
 
 async function checkForUpdate() {
   try {
