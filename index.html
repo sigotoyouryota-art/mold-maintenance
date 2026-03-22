@@ -2010,8 +2010,8 @@ function renderMasterMachines(el) {
       <th>ID</th>
       <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('machine_no')">機番${masterSortState[masterCurrentTab]?.key==='machine_no'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
       <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('line_name')">ライン${masterSortState[masterCurrentTab]?.key==='line_name'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th>段替え</th>
-      <th>備考</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('is_dandori')">段替え${masterSortState[masterCurrentTab]?.key==='is_dandori'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('note')">備考${masterSortState[masterCurrentTab]?.key==='note'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
       <th>操作</th>
     </tr>
     ${sortMasterData(state.machines, masterSortState[masterCurrentTab]?.key||'machine_no', masterSortState[masterCurrentTab]?.dir||'asc').map(m=>{
@@ -2108,11 +2108,24 @@ function renderMasterUsersTable(el) {
 }
 
 function renderMasterAlerts(el) {
+  const s = masterSortState['alerts'] || {key:'part_no', dir:'asc'};
+  function sa(k) { return s.key===k ? (s.dir==='asc' ? ' ↑' : ' ↓') : ' ↕'; }
+  const sorted = sortMasterData(state.molds, s.key, s.dir);
   el.innerHTML = `
   <div style="padding:10px 16px;font-size:12px;color:var(--text3)">各金型のアラートしきい値を設定します</div>
   <div class="table-wrap"><table>
-    <tr><th>品番</th><th>品名</th><th>分類</th><th>メンテ間隔</th><th>要メンテ(分前)</th><th>注意(分前)</th><th>操作</th></tr>
-    ${state.molds.map(m=>`<tr>
+    <tr>
+      <th>ID</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('part_no')">品番${sa('part_no')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('part_name')">品名${sa('part_name')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('category_name')">分類${sa('category_name')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('maintenance_interval')">メンテ間隔${sa('maintenance_interval')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('alert_min_danger')">要メンテ(分前)${sa('alert_min_danger')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('alert_min_warning')">注意(分前)${sa('alert_min_warning')}</th>
+      <th>操作</th>
+    </tr>
+    ${sorted.map(m=>`<tr>
+      <td style="font-size:10px;color:var(--text4);font-family:monospace">${(m.id||'').slice(0,8)}</td>
       <td style="font-weight:600;color:var(--text)">${m.part_no}</td>
       <td>${m.part_name}</td>
       <td>${typeBadge(m.category_name)}</td>
@@ -3540,6 +3553,7 @@ let masterSortState = {
   machines: { key: 'machine_no', dir: 'asc' },
   lines:    { key: 'name',      dir: 'asc' },
   users:    { key: 'name',      dir: 'asc' },
+  alerts:   { key: 'part_no',  dir: 'asc' },
 };
 let masterCurrentTab = 'molds';
 // 後方互換のためのゲッター
@@ -3549,6 +3563,7 @@ Object.defineProperty(window, 'masterSortDir', { get: () => masterSortState[mast
 function sortMasterData(arr, key, dir) {
   const data = [...arr];
   const numKeys = ['machine_no','maintenance_interval','cycle_time_sec','simple_maint_time_min','oh_maint_time_min','alert_min_danger','alert_min_warning'];
+  const boolKeys = ['is_dandori'];
   data.sort((a, b) => {
     let va = a[key] !== undefined ? a[key] : '';
     let vb = b[key] !== undefined ? b[key] : '';
@@ -3556,7 +3571,11 @@ function sortMasterData(arr, key, dir) {
       va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
       return dir === 'asc' ? va - vb : vb - va;
     }
-    va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+    if (boolKeys.includes(key)) {
+      va = va ? 1 : 0; vb = vb ? 1 : 0;
+      return dir === 'asc' ? va - vb : vb - va;
+    }
+    va = String(va || '').toLowerCase(); vb = String(vb || '').toLowerCase();
     return dir === 'asc' ? va.localeCompare(vb, 'ja') : vb.localeCompare(va, 'ja');
   });
   return data;
@@ -3571,7 +3590,7 @@ function setMasterSort(key) {
   else { s.key = key; s.dir = 'asc'; }
   const body = document.getElementById('master-body');
   if (body) {
-    const renders = { molds: renderMasterMolds, machines: renderMasterMachines, lines: renderMasterLines, users: renderMasterUsersTable };
+    const renders = { molds: renderMasterMolds, machines: renderMasterMachines, lines: renderMasterLines, users: renderMasterUsersTable, alerts: renderMasterAlerts };
     if (renders[masterCurrentTab]) renders[masterCurrentTab](body);
   }
 }
