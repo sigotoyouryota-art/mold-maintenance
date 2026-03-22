@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.4.0">
+<meta name="app-version" content="1.4.1">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -565,7 +565,6 @@ select.form-control { cursor: pointer; }
     <div class="bn-item active" onclick="showSection('dashboard')" id="bn-dashboard"><span class="bn-icon">📊</span><span class="bn-label" id="bn-label-dashboard">DB</span></div>
     <div class="bn-item" onclick="showSection('list')" id="bn-list"><span class="bn-icon">≡</span><span class="bn-label" id="bn-label-list">一覧</span></div>
     <div class="bn-item" onclick="showSection('schedule')" id="bn-schedule"><span class="bn-icon">📅</span><span class="bn-label" id="bn-label-schedule">予定</span></div>
-    <div class="bn-item" onclick="showSection('shotUpdate')" id="bn-shotUpdate"><span class="bn-icon">🔢</span><span class="bn-label" id="bn-label-shotUpdate">更新</span></div>
     <div class="bn-item" onclick="showSection('shotUpdate')" id="bn-shotUpdate"><span class="bn-icon">🔢</span><span class="bn-label" id="bn-label-shotUpdate">更新</span></div>
     <div class="bn-item" onclick="showSection('dandori')" id="bn-dandori"><span class="bn-icon">⚙</span><span class="bn-label" id="bn-label-dandori-bn">段取り</span></div>
     <div class="bn-item" onclick="showSection('history')" id="bn-history"><span class="bn-icon">📋</span><span class="bn-label" id="bn-label-history">履歴</span></div>
@@ -3755,9 +3754,11 @@ function renderShotUpdateGrid(el) {
 
   const totalMachines = sorted.length;
 
-  // ラインフィルター（line_nameから収集）
-  const lineNames = [...new Set(sorted.map(m => m.line_name).filter(Boolean).sort())];
-  const lines = ['全て', ...lineNames];
+  // ラインフィルター（state.linesと両方から収集）
+  const lineNamesFromMolds = new Set(sorted.map(m => m.line_name).filter(Boolean));
+  const lineNamesFromState = new Set((state.lines||[]).map(l => l.name).filter(Boolean));
+  const allLineNames = [...new Set([...lineNamesFromMolds, ...lineNamesFromState])].sort();
+  const lines = ['全て', ...allLineNames];
   let suLineFilter = window.suLineFilterVal || '全て';
 
   const gridItems = sorted.map(m => {
@@ -3786,7 +3787,7 @@ function renderShotUpdateGrid(el) {
     </div>
   </div>
   <div style="height:3px;background:var(--border)"><div style="height:100%;width:${totalMachines>0?Math.round(doneCount/totalMachines*100):0}%;background:var(--info-text);transition:width 0.3s"></div></div>
-  <div id="su-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px">${gridItems}</div>
+  <div id="su-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;padding:10px 12px;max-width:100%">${gridItems}</div>
   <div style="padding:4px 12px 12px;display:flex;gap:10px;justify-content:center">
     <div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--success-text)"></div><span style="font-size:10px;color:var(--text3)">更新済</span></div>
     <div style="display:flex;align-items:center;gap:3px"><div style="width:5px;height:5px;border-radius:50%;background:var(--border2)"></div><span style="font-size:10px;color:var(--text3)">未入力</span></div>
@@ -4619,7 +4620,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.4.0';
+const CURRENT_VERSION = '1.4.1';
 
 async function checkForUpdate() {
   try {
@@ -4838,7 +4839,7 @@ function renderAllScheduleBody(el) {
 
 
 // ===== スワイプナビゲーション =====
-const SWIPE_SECTIONS = ['dashboard','list','schedule','dandori','history','analysis'];
+const SWIPE_SECTIONS = ['dashboard','list','schedule','shotUpdate','dandori','history','analysis'];
 
 (function initSwipe() {
   let startX = 0, startY = 0, startTime = 0;
