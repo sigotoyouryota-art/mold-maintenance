@@ -4228,8 +4228,7 @@ function buildSchedule(shift) {
   const [startH, endH] = SHIFT_HOURS[shift];
   const now = new Date();
 
-  // ===== 直の開始・終了時刻を正確に計算 =====
-  // 3S(00-08)の場合は日付ロジックに注意
+  // ===== 直の開始・終了時刻を計算 =====
   const shiftStart = new Date(now);
   shiftStart.setHours(startH, 0, 0, 0);
 
@@ -4241,106 +4240,76 @@ function buildSchedule(shift) {
     shiftEnd.setHours(endH, 0, 0, 0);
   }
 
-  // 直の終了が開始以前になる場合（3S: 08:00 <= 00:00）→ 終了を翌日に
+  // 3S: 終了(08:00) <= 開始(00:00) にならないよう翌日補正
   if (shiftEnd <= shiftStart) {
     shiftEnd.setDate(shiftEnd.getDate() + 1);
   }
 
-  // now が直の終了後 → 翌日の同じ直として計算（1回だけ）
+  // 既に終わった直 → 翌日の同じ直として計算
   if (now >= shiftEnd) {
     shiftStart.setDate(shiftStart.getDate() + 1);
     shiftEnd.setDate(shiftEnd.getDate() + 1);
   }
 
-  const shiftEndMs = shiftEnd.getTime();
   const shiftStartMs = shiftStart.getTime();
-  const nowMs = now.getTime();
+  const shiftEndMs   = shiftEnd.getTime();
+  const nowMs        = now.getTime();
   const isCurrentShift = nowMs >= shiftStartMs && nowMs < shiftEndMs;
-  const baseMs = Math.max(nowMs, shiftStartMs); // 配置の基準時刻
 
-  // ===== ① 全金型のデッドライン計算 =====
+  // 配置の基準時刻（現在の直なら今、未来の直なら直開始）
+  const baseMs = isCurrentShift ? nowMs : shiftStartMs;
+
+  // ===== ① 各金型のデッドラインを計算 =====
+  // deadline = 今からremMin分後 - 所要時間
+  // （これより遅く開始するとメンテ間隔を超過する）
   const moldsWithDeadline = state.molds.map(mold => {
     const status = calcStatus(mold);
-    const dur = (mold.simple_maint_time_min || 20) * 60000;
+    const dur    = (mold.simple_maint_time_min || 20) * 60000;
     const remMin = status === 'overdue' ? 0 : calcEstimatedRemainingMin(mold);
-    // deadline = 今からremMin分後 - 所要時間 = これ以降に開始しないと超過
     const deadlineMs = nowMs + remMin * 60000 - dur;
     return { mold, remMin, dur, status, deadlineMs };
   });
 
-  // ===== ② フィルター（修正①⑤対応） =====
+  // ===== ② この直に属する金型だけ抽出 =====
+  // ルール:
+  //   overdue / 既にdeadline超過 → 現在の直のみ（重複防止）
+  //   それ以外 → deadlineが「この直の時間帯」に収まるものだけ
+  //   （deadlineが shiftStart <= deadline < shiftEnd）
   const targets = moldsWithDeadline.filter(({ deadlineMs, status }) => {
-    // 超過中 → 現在の直のみ
-    if (status === 'overdue') return isCurrentShift;
-    // deadlineが過去（超過直前）→ 現在の直のみ（全直に出ないよう制限）
-    if (deadlineMs <= nowMs) return isCurrentShift;
-    // deadlineが直の終了より前なら対象
-    return deadlineMs < shiftEndMs;
+    if (status === 'overdue')      return isCurrentShift;
+    if (deadlineMs <= nowMs)       return isCurrentShift;
+    return deadlineMs >= shiftStartMs && deadlineMs < shiftEndMs;
   }).sort((a, b) => {
     const order = { overdue: 0, danger: 1, warning: 2, normal: 3 };
     const ao = order[a.status] ?? 3;
     const bo = order[b.status] ?? 3;
     if (ao !== bo) return ao - bo;
-    return a.deadlineMs - b.deadlineMs;
+    return a.deadlineMs - b.deadlineMs; // deadline早い順
   });
 
   if (!targets.length) return { scheduled: [], shiftStart, shiftEnd };
 
-  // ===== ③ スタート時刻を確定（修正②③④対応） =====
-  const n = targets.length;
-  const schedTimes = new Array(n);
-
-  // overdue と 非overdueを分離
-  const overdueList = targets.filter(t => t.status === 'overdue');
-  const nonOverdueList = targets.filter(t => t.status !== 'overdue');
-
-  // Step1: overdueを baseMs から順番に配置（重複なし）
+  // ===== ③ 前から順に詰めてスタート時刻を確定（重複なし） =====
+  // cursor = 次の金型を置ける最早時刻
   let cursor = baseMs;
-  for (const t of overdueList) {
-    const idx = targets.indexOf(t);
-    const s = Math.min(cursor, shiftEndMs - t.dur); // shift内に収める
-    const e = s + t.dur;
-    schedTimes[idx] = { start: new Date(s), end: new Date(e) };
-    cursor = e;
-  }
-  // overdue配置後のカーソル（非overdueの最早開始時刻）
-  const overdueEndMs = Math.min(cursor, shiftEndMs);
+  const schedTimes = targets.map(t => {
+    // できるだけdeadlineに間に合うよう早めに配置
+    // 開始は max(cursor, できるだけ早く) かつ直の終端を超えない
+    const latestStart = Math.min(t.deadlineMs, shiftEndMs - t.dur);
+    const start = Math.max(cursor, Math.min(latestStart, shiftEndMs - t.dur));
+    const end   = start + t.dur;
+    cursor = end; // 次の金型はこの後
+    return { start: new Date(start), end: new Date(end) };
+  });
 
-  // Step2: 非overdueを後ろから逆算（修正②対応: deadlineを優先）
-  if (nonOverdueList.length > 0) {
-    const nonIdx = nonOverdueList.map(t => targets.indexOf(t));
-    const last = nonOverdueList[nonOverdueList.length - 1];
-    const lastI = nonIdx[nonIdx.length - 1];
-    // 最後の金型はdeadline or shiftEnd-dur のうち早い方
-    const lastStart = Math.min(
-      Math.max(last.deadlineMs, overdueEndMs),
-      shiftEndMs - last.dur
-    );
-    schedTimes[lastI] = { start: new Date(lastStart), end: new Date(lastStart + last.dur) };
-
-    for (let i = nonOverdueList.length - 2; i >= 0; i--) {
-      const t = nonOverdueList[i];
-      const idx = nonIdx[i];
-      const nextStart = schedTimes[nonIdx[i + 1]].start.getTime();
-      // 自分のdeadline（overdueEndMs以降に制限）
-      const myDeadline = Math.max(t.deadlineMs, overdueEndMs);
-      // 次の金型と重ならない最遅開始
-      const mustStartBy = nextStart - t.dur;
-      // 実際の開始: deadlineと重複回避の早い方、かつoverdueEndMs以降
-      const actualStart = Math.max(overdueEndMs, Math.min(myDeadline, mustStartBy));
-      schedTimes[idx] = { start: new Date(actualStart), end: new Date(actualStart + t.dur) };
-    }
-  }
-
-  // ===== ④ 直の時間帯と重なるものだけ返す =====
+  // ===== ④ 直の時間帯に収まるものだけ返す =====
   const scheduled = [];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < targets.length; i++) {
     const { mold, status, remMin } = targets[i];
-    const dur = targets[i].dur / 60000; // 分に戻す
+    const dur = targets[i].dur / 60000;
     const { start, end } = schedTimes[i];
-    if (!start || !end) continue;
-    if (end.getTime() <= shiftStartMs) continue;
-    if (start.getTime() >= shiftEndMs) continue;
+    if (end.getTime()   <= shiftStartMs) continue;
+    if (start.getTime() >= shiftEndMs)   continue;
     scheduled.push({
       mold, status, dur, remMin,
       schedStart: new Date(Math.max(start.getTime(), shiftStartMs)),
