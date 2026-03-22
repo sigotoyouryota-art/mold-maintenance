@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.4.3">
+<meta name="app-version" content="1.4.4">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3912,7 +3912,7 @@ function suKeyPress(key) {
     disp.style.color = shotUpdateInputVal ? 'var(--text)' : 'var(--text4)';
   }
   // 保存ボタンのopacity
-  const btn = document.querySelector('[onclick^="saveShotUpdate"]');
+  const btn = document.getElementById('su-save-btn');
   if (btn) btn.style.opacity = shotUpdateInputVal ? '1' : '0.5';
 }
 
@@ -3928,8 +3928,8 @@ async function saveShotUpdate(moldId) {
     // ローカルのmoldsも更新
     const mold = state.molds.find(m => m.id === moldId);
     if (mold) { mold.maint_shot = val; mold.maint_shot_updated_at = new Date().toISOString(); }
-    shotUpdateDoneIds.add(machineNo);
-    showToast('#' + machineNo + ' 保存完了（' + val.toLocaleString() + ' shot）', 'success');
+    shotUpdateDoneIds.add(shotUpdateMachineId);
+    showToast('#' + shotUpdateMachineId + ' 保存完了（' + val.toLocaleString() + ' shot）', 'success');
     backToSuGrid();
   } catch(e) {
     showToast('保存に失敗しました', 'error');
@@ -4644,7 +4644,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.4.3';
+const CURRENT_VERSION = '1.4.4';
 
 async function checkForUpdate() {
   try {
