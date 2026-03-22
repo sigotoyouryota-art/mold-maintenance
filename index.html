@@ -1929,6 +1929,7 @@ function renderMaster(el) {
 }
 
 function showMasterTab(tab, el) {
+  masterCurrentTab = tab;
   document.querySelectorAll('.master-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   const body = document.getElementById('master-body');
@@ -2005,10 +2006,18 @@ function renderMasterMachines(el) {
     </div>
   </div>
   <div class="table-wrap"><table>
-    <tr><th>ID</th><th>機番</th><th>ライン</th><th>段替え</th><th>備考</th><th>操作</th></tr>
-    ${state.machines.map(m=>{
+    <tr>
+      <th>ID</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('machine_no')">機番${masterSortState[masterCurrentTab]?.key==='machine_no'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('line_name')">ライン${masterSortState[masterCurrentTab]?.key==='line_name'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th>段替え</th>
+      <th>備考</th>
+      <th>操作</th>
+    </tr>
+    ${sortMasterData(state.machines, masterSortState[masterCurrentTab]?.key||'machine_no', masterSortState[masterCurrentTab]?.dir||'asc').map(m=>{
       const line = state.lines.find(l=>l.id===m.line_id);
       return `<tr>
+        <td style="font-size:10px;color:var(--text4);font-family:monospace">${(m.id||'').slice(0,8)}</td>
         <td style="font-weight:600">#${m.machine_no}</td>
         <td>${line?.name||'-'}</td>
         <td><span class="badge ${m.is_dandori?'badge-info':'badge-gray'}">${m.is_dandori?t('dandori'):t('fixed')}</span></td>
@@ -2029,10 +2038,16 @@ function renderMasterLines(el) {
     <button class="btn btn-primary" onclick="openAddLineModal()">＋ ライン追加</button>
   </div>
   <div class="table-wrap"><table>
-    <tr><th>ID</th><th>ライン名</th><th>機台数</th><th>操作</th></tr>
-    ${state.lines.map(l=>{
+    <tr>
+      <th>ID</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('name')">ライン名${masterSortState[masterCurrentTab]?.key==='name'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th>機台数</th>
+      <th>操作</th>
+    </tr>
+    ${sortMasterData(state.lines, masterSortState[masterCurrentTab]?.key||'name', masterSortState[masterCurrentTab]?.dir||'asc').map(l=>{
       const cnt = state.machines.filter(m=>m.line_id===l.id).length;
       return `<tr>
+        <td style="font-size:10px;color:var(--text4);font-family:monospace">${(l.id||'').slice(0,8)}</td>
         <td style="font-weight:600">${l.name}</td>
         <td>${cnt}台</td>
         <td><button class="btn btn-secondary btn-sm" onclick="editLine('${l.id}')">編集</button></td>
@@ -2049,32 +2064,42 @@ function renderMasterUsers(el) {
 }
 
 function renderMasterUsersTable(el) {
-  let rows = '';
-  if (!state.users || state.users.length === 0) {
-    rows = '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">ユーザーが登録されていません</td></tr>';
+  var s = masterSortState['users'] || {key:'name', dir:'asc'};
+  function si(k, l) {
+    var arrow = s.key === k ? (s.dir === 'asc' ? ' \u2191' : ' \u2193') : ' \u2195';
+    return '<th style="cursor:pointer;white-space:nowrap" data-sk="' + k + '" onclick="masterCurrentTab=\'users\';setMasterSort(this.dataset.sk)">' + l + arrow + '</th>';
+  }
+  var thead = '<tr><th>ID</th>' + si('name','\u540d\u524d') + si('role','\u6a29\u9650') + si('last_login_at','\u6700\u7d42\u30ed\u30b0\u30a4\u30f3') + '<th>\u64cd\u4f5c</th></tr>';
+
+  var sorted = sortMasterData(state.users || [], s.key, s.dir);
+  var rows = '';
+  if (sorted.length === 0) {
+    rows = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">\u30e6\u30fc\u30b6\u30fc\u304c\u767b\u9332\u3055\u308c\u3066\u3044\u307e\u305b\u3093</td></tr>';
   } else {
-    state.users.forEach(function(u) {
-      const lastLogin = u.last_login_at || u.updated_at;
-      const lastStr = lastLogin ? new Date(lastLogin).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
-      const editBtn = '<button class="btn btn-secondary btn-sm" onclick="editUser(this.dataset.id)" data-id="' + u.id + '">編集</button>';
-      const delBtn  = '<button class="btn btn-danger btn-sm" onclick="deleteUser(this.dataset.id)" data-id="' + u.id + '">削除</button>';
+    sorted.forEach(function(u) {
+      var lastLogin = u.last_login_at || u.updated_at;
+      var lastStr = lastLogin ? new Date(lastLogin).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
       rows += '<tr>'
-        + '<td style="font-size:10px;color:var(--text4)">' + (u.id||'-') + '</td>'
-        + '<td style="font-weight:600">' + (u.name||'') + '</td>'
-        + '<td><span class="badge ' + (u.role==='admin'?'badge-warning':'badge-gray') + '">' + (u.role==='admin'?'管理者':'作業者') + '</span></td>'
+        + '<td style="font-size:10px;color:var(--text4);font-family:monospace">' + (u.id || '').slice(0,8) + '</td>'
+        + '<td style="font-weight:600">' + (u.name || '') + '</td>'
+        + '<td><span class="badge ' + (u.role === 'admin' ? 'badge-warning' : 'badge-gray') + '">' + (u.role === 'admin' ? '\u7ba1\u7406\u8005' : '\u4f5c\u696d\u8005') + '</span></td>'
         + '<td style="font-size:12px;color:var(--text3)">' + lastStr + '</td>'
-        + '<td><div style="display:flex;gap:4px">' + editBtn + delBtn + '</div></td></tr>';
+        + '<td><div style="display:flex;gap:4px">'
+        + '<button class="btn btn-secondary btn-sm" data-uid="' + u.id + '" onclick="editUser(this.dataset.uid)">\u7de8\u96c6</button>'
+        + '<button class="btn btn-danger btn-sm" data-uid="' + u.id + '" onclick="deleteUser(this.dataset.uid)">\u524a\u9664</button>'
+        + '</div></td></tr>';
     });
   }
+
   el.innerHTML = '<div class="toolbar"><div></div>'
     + '<div style="display:flex;gap:6px">'
-    + '<button class="btn btn-secondary" onclick="exportMaster(\'users\')">↓ CSVエクスポート</button>'
-    + '<button class="btn btn-secondary" onclick="openImportModal(\'users\')">↑ CSVインポート</button>'
-    + '<button class="btn btn-primary" onclick="openAddUserModal()">＋ ユーザー追加</button>'
+    + '<button class="btn btn-secondary" onclick="exportMaster(\'users\')">\u2193 CSV\u30a8\u30af\u30b9\u30dd\u30fc\u30c8</button>'
+    + '<button class="btn btn-secondary" onclick="openImportModal(\'users\')">\u2191 CSV\u30a4\u30f3\u30dd\u30fc\u30c8</button>'
+    + '<button class="btn btn-primary" onclick="openAddUserModal()">\uff0b \u30e6\u30fc\u30b6\u30fc\u8ffd\u52a0</button>'
     + '</div></div>'
     + '<div class="table-wrap"><table>'
-    + '<tr><th>ID</th><th>名前</th><th>権限</th><th>最終ログイン</th><th>操作</th></tr>'
-    + rows + '</table></div>';
+    + thead + rows
+    + '</table></div>';
 }
 
 function renderMasterAlerts(el) {
@@ -2601,14 +2626,19 @@ async function saveUser() {
 }
 
 async function deleteUser(id) {
-  const u = state.users.find(u=>u.id===id);
-  if (!confirm(`「${u?.name}」を削除しますか？`)) return;
+  const u = state.users.find(u => u.id === id);
+  const name = u?.name || 'このユーザー';
+  if (!confirm('「' + name + '」を削除しますか？\nこの操作は取り消せません。')) return;
   try {
-    await sb('users','PATCH',{is_active:false},`?id=eq.${id}`);
+    await sb('users', 'PATCH', { is_active: false }, '?id=eq.' + id);
+    state.users = await sb('users', 'GET', null, '?order=name');
     showToast('削除しました', 'success');
-    state.users = await sb('users','GET',null,'?order=name');
-    showMasterTabByIndex(3);
-  } catch(e) { showToast('削除エラー', 'error'); }
+    const body = document.getElementById('master-body');
+    if (body) renderMasterUsersTable(body);
+  } catch(e) {
+    console.error(e);
+    showToast('削除エラー: ' + (e.message||''), 'error');
+  }
 }
 
 // ===== アラート設定 CRUD =====
@@ -3498,36 +3528,45 @@ function showMasterTabByIndex(idx) {
 
 // ===== ソート =====
 // ===== マスタ一覧ソート =====
-let masterSortKey = 'part_no';
-let masterSortDir = 'asc';
+let masterSortState = {
+  molds:    { key: 'part_no',   dir: 'asc' },
+  machines: { key: 'machine_no', dir: 'asc' },
+  lines:    { key: 'name',      dir: 'asc' },
+  users:    { key: 'name',      dir: 'asc' },
+};
+let masterCurrentTab = 'molds';
+// 後方互換のためのゲッター
+Object.defineProperty(window, 'masterSortKey', { get: () => masterSortState[masterCurrentTab]?.key || 'part_no' });
+Object.defineProperty(window, 'masterSortDir', { get: () => masterSortState[masterCurrentTab]?.dir || 'asc' });
 
-function sortMoldMaster(molds, key, dir) {
-  const arr = [...molds];
+function sortMasterData(arr, key, dir) {
+  const data = [...arr];
   const numKeys = ['machine_no','maintenance_interval','cycle_time_sec','simple_maint_time_min','oh_maint_time_min','alert_min_danger','alert_min_warning'];
-  arr.sort((a, b) => {
+  data.sort((a, b) => {
     let va = a[key] !== undefined ? a[key] : '';
     let vb = b[key] !== undefined ? b[key] : '';
     if (numKeys.includes(key)) {
-      va = parseFloat(va) || 0;
-      vb = parseFloat(vb) || 0;
+      va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
       return dir === 'asc' ? va - vb : vb - va;
     }
-    va = String(va).toLowerCase();
-    vb = String(vb).toLowerCase();
+    va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
     return dir === 'asc' ? va.localeCompare(vb, 'ja') : vb.localeCompare(va, 'ja');
   });
-  return arr;
+  return data;
 }
+// 後方互換
+function sortMoldMaster(arr, key, dir) { return sortMasterData(arr, key, dir); }
 
 function setMasterSort(key) {
-  if (masterSortKey === key) {
-    masterSortDir = masterSortDir === 'asc' ? 'desc' : 'asc';
-  } else {
-    masterSortKey = key;
-    masterSortDir = 'asc';
+  const s = masterSortState[masterCurrentTab];
+  if (!s) return;
+  if (s.key === key) { s.dir = s.dir === 'asc' ? 'desc' : 'asc'; }
+  else { s.key = key; s.dir = 'asc'; }
+  const body = document.getElementById('master-body');
+  if (body) {
+    const renders = { molds: renderMasterMolds, machines: renderMasterMachines, lines: renderMasterLines, users: renderMasterUsersTable };
+    if (renders[masterCurrentTab]) renders[masterCurrentTab](body);
   }
-  const el = document.getElementById('main-content');
-  if (el) renderMaster(el);
 }
 
 function sortMolds(molds, mode) {
