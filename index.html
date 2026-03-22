@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.0.9">
+<meta name="app-version" content="1.1.0">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -1326,12 +1326,16 @@ function renderListBody() {
 
   // PC テーブル
   const makeRow = (m, dim=false) => {
-    const rem = calcEstimatedRemaining(m);
-    const remMin = calcEstimatedRemainingMin(m);
-    const pct = calcEstimatedProgress(m);
     const status = calcStatus(m);
+    const isOverdue = status === 'overdue';
+    const overShot = isOverdue ? calcOverShot(m) : 0;
+    const rem = isOverdue ? 0 : calcEstimatedRemaining(m);
+    const remMin = isOverdue ? 0 : calcEstimatedRemainingMin(m);
+    const pct = isOverdue ? 100 : calcEstimatedProgress(m);
+    const totalShot = calcEstimatedTotalShot(m);
     const color = dim ? 'var(--text4)' : statusColor(status);
-    return `<tr data-mold-id="${m.id}" style="${dim?'opacity:0.45':''}">
+    const rowBg = !dim && isOverdue ? 'background:var(--danger-bg)20' : dim ? 'opacity:0.45' : '';
+    return `<tr data-mold-id="${m.id}" style="${rowBg}">
       <td style="font-weight:600">#${m.machine_no||'?'}</td>
       <td style="font-weight:500">${m.part_name}</td>
       <td style="color:var(--text3);font-size:11px">${m.part_no}</td>
@@ -1339,9 +1343,10 @@ function renderListBody() {
       <td>${typeBadge(m.category_name)}</td>
       <td>${m.line_name||'-'}</td>
       <td><div class="progress-wrap"><div class="progress-fill rt-progress" style="width:${pct}%;background:${color}"></div></div></td>
-      <td class="rt-remain-shot" style="color:${color};font-weight:600">${fmtNum(rem)}</td>
-      <td class="rt-remain-time" style="color:${color}">${fmtTime(remMin)}</td>
-      <td class="rt-pct" style="color:${color}">${pct}%</td>
+      <td class="rt-remain-shot" style="color:${color};font-weight:600">${isOverdue ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span>` : fmtNum(rem)}</td>
+      <td class="rt-remain-time" style="color:${color}">${isOverdue ? '-' : fmtTime(remMin)}</td>
+      <td class="rt-pct" style="color:${color}">${isOverdue ? '超過' : pct+'%'}</td>
+      <td style="color:var(--info-text);font-size:11px;font-weight:500">${fmtNum(totalShot)}</td>
       <td class="rt-status">${dim?'':statusBadge(status)}</td>
       <td><span style="font-size:11px;color:var(--accent);cursor:pointer" onclick="openShotModal('${m.id}')">入力 ›</span></td>
     </tr>`;
@@ -1357,12 +1362,14 @@ function renderListBody() {
 
   // スマホカード
   const makeCard = (m, dim=false) => {
-    const rem = calcEstimatedRemaining(m);
-    const remMin = calcEstimatedRemainingMin(m);
-    const pct = calcEstimatedProgress(m);
     const status = calcStatus(m);
+    const isOverdue = status === 'overdue';
+    const overShot = isOverdue ? calcOverShot(m) : 0;
+    const rem = isOverdue ? 0 : calcEstimatedRemaining(m);
+    const remMin = isOverdue ? 0 : calcEstimatedRemainingMin(m);
+    const pct = isOverdue ? 100 : calcEstimatedProgress(m);
     const color = dim ? 'var(--text4)' : statusColor(status);
-    return `<div class="mold-card ${dim?'':status}" data-mold-id="${m.id}" style="${dim?'opacity:0.45;border-left-color:var(--border)':''}">
+    return `<div class="mold-card ${dim?'':(isOverdue?'danger':status)}" data-mold-id="${m.id}" style="${dim?'opacity:0.45;border-left-color:var(--border)':''}">
       <div class="mold-card-top">
         <div>
           <div class="mold-card-name">#${m.machine_no||'?'}　${m.part_name}　<span style="font-size:9px;color:var(--text4)">${m.model_no||''}</span></div>
@@ -1372,11 +1379,12 @@ function renderListBody() {
       </div>
       <div class="mold-card-bar"><div class="rt-bar-fill" style="height:100%;border-radius:2px;background:${color};width:${pct}%"></div></div>
       <div class="mold-card-meta rt-meta">
-        <span style="color:${color}">残 ${fmtNum(rem)}shot</span>
-        <span style="color:${color}">${fmtTime(remMin)}</span>
-        <span style="color:${color}">${pct}%</span>
+        ${isOverdue
+          ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span><span style="color:var(--text3)">累計${fmtNum(calcEstimatedTotalShot(m))}</span>`
+          : `<span style="color:${color}">残 ${fmtNum(rem)}shot</span><span style="color:${color}">${fmtTime(remMin)}</span><span style="color:${color}">${pct}%</span>`
+        }
       </div>
-      ${dim?'':`<div class="mold-card-btn ${status==='danger'?'hot':''}" onclick="openShotModal('${m.id}')">${t('shotUpdate')} / ${t('maintDone2')}</div>`}
+      ${dim?'':`<div class="mold-card-btn ${(isOverdue||status==='danger')?'hot':''}" onclick="openShotModal('${m.id}')">${t('shotUpdate')} / ${t('maintDone2')}</div>`}
     </div>`;
   };
 
@@ -3451,11 +3459,20 @@ function calcEstimatedRemainingMin(mold) {
 }
 
 function calcStatus(mold) {
+  const estimated = calcEstimatedShot(mold);
+  const interval = mold.maintenance_interval || 5000;
+  if (estimated >= interval) return 'overdue'; // 超過
   const remaining = calcEstimatedRemaining(mold);
   const remainingMin = calcEstimatedRemainingMin(mold);
   if (remaining <= (mold.alert_shot_danger||500) || remainingMin <= (mold.alert_min_danger||120)) return 'danger';
   if (remaining <= (mold.alert_shot_warning||1000) || remainingMin <= (mold.alert_min_warning||480)) return 'warning';
   return 'normal';
+}
+
+function calcOverShot(mold) {
+  const estimated = calcEstimatedShot(mold);
+  const interval = mold.maintenance_interval || 5000;
+  return Math.max(0, estimated - interval);
 }
 
 function startRealtimeUpdate() {
@@ -3581,7 +3598,7 @@ function updateRealtimeDisplay() {
 
 // ===== スケジュール画面 =====
 const SHIFT_HOURS = { '1S': [8,16], '2S': [16,24], '3S': [0,8] };
-let scheduleShift = '2S';
+let scheduleShift = 'all';
 let scheduleView = 'card'; // 'card' | 'timeline'
 
 function renderSchedule(el) {
@@ -3607,6 +3624,21 @@ function setSchedShift(shift, el) {
   document.querySelectorAll('#sched-shift-seg .seg-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   renderScheduleBody();
+}
+
+function renderAllSchedule() {
+  // 全直のスケジュールを時系列で表示
+  const shifts = ['1S','2S','3S'];
+  const allScheduled = [];
+  let shiftStartRef = null, shiftEndRef = null;
+  shifts.forEach(shift => {
+    const result = buildSchedule(shift);
+    if (!shiftStartRef) { shiftStartRef = result.shiftStart; shiftEndRef = result.shiftEnd; }
+    result.scheduled.forEach(s => allScheduled.push({...s, shift}));
+  });
+  // 時刻順に並べ替え
+  allScheduled.sort((a,b) => a.schedStart - b.schedStart);
+  return allScheduled;
 }
 
 function setSchedView(view, el) {
@@ -3729,6 +3761,12 @@ function renderScheduleBody() {
   if (!el) return;
   if (!state.molds.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
 
+  // 全てタブ
+  if (scheduleShift === 'all') {
+    renderAllScheduleBody(el);
+    return;
+  }
+
   const { scheduled, shiftStart, shiftEnd } = buildSchedule(scheduleShift);
 
 
@@ -3745,11 +3783,15 @@ function renderScheduleBody() {
   </div>`;
 
   if (scheduleView === 'card') {
-    el.innerHTML = infoBar + scheduled.map(s => {
+    const hint = `<div style="font-size:11px;color:var(--text3);padding:2px 0 8px;display:flex;align-items:center;gap:5px">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>
+      カードをタップしてメンテ完了を登録
+    </div>`;
+    el.innerHTML = infoBar + hint + scheduled.map(s => {
       const color = statusColor(s.status);
       const minsUntilStart = (s.schedStart - new Date()) / 60000;
       const isNow = minsUntilStart < 30 && s.status === 'danger';
-      return `<div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
+      return `<div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px;cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">
         <div style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;width:44px">
           <div style="font-size:${isNow?'10px':'11px'};font-weight:600;color:${isNow?'var(--danger-text)':color};white-space:nowrap">${isNow?t('rightNow'):fmtHM(s.schedStart)}</div>
           <div style="font-size:9px;color:var(--text4);white-space:nowrap">〜${fmtHM(s.schedEnd)}</div>
@@ -3827,7 +3869,7 @@ function renderScheduleBody() {
       const startLabel = `<div style="position:absolute;left:${maintOffset}%;top:-16px;transform:translateX(-50%);font-size:9px;color:${color};font-weight:600;white-space:nowrap">${fmtHM(s.schedStart)}</div>`;
       const endLabel = `<div style="position:absolute;left:${maintOffset + maintWidth}%;bottom:-16px;transform:translateX(-50%);font-size:9px;color:${color};font-weight:600;white-space:nowrap">〜${fmtHM(s.schedEnd)}</div>`;
 
-      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:28px">
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:28px;cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">
         <div style="width:80px;flex-shrink:0">
           <div style="font-size:11px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
           <div style="font-size:10px;font-weight:600;color:${timeLabelColor}">${timeLabel}</div>
@@ -3865,7 +3907,11 @@ function renderScheduleBody() {
       <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:12px;background:#ef4444"></div><span style="font-size:10px;color:var(--text3)">現在時刻</span></div>
     </div>`;
 
-    const timelineHTML = axisTop + `<div style="padding:0 0 16px">${timelineRows}</div>` + axisBottom + legend;
+    const hintTL = `<div style="font-size:11px;color:var(--text3);padding:2px 0 8px;display:flex;align-items:center;gap:5px">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>
+      タイムラインをタップしてメンテ完了を登録
+    </div>`;
+    const timelineHTML = hintTL + axisTop + `<div style="padding:0 0 16px">${timelineRows}</div>` + axisBottom + legend;
     el.innerHTML = infoBar + timelineHTML;
   }
 }
@@ -4194,7 +4240,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.0.9';
+const CURRENT_VERSION = '1.1.0';
 
 async function checkForUpdate() {
   try {
@@ -4239,6 +4285,100 @@ function forceReload() {
   const url = window.location.href.split('?')[0] + '?v=' + Date.now();
   window.location.replace(url);
 }
+
+
+function renderAllScheduleBody(el) {
+  const shifts = ['1S','2S','3S'];
+  const SHIFT_LABELS = {'1S':'1S（08:00〜16:00）','2S':'2S（16:00〜24:00）','3S':'3S（00:00〜08:00）'};
+  let html = '';
+  let totalCount = 0;
+
+  shifts.forEach(shift => {
+    const { scheduled, shiftStart, shiftEnd } = buildSchedule(shift);
+    if (!scheduled.length) return;
+    totalCount += scheduled.length;
+    html += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px">
+      <div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>
+      <span style="font-size:11px;font-weight:600;color:var(--info-text)">${SHIFT_LABELS[shift]}</span>
+    </div>`;
+    html += scheduled.map(s => {
+      const color = statusColor(s.status);
+      const isNow = (s.schedStart - new Date()) / 60000 < 30 && s.status === 'danger';
+      const timeLabel = isNow ? '今すぐ!' : `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
+      const pct = calcEstimatedProgress(s.mold);
+      return `<div onclick="openMaintenanceFromAlert('${s.mold.id}')" style="margin-left:11px;margin-bottom:4px;background:var(--bg2);border-radius:8px;padding:8px 11px;border-left:3px solid ${color};cursor:pointer">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <div style="font-size:12px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
+          ${statusBadge(s.status)}
+        </div>
+        <div style="height:3px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:4px">
+          <div style="width:${pct}%;height:100%;border-radius:2px;background:${color}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:10px;color:${color};font-weight:600">${timeLabel}</div>
+          <div style="font-size:10px;color:var(--text3)">${typeBadge(s.mold.category_name)}　${s.mold.line_name||'-'}　${s.dur}分</div>
+        </div>
+      </div>`;
+    }).join('');
+  });
+
+  if (!totalCount) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">全直にメンテ予定はありません</div>`;
+    return;
+  }
+
+  const hint = `<div style="font-size:11px;color:var(--text3);padding:6px 0 4px;display:flex;align-items:center;gap:5px">
+    <div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>
+    タップしてメンテ完了を登録
+  </div>`;
+  el.innerHTML = hint + html;
+}
+
+
+// ===== スワイプナビゲーション =====
+const SWIPE_SECTIONS = ['dashboard','list','schedule','dandori','history','analysis'];
+
+(function initSwipe() {
+  let startX = 0, startY = 0, startTime = 0;
+  const mainContent = document.getElementById('main-content') || document.querySelector('.main-content');
+
+  function onTouchStart(e) {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    startTime = Date.now();
+  }
+
+  function onTouchEnd(e) {
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    const dt = Date.now() - startTime;
+    // 横スワイプ判定：横移動が縦より大きく、50px以上、300ms以内
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50 && dt < 300) {
+      const cur = SWIPE_SECTIONS.indexOf(state.currentSection);
+      if (cur === -1) return;
+      if (dx < 0 && cur < SWIPE_SECTIONS.length - 1) {
+        showSection(SWIPE_SECTIONS[cur + 1]); // 左スワイプ→次へ
+      } else if (dx > 0 && cur > 0) {
+        showSection(SWIPE_SECTIONS[cur - 1]); // 右スワイプ→前へ
+      }
+    }
+  }
+
+  // DOMが準備できたらイベント登録
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('main-page') || document.body;
+    el.addEventListener('touchstart', onTouchStart, {passive:true});
+    el.addEventListener('touchend', onTouchEnd, {passive:true});
+  });
+  // すでにDOMが準備できている場合
+  if (document.readyState !== 'loading') {
+    const el = document.getElementById('main-page') || document.body;
+    if (el) {
+      el.addEventListener('touchstart', onTouchStart, {passive:true});
+      el.addEventListener('touchend', onTouchEnd, {passive:true});
+    }
+  }
+})();
 
 // ===== 初期化 =====
 applyTheme();
