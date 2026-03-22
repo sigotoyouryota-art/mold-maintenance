@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.2.6">
+<meta name="app-version" content="1.2.7">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3781,10 +3781,15 @@ function buildSchedule(shift) {
   // ② この直の範囲内にデッドラインが来る金型を抽出
   // 「直の開始から終了まで」の間にデッドラインがある金型
   // また既に要メンテ（deadline < now）のものも含める
+  // 現在の直かどうか（nowがshiftStart〜shiftEndの間）
+  const isCurrentShift = now >= shiftStart && now < shiftEnd;
+
   const targets = moldsWithDeadline
     .filter(({ deadlineMs, status }) => {
-      // 超過中・要メンテは常に含める
-      if (status === 'overdue' || status === 'danger') return true;
+      // 超過中は現在の直にのみ表示
+      if (status === 'overdue') return isCurrentShift;
+      // 要メンテは常に含める
+      if (status === 'danger') return true;
       // デッドラインが直の終了より前なら対象
       return deadlineMs < shiftEnd.getTime();
     })
@@ -4352,7 +4357,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.2.6';
+const CURRENT_VERSION = '1.2.7';
 
 async function checkForUpdate() {
   try {
