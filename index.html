@@ -2032,6 +2032,12 @@ function renderMasterMachines(el) {
 }
 
 function renderMasterLines(el) {
+  const sk = masterSortState[masterCurrentTab]?.key || 'name';
+  const sd = masterSortState[masterCurrentTab]?.dir || 'asc';
+  function sa(k) { return sk===k ? (sd==='asc' ? ' ↑' : ' ↓') : ' ↕'; }
+  // 機械台数を各ラインに付与してからソート
+  const linesWithCnt = state.lines.map(l => ({...l, machine_count: state.machines.filter(m=>m.line_id===l.id).length}));
+  const sorted = sortMasterData(linesWithCnt, sk, sd);
   el.innerHTML = `
   <div class="toolbar">
     <div></div>
@@ -2040,19 +2046,16 @@ function renderMasterLines(el) {
   <div class="table-wrap"><table>
     <tr>
       <th>ID</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('name')">ライン名${masterSortState[masterCurrentTab]?.key==='name'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th>機台数</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('name')">ライン名${sa('name')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('machine_count')">機械台数${sa('machine_count')}</th>
       <th>操作</th>
     </tr>
-    ${sortMasterData(state.lines, masterSortState[masterCurrentTab]?.key||'name', masterSortState[masterCurrentTab]?.dir||'asc').map(l=>{
-      const cnt = state.machines.filter(m=>m.line_id===l.id).length;
-      return `<tr>
-        <td style="font-size:10px;color:var(--text4);font-family:monospace">${(l.id||'').slice(0,8)}</td>
-        <td style="font-weight:600">${l.name}</td>
-        <td>${cnt}台</td>
-        <td><button class="btn btn-secondary btn-sm" onclick="editLine('${l.id}')">編集</button></td>
-      </tr>`;
-    }).join('')}
+    ${sorted.map(l=>`<tr>
+      <td style="font-size:10px;color:var(--text4);font-family:monospace">${(l.id||'').slice(0,8)}</td>
+      <td style="font-weight:600">${l.name}</td>
+      <td>${l.machine_count}台</td>
+      <td><button class="btn btn-secondary btn-sm" onclick="editLine('${l.id}')">編集</button></td>
+    </tr>`).join('')}
   </table></div>`;
 }
 
@@ -3562,7 +3565,7 @@ Object.defineProperty(window, 'masterSortDir', { get: () => masterSortState[mast
 
 function sortMasterData(arr, key, dir) {
   const data = [...arr];
-  const numKeys = ['machine_no','maintenance_interval','cycle_time_sec','simple_maint_time_min','oh_maint_time_min','alert_min_danger','alert_min_warning'];
+  const numKeys = ['machine_no','maintenance_interval','cycle_time_sec','simple_maint_time_min','oh_maint_time_min','alert_min_danger','alert_min_warning','machine_count'];
   const boolKeys = ['is_dandori'];
   data.sort((a, b) => {
     let va = a[key] !== undefined ? a[key] : '';
