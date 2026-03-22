@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.4.6">
+<meta name="app-version" content="1.4.7">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3725,6 +3725,7 @@ let shotUpdateView = 'grid'; // 'grid' | 'input'
 let shotUpdateMachineId = null;
 let shotUpdateInputVal = '';
 let shotUpdateDoneIds = new Set();
+let shotUpdateSelectedMoldId = null; // 入力画面で選択中の金型ID
 
 function renderShotUpdate(el) {
   if (shotUpdateView === 'input' && shotUpdateMachineId) {
@@ -3830,6 +3831,7 @@ function setSuLineFilter(line, btn) {
 function openShotUpdateInput(machineNo) {
   shotUpdateMachineId = machineNo;
   shotUpdateInputVal = '';
+  shotUpdateSelectedMoldId = null; // リセット
   shotUpdateView = 'input';
   const el = document.getElementById('main-content');
   if (el) renderShotUpdateInput(el);
@@ -3840,13 +3842,16 @@ function renderShotUpdateInput(el) {
   const molds = state.molds.filter(function(m) { return String(m.machine_no) === String(machineNo); });
   if (!molds.length) { shotUpdateView = 'grid'; renderShotUpdateGrid(el); return; }
 
+  // 選択中のmoldId優先、なければdandori設定、なければ先頭
   const dandoriMoldId = dandoriData[molds[0] && molds[0].machine_id];
-  const currentMold = (dandoriMoldId ? molds.find(function(m) { return m.id === dandoriMoldId; }) : null) || molds[0];
+  const currentMold = (shotUpdateSelectedMoldId ? molds.find(function(m){ return m.id === shotUpdateSelectedMoldId; }) : null)
+    || (dandoriMoldId ? molds.find(function(m) { return m.id === dandoriMoldId; }) : null)
+    || molds[0];
   const prevShot = currentMold ? (currentMold.maint_shot || currentMold.current_shot || 0) : 0;
   const prevTime = currentMold && (currentMold.maint_shot_updated_at || currentMold.last_shot_updated_at);
   const prevTimeStr = prevTime ? new Date(prevTime).toLocaleString('ja-JP', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
   const moldId = (currentMold && currentMold.id) || '';
-  const moldName = currentMold ? (currentMold.part_name + (currentMold.part_no ? '\u3000' + currentMold.part_no : '')) : '\u91d1\u578b\u306a\u3057';
+  const moldName = currentMold ? (currentMold.part_name + (currentMold.part_no ? '\u3000' + currentMold.part_no : '') + (currentMold.model_no ? '\u3000\u578b' + currentMold.model_no : '')) : '\u91d1\u578b\u306a\u3057';
   const doneCount = shotUpdateDoneIds.size;
   const machineNos = new Set(state.molds.map(function(m) { return m.machine_no; }));
   const totalMachines = machineNos.size;
@@ -3989,8 +3994,7 @@ function showSuMoldSelect() {
   sheet.querySelectorAll('.su-mold-item').forEach(function(item) {
     item.addEventListener('click', function() {
       var moldId = this.getAttribute('data-mold-id');
-      var machineId = this.getAttribute('data-machine-id');
-      if (machineId) dandoriData[machineId] = moldId;
+      shotUpdateSelectedMoldId = moldId; // 専用変数に保存
       document.body.removeChild(overlay);
       var el = document.getElementById('main-content');
       if (el) renderShotUpdateInput(el);
@@ -4714,7 +4718,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.4.6';
+const CURRENT_VERSION = '1.4.7';
 
 async function checkForUpdate() {
   try {
