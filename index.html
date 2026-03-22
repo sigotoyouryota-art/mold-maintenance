@@ -2056,10 +2056,15 @@ function renderMasterLines(el) {
   </table></div>`;
 }
 
-function renderMasterUsers(el) {
-  sb('users', 'GET', null, '?order=name').then(function(users) {
-    if (users) { state.users = users; renderMasterUsersTable(el); }
-  }).catch(function(){});
+async function renderMasterUsers(el) {
+  // ローディング表示
+  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">読み込み中...</div>';
+  try {
+    var users = await sb('users', 'GET', null, '?order=name');
+    if (users) state.users = users;
+  } catch(e) {
+    showToast('ユーザー取得エラー: ' + e.message, 'error');
+  }
   renderMasterUsersTable(el);
 }
 
@@ -2660,15 +2665,17 @@ async function saveUser() {
 }
 
 async function deleteUser(id) {
+  if (!id) { showToast('IDが取得できませんでした', 'error'); return; }
   try {
-    await sb('users', 'PATCH', { is_active: false }, '?id=eq.' + id);
-    state.users = await sb('users', 'GET', null, '?order=name');
+    var res = await sb('users', 'PATCH', { is_active: false }, '?id=eq.' + id);
+    var users = await sb('users', 'GET', null, '?order=name');
+    if (users) state.users = users;
     showToast('削除しました', 'success');
     var body = document.getElementById('master-body');
     if (body) renderMasterUsersTable(body);
   } catch(e) {
-    console.error(e);
-    showToast('削除エラー: ' + (e.message||''), 'error');
+    console.error('deleteUser error:', e);
+    showToast('エラー: ' + (e.message || JSON.stringify(e)), 'error');
   }
 }
 
