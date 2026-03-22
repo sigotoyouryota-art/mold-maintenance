@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.1.9">
+<meta name="app-version" content="1.2.0">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3884,20 +3884,19 @@ function renderScheduleBody() {
       </div>`;
     }).join('') + (scheduled.length===0?`<div style="text-align:center;padding:40px;color:var(--text3)">この直にメンテ予定はありません</div>`:'');
   } else {
-    // タイムライン表示（最終版）
+    // タイムライン表示（v2: 時刻ラベル位置を3パターンで正確に制御）
     const shiftDur = (shiftEnd - shiftStart) / 60000;
     const nowOffset = Math.max(0, Math.min(100, (new Date() - shiftStart) / 60000 / shiftDur * 100));
 
     // 時間軸（時のみ・2時間ごと）
-    const axisInner = [0,2,4,6,8].map((i,idx) => {
+    const makeAxis = () => [0,2,4,6,8].map((i,idx) => {
       const h = (shiftStart.getHours() + i) % 24;
-      const align = idx===0 ? '' : idx===4 ? 'text-align:right' : 'text-align:center';
+      const align = idx===0?'':idx===4?'text-align:right':'text-align:center';
       return `<div style="flex:1;font-size:10px;color:var(--text4);${align}">${String(h).padStart(2,'0')}</div>`;
     }).join('');
-    const axisHTML = `<div style="display:flex;padding-left:120px;margin-bottom:6px">${axisInner}</div>`;
-    const axisBottomHTML = `<div style="display:flex;padding-left:120px;margin-top:8px;padding-top:6px;border-top:0.5px solid var(--border)">${axisInner}</div>`;
+    const axisHTML = `<div style="display:flex;padding-left:124px;margin-bottom:6px">${makeAxis()}</div>`;
+    const axisBottomHTML = `<div style="display:flex;padding-left:124px;margin-top:8px;padding-top:6px;border-top:0.5px solid var(--border)">${makeAxis()}</div>`;
 
-    // グリッド線（2時間ごと）
     const gridLines = [1,2,3,4,5,6,7].map(i =>
       `<div style="position:absolute;left:${(i/8)*100}%;top:0;bottom:0;width:1px;background:var(--border);opacity:0.4"></div>`
     ).join('');
@@ -3907,72 +3906,74 @@ function renderScheduleBody() {
       タイムラインをタップしてメンテ完了を登録
     </div>`;
 
-    let rowsHTML = '';
-    let rankIdx = 0;
-    for (const s of scheduled) {
-      rankIdx++;
+    // 時刻ラベル位置の判定関数
+    // バー終端が65%以上 → 左横、それ以外 → 右横
+    const makeTimeTag = (maintOffset, maintWidth, color, text) => {
+      const barRight = maintOffset + maintWidth;
+      if (barRight >= 65) {
+        // 左横：バー開始位置の左に配置
+        return `<div style="position:absolute;right:${(100 - maintOffset + 1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${text}</div>`;
+      } else {
+        // 右横：バー終端の右に配置
+        return `<div style="position:absolute;left:${(barRight + 1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${text}</div>`;
+      }
+    };
+
+    const buildRow = (s, rankIdx) => {
       const status = s.status;
       const isOverdue = status === 'overdue';
       const color = statusColor(status);
       const pctRaw = calcEstimatedProgress(s.mold);
-      const pct = Math.min(100, pctRaw);
       const rem = isOverdue ? 0 : calcEstimatedRemaining(s.mold);
+      const remMin = isOverdue ? 0 : calcEstimatedRemainingMin(s.mold);
       const overShot = isOverdue ? calcOverShot(s.mold) : 0;
+      const overMin = isOverdue ? Math.round(-remMin) : 0;
 
       const maintOffset = Math.max(0, Math.min(92, (s.schedStart - shiftStart) / 60000 / shiftDur * 100));
       const maintWidth = Math.max(4, Math.min(100 - maintOffset, s.dur / shiftDur * 100));
-      const barRight = maintOffset + maintWidth;
-      const useLeftTag = barRight > 70;
+      const timeTagText = `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
+      const timeTag = makeTimeTag(maintOffset, maintWidth, color, timeTagText);
 
       const barBg = isOverdue ? '#ef444425' : status==='danger' ? '#f9731618' : status==='warning' ? 'var(--warning-bg)15' : 'var(--bg3)';
       const maintBg = isOverdue ? '#ef4444' : status==='danger' ? '#f97316' : status==='warning' ? '#fbbf24' : '#22c55e';
       const barTextColor = (status==='warning'||status==='normal') ? '#1c1917' : '#fff';
-      const rankBg = maintBg;
-      const rankTextColor = barTextColor;
 
-      // 時刻タグ（背景なし・文字色のみ・完全な時刻）
-      const timeTagText = `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
-      const timeTag = useLeftTag
-        ? `<div style="position:absolute;right:${(100-maintOffset+1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${timeTagText}</div>`
-        : `<div style="position:absolute;left:${(barRight+1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${timeTagText}</div>`;
+      // 残り時間表示（超過は「○分超過」、通常は「残り○分/○h」）
+      const remDisplay = isOverdue
+        ? `${fmtNum(overShot)}shot超過　<span style="font-size:13px;color:${color};font-weight:700">${overMin}分超過</span>`
+        : remMin < 120
+          ? `残 ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">残り${Math.round(remMin)}分</span>`
+          : `残 ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">残り${(remMin/60).toFixed(1)}h</span>`;
 
-      // 残りshot表示（バー外・下）
-      const remainText = isOverdue
-        ? `${fmtNum(overShot)}shot超過　${pctRaw}%`
-        : `残 ${fmtNum(rem)}shot　${pct}%`;
-
-      // 左メタ（時刻はメタ欄のみ・バー内重複なし）
       const metaHTML = `<div style="width:116px;flex-shrink:0">
         <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
-          <div style="width:22px;height:22px;border-radius:50%;background:${rankBg};color:${rankTextColor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--bg3);flex-shrink:0">${rankIdx}</div>
+          <div style="width:22px;height:22px;border-radius:50%;background:${maintBg};color:${barTextColor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--bg3);flex-shrink:0">${rankIdx}</div>
           <div style="font-size:14px;font-weight:700;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
         </div>
         <div style="padding-left:26px;font-size:11px;font-weight:600;color:${color}">${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}</div>
       </div>`;
 
-      // バー（残りshotはバー外）
       const trackHTML = `<div style="flex:1;min-width:0">
-        <div style="height:32px;border-radius:4px;background:${barBg};position:relative;overflow:hidden;margin-bottom:4px">
+        <div style="height:32px;border-radius:4px;background:${barBg};position:relative;overflow:hidden;margin-bottom:5px">
           ${gridLines}
           <div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:2px;background:#ef4444;opacity:0.9;z-index:5"></div>
-          <div style="position:absolute;left:${maintOffset}%;top:3px;bottom:3px;width:${maintWidth}%;background:${maintBg};border-radius:3px;display:flex;align-items:center;justify-content:center;z-index:3">
-            <span style="font-size:10px;font-weight:700;color:${barTextColor};white-space:nowrap">${s.dur}分</span>
-          </div>
+          <div style="position:absolute;left:${maintOffset}%;top:3px;bottom:3px;width:${maintWidth}%;background:${maintBg};border-radius:3px;z-index:3"></div>
           ${timeTag}
         </div>
-        <div style="font-size:12px;font-weight:700;color:${color}">${remainText}</div>
+        <div style="font-size:12px;font-weight:700;color:${color}">${remDisplay}</div>
       </div>`;
 
-      // 超過 → 緊急バナー枠
       if (isOverdue) {
-        rowsHTML += `<div style="border:1.5px solid #ef4444;border-radius:8px;padding:8px 10px;margin-bottom:10px;background:#ef44440a;cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">
+        return `<div style="border:1.5px solid #ef4444;border-radius:8px;padding:8px 10px;margin-bottom:8px;background:#ef44440a;cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">
           <div style="background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;margin-bottom:7px;display:inline-block">緊急 — ショット超過中</div>
           <div style="display:flex;align-items:flex-start;gap:8px">${metaHTML}${trackHTML}</div>
         </div>`;
-      } else {
-        rowsHTML += `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">${metaHTML}${trackHTML}</div>`;
       }
-    }
+      return `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer;padding:6px 10px" onclick="openMaintenanceFromAlert('${s.mold.id}')">${metaHTML}${trackHTML}</div>`;
+    };
+
+    let rowsHTML = '';
+    scheduled.forEach((s, i) => { rowsHTML += buildRow(s, i+1); });
 
     const legend = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px;padding-top:8px;border-top:0.5px solid var(--border)">
       <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#ef4444;border:1px solid #ef4444"></div><span style="font-size:11px;color:var(--text3)">緊急（超過）</span></div>
@@ -4310,7 +4311,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.1.9';
+const CURRENT_VERSION = '1.2.0';
 
 async function checkForUpdate() {
   try {
@@ -4415,56 +4416,92 @@ function renderAllScheduleBody(el) {
     });
     el.innerHTML = hint + html;
   } else {
-    // タイムライン表示（全直）
+    // タイムライン表示（全直）- 統一版
     let html = '';
+    let globalRankIdx = 0;
     allShiftData.forEach(({ shift, scheduled, shiftStart, shiftEnd }) => {
       if (!scheduled.length) return;
       const shiftDur = (shiftEnd - shiftStart) / 60000;
       const nowOffset = Math.max(0, Math.min(100, (new Date() - shiftStart) / 60000 / shiftDur * 100));
+
+      // 直ラベル
       html += `<div style="display:flex;align-items:center;gap:8px;margin:10px 0 6px">
         <div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>
         <span style="font-size:11px;font-weight:600;color:var(--info-text)">${SHIFT_LABELS[shift]}</span>
       </div>`;
-      const hours = [];
-      for (let i = 0; i <= 8; i++) {
-        const pct = (i/8)*100;
+
+      // 時間軸（上）
+      const axisInner = [0,2,4,6,8].map((i,idx) => {
         const h = (shiftStart.getHours() + i) % 24;
-        hours.push({pct, label: String(h).padStart(2,'0')+':00'});
-      }
-      const axisHTML = hours.map(h=>`<div style="position:absolute;left:calc(80px + ${h.pct}% * ((100% - 80px) / 100%));transform:translateX(-50%);font-size:8px;color:var(--text4);white-space:nowrap">${h.label}</div>`).join('');
-      html += `<div style="position:relative;padding-left:80px;height:16px;margin-bottom:4px">${axisHTML}</div>`;
-      html += scheduled.map(s => {
-        const status = s.status;
-        const isOverdueMold = status === 'overdue';
-        const color = statusColor(status);
-        const pctRaw = calcEstimatedProgress(s.mold);
-        const rem = isOverdueMold ? 0 : calcEstimatedRemaining(s.mold);
-        const overShot = isOverdueMold ? calcOverShot(s.mold) : 0;
-        const maintOffset = Math.max(0, Math.min(95, (s.schedStart - shiftStart) / 60000 / shiftDur * 100));
-        const maintWidth = Math.max(2, Math.min(100 - maintOffset, s.dur / shiftDur * 100));
-        const barBg = isOverdueMold ? '#7f1d1d50' : status==='warning' ? '#78350f40' : '#1e335840';
-        const maintBg = isOverdueMold ? '#ef4444' : status==='warning' ? '#f59e0b' : '#22c55e';
-        const timeLabel = isOverdueMold ? '異常・超過中' : `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
-        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:26px;cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">
-          <div style="width:76px;flex-shrink:0">
-            <div style="font-size:10px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
-            <div style="font-size:9px;font-weight:600;color:${color}">${timeLabel}</div>
-          </div>
-          <div style="flex:1;height:32px;background:var(--bg3);border-radius:4px;position:relative;overflow:visible">
-            <div style="position:absolute;inset:0;border-radius:4px;background:${barBg}"></div>
-            <div style="position:absolute;left:${maintOffset}%;top:0;bottom:0;width:${maintWidth}%;background:${maintBg};border-radius:2px;z-index:2;display:flex;align-items:center;justify-content:center">
-              <span style="font-size:8px;font-weight:700;color:${isOverdueMold?'#fff':'#1c1917'}">${s.dur}分</span>
-            </div>
-            <div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:2px;background:#ef4444;z-index:3"></div>
-            <div style="position:absolute;left:${maintOffset}%;top:-14px;transform:translateX(-50%);font-size:8px;color:${color};font-weight:600;white-space:nowrap">${isOverdueMold?'超過':fmtHM(s.schedStart)}</div>
-            <div style="position:absolute;left:${maintOffset+maintWidth}%;bottom:-14px;transform:translateX(-50%);font-size:8px;color:${color};font-weight:600;white-space:nowrap">${isOverdueMold?'':('〜'+fmtHM(s.schedEnd))}</div>
-            <div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);font-size:8px;color:${color};font-weight:500;z-index:1;white-space:nowrap">
-              ${isOverdueMold ? fmtNum(overShot)+'shot超過　'+Math.round(pctRaw)+'%' : '残'+fmtNum(rem)+'shot　'+Math.min(100,Math.round(pctRaw))+'%'}
-            </div>
-          </div>
-        </div>`;
+        const align = idx===0?'':idx===4?'text-align:right':'text-align:center';
+        return `<div style="flex:1;font-size:10px;color:var(--text4);${align}">${String(h).padStart(2,'0')}</div>`;
       }).join('');
+      html += `<div style="display:flex;padding-left:124px;margin-bottom:6px">${axisInner}</div>`;
+
+      const gridLines = [1,2,3,4,5,6,7].map(i =>
+        `<div style="position:absolute;left:${(i/8)*100}%;top:0;bottom:0;width:1px;background:var(--border);opacity:0.4"></div>`
+      ).join('');
+
+      scheduled.forEach(s => {
+        globalRankIdx++;
+        const status = s.status;
+        const isOverdue = status === 'overdue';
+        const color = statusColor(status);
+        const rem = isOverdue ? 0 : calcEstimatedRemaining(s.mold);
+        const remMin = isOverdue ? 0 : calcEstimatedRemainingMin(s.mold);
+        const overShot = isOverdue ? calcOverShot(s.mold) : 0;
+        const overMin = isOverdue ? Math.round(Math.abs(remMin)) : 0;
+        const maintOffset = Math.max(0, Math.min(92, (s.schedStart - shiftStart) / 60000 / shiftDur * 100));
+        const maintWidth = Math.max(4, Math.min(100 - maintOffset, s.dur / shiftDur * 100));
+        const barRight = maintOffset + maintWidth;
+        const timeTagText = `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
+        const timeTag = barRight >= 65
+          ? `<div style="position:absolute;right:${(100-maintOffset+1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${timeTagText}</div>`
+          : `<div style="position:absolute;left:${(barRight+1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${timeTagText}</div>`;
+        const barBg = isOverdue ? '#ef444425' : status==='danger' ? '#f9731618' : status==='warning' ? 'var(--warning-bg)15' : 'var(--bg3)';
+        const maintBg = isOverdue ? '#ef4444' : status==='danger' ? '#f97316' : status==='warning' ? '#fbbf24' : '#22c55e';
+        const barTextColor = (status==='warning'||status==='normal') ? '#1c1917' : '#fff';
+        const remDisplay = isOverdue
+          ? `${fmtNum(overShot)}shot超過　<span style="font-size:13px;color:${color};font-weight:700">${overMin}分超過</span>`
+          : remMin < 120
+            ? `残 ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">残り${Math.round(remMin)}分</span>`
+            : `残 ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">残り${(remMin/60).toFixed(1)}h</span>`;
+        const metaHTML = `<div style="width:116px;flex-shrink:0">
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
+            <div style="width:22px;height:22px;border-radius:50%;background:${maintBg};color:${barTextColor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--bg3);flex-shrink:0">${globalRankIdx}</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
+          </div>
+          <div style="padding-left:26px;font-size:11px;font-weight:600;color:${color}">${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}</div>
+        </div>`;
+        const trackHTML = `<div style="flex:1;min-width:0">
+          <div style="height:32px;border-radius:4px;background:${barBg};position:relative;overflow:hidden;margin-bottom:5px">
+            ${gridLines}
+            <div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:2px;background:#ef4444;opacity:0.9;z-index:5"></div>
+            <div style="position:absolute;left:${maintOffset}%;top:3px;bottom:3px;width:${maintWidth}%;background:${maintBg};border-radius:3px;z-index:3"></div>
+            ${timeTag}
+          </div>
+          <div style="font-size:12px;font-weight:700;color:${color}">${remDisplay}</div>
+        </div>`;
+        if (isOverdue) {
+          html += `<div style="border:1.5px solid #ef4444;border-radius:8px;padding:8px 10px;margin-bottom:8px;background:#ef44440a;cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">
+            <div style="background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;margin-bottom:7px;display:inline-block">緊急 — ショット超過中</div>
+            <div style="display:flex;align-items:flex-start;gap:8px">${metaHTML}${trackHTML}</div>
+          </div>`;
+        } else {
+          html += `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer;padding:6px 10px" onclick="openMaintenanceFromAlert('${s.mold.id}')">${metaHTML}${trackHTML}</div>`;
+        }
+      });
+
+      // 時間軸（下）
+      html += `<div style="display:flex;padding-left:124px;margin-top:4px;padding-bottom:8px;border-bottom:0.5px solid var(--border)">${axisInner}</div>`;
     });
+
+    html += `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#ef4444"></div><span style="font-size:11px;color:var(--text3)">緊急（超過）</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#f97316"></div><span style="font-size:11px;color:var(--text3)">要メンテ</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#fbbf24"></div><span style="font-size:11px;color:var(--text3)">注意</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:12px;background:#ef4444"></div><span style="font-size:11px;color:var(--text3)">現在時刻</span></div>
+    </div>`;
     el.innerHTML = hint + html;
   }
 }
