@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.4.8">
+<meta name="app-version" content="1.5.0">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -1947,24 +1947,37 @@ function renderMasterMolds(el) {
     </div>
   </div>
   <div class="table-wrap"><table>
-    <tr><th>品番</th><th>品名</th><th>分類</th><th>機番</th><th>ライン</th><th>メンテ間隔</th><th>サイクル</th><th>簡易所要時間</th><th>OH所要時間</th><th>アラート設定</th><th>操作</th></tr>
-    ${state.molds.map(m=>`<tr>
+    <tr>
+      <th style="cursor:pointer" onclick="setMasterSort('part_no')">品番${masterSortKey==='part_no'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('part_name')">品名${masterSortKey==='part_name'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('category_name')">分類${masterSortKey==='category_name'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('model_no')">型番${masterSortKey==='model_no'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('machine_no')">機番${masterSortKey==='machine_no'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('line_name')">ライン${masterSortKey==='line_name'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('maintenance_interval')">メンテ間隔${masterSortKey==='maintenance_interval'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('cycle_time_sec')">サイクル${masterSortKey==='cycle_time_sec'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('simple_maint_time_min')">簡易所要${masterSortKey==='simple_maint_time_min'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('oh_maint_time_min')">OH所要${masterSortKey==='oh_maint_time_min'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('alert_min_danger')">アラート設定${masterSortKey==='alert_min_danger'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th>操作</th>
+    </tr>
+    ${sortMoldMaster(state.molds, masterSortKey, masterSortDir).map(m=>`<tr>
       <td style="font-weight:600;color:var(--text)">${m.part_no}</td>
       <td>${m.part_name}</td>
       <td>${typeBadge(m.category_name)}</td>
+      <td style="color:var(--text3)">${m.model_no||'-'}</td>
       <td style="font-weight:500">#${m.machine_no||'?'}</td>
-      <td style="font-size:15px">${m.line_name||'-'}</td>
+      <td>${m.line_name||'-'}</td>
       <td>${fmtNum(m.maintenance_interval)} shot</td>
       <td>${m.cycle_time_sec}秒</td>
       <td style="color:var(--accent);font-weight:500">${m.simple_maint_time_min||20}分</td>
       <td style="color:var(--text3)">${m.oh_maint_time_min||60}分</td>
-      <td style="font-size:10px;color:var(--text3)">${fmtNum()}shot前</td>
+      <td style="font-size:10px;color:var(--text3)">要${m.alert_min_danger||120}分前<br>注${m.alert_min_warning||480}分前</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-secondary btn-sm" onclick="editMold('${m.id}')">編集</button>
         <button class="btn btn-danger btn-sm" onclick="deleteMold('${m.id}')">削除</button>
       </div></td>
-    </tr>`).join('')}
-  </table></div>
+    </tr>`).join('')}  </table></div>
   <div class="mold-cards">${state.molds.map(m=>`
     <div class="mold-card ${m.status}" style="border-left-color:var(--border)">
       <div class="mold-card-top"><div>
@@ -3467,6 +3480,39 @@ function showMasterTabByIndex(idx) {
 
 
 // ===== ソート =====
+// ===== マスタ一覧ソート =====
+let masterSortKey = 'part_no';
+let masterSortDir = 'asc';
+
+function sortMoldMaster(molds, key, dir) {
+  const arr = [...molds];
+  const numKeys = ['machine_no','maintenance_interval','cycle_time_sec','simple_maint_time_min','oh_maint_time_min','alert_min_danger','alert_min_warning'];
+  arr.sort((a, b) => {
+    let va = a[key] !== undefined ? a[key] : '';
+    let vb = b[key] !== undefined ? b[key] : '';
+    if (numKeys.includes(key)) {
+      va = parseFloat(va) || 0;
+      vb = parseFloat(vb) || 0;
+      return dir === 'asc' ? va - vb : vb - va;
+    }
+    va = String(va).toLowerCase();
+    vb = String(vb).toLowerCase();
+    return dir === 'asc' ? va.localeCompare(vb, 'ja') : vb.localeCompare(va, 'ja');
+  });
+  return arr;
+}
+
+function setMasterSort(key) {
+  if (masterSortKey === key) {
+    masterSortDir = masterSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    masterSortKey = key;
+    masterSortDir = 'asc';
+  }
+  const el = document.getElementById('main-content');
+  if (el) renderMaster(el);
+}
+
 function sortMolds(molds, mode) {
   const arr = [...molds];
   switch(mode) {
@@ -4740,7 +4786,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.4.8';
+const CURRENT_VERSION = '1.5.0';
 
 async function checkForUpdate() {
   try {
