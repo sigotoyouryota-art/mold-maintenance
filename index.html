@@ -2633,7 +2633,7 @@ async function saveUser() {
 async function deleteUser(id) {
   if (!id) { showToast('IDが取得できませんでした', 'error'); return; }
   try {
-    await sb('users', 'DELETE', null, '?id=eq.' + id);
+    await sb('users', 'PATCH', { is_active: false }, '?id=eq.' + id);
     var users = await sb('users', 'GET', null, '?order=name');
     if (users) state.users = users;
     showToast('削除しました', 'success');
