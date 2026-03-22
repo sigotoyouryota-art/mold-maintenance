@@ -496,13 +496,13 @@ select.form-control { cursor: pointer; }
     <div class="login-box">
       <div class="login-title" id="login-title">MenteLog</div>
       <div class="login-sub" id="login-subtitle">製造3課</div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:8px" id="label-shift">直を選択</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px" id="label-shift">${t('labelShift')}</div>
       <div class="shift-row">
         <div class="shift-btn active" id="shift-1S" data-shift="1S">1S</div>
         <div class="shift-btn" id="shift-2S" data-shift="2S">2S</div>
         <div class="shift-btn" id="shift-3S" data-shift="3S">3S</div>
       </div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:10px" id="label-worker">作業者を選択</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px" id="label-worker">${t('labelWorker2')}</div>
       <div class="user-grid" id="user-grid">
         <div class="loading-overlay" style="grid-column:1/-1">
           <div class="spinner"></div>
@@ -550,13 +550,13 @@ select.form-control { cursor: pointer; }
       <div class="sidebar-item" id="nav-master" onclick="showSection('master')" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-master">マスタ設定</span></div>
       <div class="sidebar-item" id="nav-report" onclick="generateMonthlyReport()" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-report">月次レポート</span></div>
       <div class="sidebar-item" id="nav-backup" onclick="backupAllData()" style="display:none"><div class="sidebar-dot"></div><span id="nav-label-backup">バックアップ</span></div>
-      <div class="sidebar-item" onclick="showSection('settings')"><div class="sidebar-dot"></div><span>設定</span></div>
+      <div class="sidebar-item" onclick="showSection('settings')"><div class="sidebar-dot"></div><span>${t('settings')}</span></div>
       <div class="sidebar-item" onclick="doLogout()" style="margin-top:auto"><div class="sidebar-dot"></div><span id="nav-label-logout">ログアウト</span></div>
     </div>
     <div class="main-content" id="main-content">
       <div class="loading-overlay" id="main-loading">
         <div class="spinner"></div>
-        <div class="loading-text">読み込み中...</div>
+        <div class="loading-text">${t('loadingText')}</div>
       </div>
       <!-- セクションコンテンツはJSで動的生成 -->
     </div>
@@ -594,15 +594,15 @@ select.form-control { cursor: pointer; }
     </div>
     <div style="display:flex;gap:6px;margin-bottom:6px">
       <div style="flex:1;background:var(--bg3);border-radius:6px;padding:5px 8px;text-align:center">
-        <div style="font-size:9px;color:var(--text3);margin-bottom:2px">メンテ間</div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:2px">${t('maintInterval2')}</div>
         <div style="font-size:11px;font-weight:600;color:var(--accent)" id="shot-maint-display">0</div>
       </div>
       <div style="flex:1;background:var(--bg3);border-radius:6px;padding:5px 8px;text-align:center">
-        <div style="font-size:9px;color:var(--text3);margin-bottom:2px">累計</div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:2px">${t('totalShot')}</div>
         <div style="font-size:11px;font-weight:600;color:var(--text2)" id="shot-total-display">0</div>
       </div>
     </div>
-    <div style="font-size:10px;color:var(--text3);margin-bottom:4px">現在のショット数を入力</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:4px">${t('inputShotHint')}</div>
     <div class="shot-display">
       <span class="shot-value" id="shot-input-display">0</span>
       <span class="shot-unit">shot</span>
@@ -623,8 +623,8 @@ select.form-control { cursor: pointer; }
     </div>
     <div class="btn btn-primary" onclick="submitShot()" style="width:100%;padding:12px;font-size:14px;margin-bottom:8px" id="shot-submit-btn"></div>
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:12px;color:var(--text4);cursor:pointer" onclick="closeModal('modal-shot')" id="shot-cancel-label">キャンセル</div>
-      <div class="btn btn-success btn-sm" onclick="openMaintenanceModal()" id="shot-maint-btn">メンテ完了を登録</div>
+      <div style="font-size:12px;color:var(--text4);cursor:pointer" onclick="closeModal('modal-shot')" id="shot-cancel-label">${t('cancel')}</div>
+      <div class="btn btn-success btn-sm" onclick="openMaintenanceModal()" id="shot-maint-btn">${t('maintComplete')}</div>
     </div>
   </div>
 </div>
@@ -642,32 +642,32 @@ select.form-control { cursor: pointer; }
     <div style="height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:10px">
       <div id="maint-progress-bar" style="height:100%;border-radius:2px;"></div>
     </div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:6px" id="label-maint-type">メンテナンス種別を選択</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px" id="label-maint-type">${t('maintTypeLabel')}</div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <div id="maint-type-simple" onclick="selectMaintType('simple')" style="flex:1;padding:10px 6px;border-radius:8px;text-align:center;border:0.5px solid var(--info-bg);background:var(--info-bg);cursor:pointer;transition:all 0.15s">
         <div style="font-size:18px;margin-bottom:3px">🧹</div>
-        <div style="font-size:11px;font-weight:600;color:var(--info-text)" id="label-simple-maint">簡易メンテ</div>
-        <div style="font-size:9px;color:var(--text3);margin-top:2px" id="label-simple-desc">リセット選択可</div>
+        <div style="font-size:11px;font-weight:600;color:var(--info-text)" id="label-simple-maint">${t('simpleMaint')}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px" id="label-simple-desc">${t('resetDesc')}</div>
       </div>
       <div id="maint-type-oh" onclick="selectMaintType('OH')" style="flex:1;padding:10px 6px;border-radius:8px;text-align:center;border:0.5px solid var(--border);background:var(--bg);cursor:pointer;transition:all 0.15s">
         <div style="font-size:18px;margin-bottom:3px">🔧</div>
-        <div style="font-size:11px;font-weight:600;color:var(--text)" id="label-oh-maint">OHメンテ</div>
-        <div style="font-size:9px;color:var(--text3);margin-top:2px" id="label-oh-desc">自動リセット</div>
+        <div style="font-size:11px;font-weight:600;color:var(--text)" id="label-oh-maint">${t('ohMaint')}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px" id="label-oh-desc">${t('ohDesc')}</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:10px">
       <div>
-        <div style="font-size:12px;color:var(--text2)" id="label-reset-counter">ショットカウンターをリセット</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px" id="label-reset-desc">OHメンテは自動でリセット</div>
+        <div style="font-size:12px;color:var(--text2)" id="label-reset-counter">${t('resetCounter')}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px" id="label-reset-desc">${t('resetNote')}</div>
       </div>
       <div class="toggle-wrap" id="reset-toggle" onclick="toggleReset()"><div class="toggle-dot"></div></div>
     </div>
     <div style="margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:5px" id="label-worker">作業者</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:5px" id="label-worker">${t('worker')}</div>
       <div style="background:var(--bg);border:0.5px solid var(--border2);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);display:flex;justify-content:space-between" id="maint-worker-display"></div>
     </div>
-    <div class="btn btn-success" onclick="confirmMaintenance()" style="width:100%;padding:12px;font-size:14px;margin-bottom:8px" id="maint-register-btn">メンテ完了を登録する</div>
-    <div style="font-size:12px;color:var(--text4);text-align:center;cursor:pointer" onclick="closeModal('modal-maint')" id="maint-cancel-label">キャンセル</div>
+    <div class="btn btn-success" onclick="confirmMaintenance()" style="width:100%;padding:12px;font-size:14px;margin-bottom:8px" id="maint-register-btn">${t('maintRegister')}</div>
+    <div style="font-size:12px;color:var(--text4);text-align:center;cursor:pointer" onclick="closeModal('modal-maint')" id="maint-cancel-label">${t('cancel')}</div>
   </div>
 </div>
 
@@ -676,12 +676,12 @@ select.form-control { cursor: pointer; }
   <div class="modal">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:0.5px solid var(--border)">
       <div style="width:40px;height:40px;border-radius:50%;background:var(--success-bg);border:1.5px solid var(--success);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">✓</div>
-      <div style="font-size:14px;font-weight:600;color:var(--text)" id="confirm-dialog-title">登録内容を確認</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text)" id="confirm-dialog-title">${t('confirmTitle')}</div>
     </div>
     <div class="confirm-card" id="confirm-card-content"></div>
     <div class="modal-btns">
-      <div class="btn btn-secondary" onclick="closeModal('modal-maint-confirm')" id="confirm-back-btn">戻る</div>
-      <div class="btn btn-success" onclick="executeMaintenance()" id="confirm-register-btn">登録する</div>
+      <div class="btn btn-secondary" onclick="closeModal('modal-maint-confirm')" id="confirm-back-btn">${t('back')}</div>
+      <div class="btn btn-success" onclick="executeMaintenance()" id="confirm-register-btn">${t('register')}</div>
     </div>
   </div>
 </div>
@@ -771,7 +771,10 @@ const T = {
     maintInterval:'メンテ間隔(shot)', cycleTime2:'サイクル(秒)',
 
     lineAlert:'ライン別アラート状況', top5:'進捗率が高い金型 TOP5',
-    shotUpdateDone:'ショット数を更新しました', shotUpdateTitle:'ショット数更新', shotUpdateBack:'一覧へ戻る', maintDone:'メンテ完了を登録しました',
+    shotUpdateDone:'ショット数を更新しました', shotUpdateTitle:'ショット数更新', shotUpdateBack:'一覧へ戻る',
+    moldFormPartNo:'★品番', moldFormPartName:'★品名', moldFormModelNo:'型番', moldFormCategory:'★分類', machineFormChangeover:'段替え号機', userFormName:'★名前', userFormRole:'★権限', userFormActive:'有効', bulkColMachineNo:'★機番', bulkColLine:'★ライン',
+    deleteConfirmSuffix:'を削除しますか？', importLoaded:'のデータを読み込みました', importError:'インポートエラー: ', reportPrompt:'年月を入力 (例: ', reportDone:'月度レポートを出力しました', bulkNoLine:'のラインが選択されていません', bulkNoMachine:'ラインが選択されていますが機番が空です', savedText:'保存完了', analysisIntervalUpdate:'メンテ間隔を', analysisIntervalConfirm:'shot に更新しますか？', analysisIntervalUpdated:'shot に更新しました', updateNow:'今すぐ更新しますか？', readMore:'件', lineEditPrompt:'ライン名を変更してください', reportError:'年月の形式が正しくありません', moldNotFound:'金型が見つかりません',
+    histDeleteConfirm:'件のメンテ履歴を削除しますか？\nこの操作は取り消せません。', histDeleted:'件の履歴を削除しました', histDeleteError:'削除エラー: ', importDesc:'CSVをアップロードしてください。同じキーのデータは上書き更新されます。', maintDone:'メンテ完了を登録しました',
     loggedIn:'ログイン中', theme:'テーマ', language:'言語',
     addHomeScreen:'📱 ホーム画面に追加する', adminMenu:'管理者メニュー',
     monthlyReport:'月次レポート出力', backup:'データバックアップ',
@@ -889,6 +892,10 @@ const T = {
     backupBtn:'Sao lưu dữ liệu',
     appVersion:'Quản Lý Bảo Trì Khuôn Ver 1.0',
     shotUpdateTitle:'Cập nhật số shot', shotUpdateBack:'Về danh sách',
+    moldFormPartNo:'★Mã SP', moldFormPartName:'★Tên SP', moldFormModelNo:'Mã khuôn', moldFormCategory:'★Loại', machineFormChangeover:'Máy đổi khuôn', userFormName:'★Tên', userFormRole:'★Quyền', userFormActive:'Kích hoạt', bulkColMachineNo:'★Số máy', bulkColLine:'★Dây',
+    deleteConfirmSuffix:'có muốn xóa không?', importLoaded:'dữ liệu đã tải', importError:'Lỗi nhập: ', reportPrompt:'Nhập năm/tháng (VD: ', reportDone:'Báo cáo tháng đã xuất', bulkNoLine:': chưa chọn dây', bulkNoMachine:'Đã chọn dây nhưng chưa nhập số máy', savedText:'Đã lưu', analysisIntervalUpdate:'Chu kỳ BT', analysisIntervalConfirm:'shot - xác nhận?', analysisIntervalUpdated:'shot đã cập nhật', updateNow:'Cập nhật ngay?', readMore:'bản ghi', lineEditPrompt:'Thay đổi tên dây', reportError:'Định dạng năm/tháng không đúng', moldNotFound:'Không tìm thấy khuôn',
+    histDeleteConfirm:'bản ghi BT cần xóa?\nKhông thể hoàn tác.', histDeleted:'bản ghi đã xóa', histDeleteError:'Lỗi xóa: ', importDesc:'Tải lên CSV. Dữ liệu trùng khóa sẽ bị ghi đè.',
+    labelShift:'Chọn ca', labelWorker2:'Chọn công nhân', loadingText:'Đang tải...', maintInterval2:'Chu kỳ BT', totalShot:'Tổng', inputShotHint:'Nhập số shot hiện tại', maintTypeLabel:'Chọn loại bảo trì', loadError:'Lỗi tải dữ liệu', connError:'Lỗi kết nối', retry:'Thử lại', reloadBtn:'Tải lại', noUsers:'Chưa có người dùng', adminOnly:'Chỉ quản trị viên', adminOnlyDesc:'Chỉ quản trị viên mới sử dụng tính năng phân tích', limitLabel:'Giới hạn', machineAndLine:'Máy / Dây', partNoLabel:'Mã', partNameLabel:'Tên', maintShotLabel:'Shot chu kỳ BT', totalShotLabel:'Tổng số shot', currentLabel:'Hiện tại:', addTitle:'Thêm', updateTitle:'Cập nhật', savingText:'Đang lưu...', requiredError:'Vui lòng nhập đầy đủ các trường bắt buộc', cycleMinError:'Thời gian chu kỳ phải từ 1 giây trở lên', errorPrefix:'Lỗi:', moldAddTitle:'Thêm khuôn', moldEditTitle2:'Sửa khuôn', moldUpdated:'Đã cập nhật khuôn', moldAdded:'Đã thêm khuôn', deleted:'Đã xóa', deleteError:'Lỗi xóa', deleteErrorLinked:'Lỗi xóa (Có khuôn liên kết với máy này)', machineAddTitle:'Thêm máy', machineEditTitle2:'Sửa máy', machineUpdated:'Đã cập nhật thông tin máy', machineAdded:'Đã thêm máy', dandoriLabel:'Máy đổi khuôn', fixedLabel:'Máy cố định', userAddTitle:'Thêm người dùng', userEditTitle2:'Sửa người dùng', userUpdated:'Đã cập nhật người dùng', userAdded:'Đã thêm người dùng', nameRequired:'Vui lòng nhập tên', activeLabel:'Kích hoạt', inactiveLabel:'Vô hiệu', idError:'Không thể lấy ID', alertUpdated:'Đã cập nhật cài đặt cảnh báo', lineAdded:'Đã thêm dây', lineAddError:'Lỗi thêm (Có thể đã tồn tại dây cùng tên)', lineUpdated:'Đã cập nhật tên dây', lineUpdateError:'Lỗi cập nhật', exportingText:'Đang chuẩn bị xuất...', exportDone:'Đã xuất', exportError:'Lỗi xuất', importingText:'Đang nhập...', importExecuteBtn:'Thực hiện nhập', importNoFile:'Vui lòng chọn tệp CSV', bulkAddingText:'Đang thêm...', bulkSaveBtn2:'Thêm hàng loạt', bulkNoData:'Không có dữ liệu để thêm', dandoriSaveError:'Lỗi lưu:', selectToDelete:'Chọn bản ghi cần xóa', shotUpdateFailed:'Lưu thất bại', modelNo:'Mã khuôn', simpleTime:'TG đơn giản', ohTime:'TG OH', alertSettingCol:'Cài đặt cảnh báo', machineCountCol:'Số máy', noteCol:'Ghi chú', isChangeoverCol:'Đổi khuôn', operationCol:'Thao tác', selectPlaceholder:'Chọn', insufficientData:'Dữ liệu chưa đủ', shotOverText:'shot vượt', schedNoMaint:'Không có lịch BT trong tất cả ca', updateCheckBtn:'Kiểm tra cập nhật', checkingText:'Đang kiểm tra...', urlCopied:'Đã sao chép URL', urlCopyError:'Không thể sao chép', updateError2:'Lỗi cập nhật:', registerError:'Lỗi đăng ký:', alertEditTitle:'Chỉnh sửa cảnh báo', importModalDefault:'Nhập dữ liệu', bulkModalTitle:'Thêm máy hàng loạt', addHomeTitle:'Thêm vào màn hình chính', addRowBtn:'Thêm hàng', workerRole:'Công nhân', minUnit:'phút', appVersionLabel:'Phiên bản ứng dụng', copyBtn:'Sao chép', reportError2:'Định dạng năm tháng không đúng', reportGenerating:'Đang tạo báo cáo...', backupPreparing:'Đang chuẩn bị sao lưu...', backupDone:'Đã xuất sao lưu', backupError:'Lỗi sao lưu:', inputHere:'Nhập ›', tai:'máy', remainLabel:'Còn lại', savedText:'Đã lưu', selectMoldFor:': chọn khuôn', moldNotFound:'Không tìm thấy khuôn'
   },
   en: {
     appName:'Mold Maintenance', login:'Login', selectShift:'Select shift', selectWorker:'Select worker',
@@ -965,6 +972,10 @@ const T = {
     backupBtn:'Data backup',
     appVersion:'Mold Maintenance Ver 1.0',
     shotUpdateTitle:'Shot update', shotUpdateBack:'Back to list',
+    moldFormPartNo:'★Part No.', moldFormPartName:'★Name', moldFormModelNo:'Model No.', moldFormCategory:'★Type', machineFormChangeover:'Changeover', userFormName:'★Name', userFormRole:'★Role', userFormActive:'Active', bulkColMachineNo:'★Machine No.', bulkColLine:'★Line',
+    deleteConfirmSuffix:'Delete?', importLoaded:'data loaded', importError:'Import error: ', reportPrompt:'Enter year/month (e.g. ', reportDone:'monthly report exported', bulkNoLine:': no line selected', bulkNoMachine:'Line selected but machine no. is empty', savedText:'Saved', analysisIntervalUpdate:'Maint. interval', analysisIntervalConfirm:'shot - confirm update?', analysisIntervalUpdated:'shot updated', updateNow:'Update now?', readMore:'record(s)', lineEditPrompt:'Change line name', reportError:'Invalid year/month format', moldNotFound:'Mold not found',
+    histDeleteConfirm:'maint. record(s) to delete?\nThis cannot be undone.', histDeleted:'history record(s) deleted', histDeleteError:'Delete error: ', importDesc:'Upload CSV file. Duplicate key data will be overwritten.',
+    labelShift:'Select shift', labelWorker2:'Select worker', loadingText:'Loading...', maintInterval2:'Maint.', totalShot:'Total', inputShotHint:'Enter current shot count', maintTypeLabel:'Select maintenance type', loadError:'Data load error', connError:'Connection error', retry:'Retry', reloadBtn:'Reload', noUsers:'No users registered', adminOnly:'Admin only', adminOnlyDesc:'Analysis is for admins only', limitLabel:'Limit', machineAndLine:'Machine / Line', partNoLabel:'Part No.', partNameLabel:'Name', maintShotLabel:'Maint. interval shot', totalShotLabel:'Total shot count', currentLabel:'Current:', addTitle:'Add', updateTitle:'Update', savingText:'Saving...', requiredError:'Please fill in all required fields', cycleMinError:'Cycle time must be at least 1 second', errorPrefix:'Error:', moldAddTitle:'Add mold', moldEditTitle2:'Edit mold', moldUpdated:'Mold updated', moldAdded:'Mold added', deleted:'Deleted', deleteError:'Delete error', deleteErrorLinked:'Delete error (molds linked to this machine)', machineAddTitle:'Add machine', machineEditTitle2:'Edit machine', machineUpdated:'Machine updated', machineAdded:'Machine added', dandoriLabel:'Changeover machine', fixedLabel:'Fixed machine', userAddTitle:'Add user', userEditTitle2:'Edit user', userUpdated:'User updated', userAdded:'User added', nameRequired:'Please enter a name', activeLabel:'Active', inactiveLabel:'Inactive', idError:'Could not get ID', alertUpdated:'Alert settings updated', lineAdded:'Line added', lineAddError:'Add error (line name may already exist)', lineUpdated:'Line name updated', lineUpdateError:'Update error', exportingText:'Preparing export...', exportDone:'Exported', exportError:'Export error', importingText:'Importing...', importExecuteBtn:'Execute import', importNoFile:'Please select a CSV file', bulkAddingText:'Adding...', bulkSaveBtn2:'Bulk add', bulkNoData:'No data to add', dandoriSaveError:'Save error:', selectToDelete:'Select history to delete', shotUpdateFailed:'Failed to save', modelNo:'Model No.', simpleTime:'Simple time', ohTime:'OH time', alertSettingCol:'Alert setting', machineCountCol:'Machine count', noteCol:'Note', isChangeoverCol:'Changeover', operationCol:'Action', selectPlaceholder:'Select', insufficientData:'Insufficient data', shotOverText:'shot over', schedNoMaint:'No maint. scheduled for any shift', updateCheckBtn:'Check update', checkingText:'Checking...', urlCopied:'URL copied', urlCopyError:'Could not copy', updateError2:'Update error:', registerError:'Register error:', alertEditTitle:'Edit alert settings', importModalDefault:'Import', bulkModalTitle:'Bulk add machines', addHomeTitle:'Add to Home Screen', addRowBtn:'Add row', workerRole:'Worker', minUnit:'min', appVersionLabel:'App version', copyBtn:'Copy', reportError2:'Invalid year/month format', reportGenerating:'Generating report...', backupPreparing:'Preparing backup...', backupDone:'Backup exported', backupError:'Backup error:', inputHere:'Input ›', tai:'unit(s)', remainLabel:'Remaining', savedText:'Saved', selectMoldFor:': select mold', moldNotFound:'Mold not found'
   }
 };
 function t(key) { return T[state.lang][key] || key; }
@@ -1033,6 +1044,24 @@ function applyLabels() {
     const el = document.getElementById(id);
     if (el) el.textContent = t(key);
   });
+  // 追加ナビラベル（shotUpdate, analysis等）
+  const extraLabels = {
+    'nav-label-shotUpdate': 'shotUpdate',
+    'bn-label-shotUpdate': 'shotUpdate',
+    'nav-label-analysis': 'analysis',
+  };
+  Object.entries(extraLabels).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t(key);
+  });
+  // ログイン画面ラベル
+  const loginShiftEl = document.getElementById('label-shift');
+  if (loginShiftEl) loginShiftEl.textContent = t('selectShift');
+  const loginWorkerEl = document.getElementById('label-worker');
+  if (loginWorkerEl && loginWorkerEl.closest('#modal-maint') === null) loginWorkerEl.textContent = t('selectWorker');
+  // バージョンラベル
+  const subtitleEl = document.getElementById('login-subtitle');
+  if (subtitleEl) subtitleEl.textContent = t('version');
 }
 
 // ===== ページ切替 =====
@@ -1071,10 +1100,10 @@ async function loadUsers() {
     if (!grid) return;
     if (!users || users.length === 0) {
       grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">
-        ユーザーが登録されていません。<br>
-        <span style="font-size:11px">Supabase → Table Editor → users にユーザーを追加してください</span>
+        ${t('noUsers')}<br>
+        <span style="font-size:11px">Supabase → Table Editor → users</span>
         <br><br>
-        <button class="btn btn-primary" onclick="loadUsers()" style="font-size:12px;padding:6px 14px">再読み込み</button>
+        <button class="btn btn-primary" onclick="loadUsers()" style="font-size:12px;padding:6px 14px">${t('reloadBtn')}</button>
       </div>`;
       return;
     }
@@ -1091,8 +1120,8 @@ async function loadUsers() {
     const grid = document.getElementById('user-grid');
     if (grid) {
       grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px">
-        <div style="color:var(--danger-text);font-size:12px;margin-bottom:8px">接続エラー: ${e.message}</div>
-        <button class="btn btn-primary" onclick="loadUsers()" style="font-size:12px;padding:6px 14px">再試行</button>
+        <div style="color:var(--danger-text);font-size:12px;margin-bottom:8px">${t('connError')}: ${e.message}</div>
+        <button class="btn btn-primary" onclick="loadUsers()" style="font-size:12px;padding:6px 14px">${t('retry')}</button>
       </div>`;
     }
   }
@@ -1108,7 +1137,7 @@ function selectUser(id, name, bg, fg, el) {
   document.getElementById('confirm-avatar').style.background = bg;
   document.getElementById('confirm-avatar').style.color = fg;
   document.getElementById('confirm-name').textContent = name;
-  document.getElementById('confirm-shift-label').textContent = selectedShift + ' ' + (t('loginWith')||'でログイン');
+  document.getElementById('confirm-shift-label').textContent = selectedShift + ' ' + t('loginWith');
 }
 
 function doLogin() {
@@ -1151,7 +1180,7 @@ async function initMainPage() {
   try {
     await Promise.all([loadMolds(), loadLines(), loadCategories(), loadMachines()]);
   } catch(e) {
-    showToast('データ読み込みエラー', 'error');
+    showToast(t('loadError'), 'error');
     console.error('initMainPage error:', e);
   }
 
@@ -1208,8 +1237,8 @@ function showSection(section) {
       if (state.currentUser?.role !== 'admin') {
         el.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text3)">
           <div style="font-size:40px;margin-bottom:12px">🔒</div>
-          <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px">管理者専用</div>
-          <div style="font-size:12px">分析機能は管理者のみ使用できます</div>
+          <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px">${t('adminOnly')}</div>
+          <div style="font-size:12px">${t('adminOnlyDesc')}</div>
         </div>`;
         return;
       }
@@ -1245,8 +1274,8 @@ function statusMainColor(s) {
   return 'var(--success-text)';
 }
 function statusBadge(s) {
-  if (s==='overdue') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#ef4444;color:#fff;font-weight:700;border:1px solid #fca5a5">異常</span>`;
-  if (s==='danger') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#f97316;color:#fff;font-weight:700">要メンテ</span>`;
+  if (s==='overdue') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#ef4444;color:#fff;font-weight:700;border:1px solid #fca5a5">${t('needMaint')}</span>`;
+  if (s==='danger') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#f97316;color:#fff;font-weight:700">${t('needMaint')}</span>`;
   if (s==='warning') return `<span class="badge badge-warning">${t('caution')}</span>`;
   return `<span class="badge badge-success">${t('normal')}</span>`;
 }
@@ -1260,7 +1289,7 @@ function typeBadge(cat) {
 }
 function fmtTime(min) {
   if (!min) return '-';
-  if (min < 60) return `${Math.round(min)}分`;
+  if (min < 60) return `${Math.round(min)}${t('minUnit')||'分'}`;
   if (min < 1440) return `${Math.round(min/60*10)/10}h`;
   return `${Math.round(min/1440*10)/10}日`;
 }
@@ -1277,7 +1306,7 @@ async function renderDashboard(el) {
   const activeCount = activeMoldIds && activeMoldIds.size > 0 ? activeMoldIds.size : state.molds.length;
   el.innerHTML = `
   <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-label">成形中金型数</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${state.molds.length}</span></div><div class="kpi-sub" style="color:var(--text3)">段取り設定済み</div></div>
+    <div class="kpi-card"><div class="kpi-label">${t('totalMolds')}</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${state.molds.length}</span></div><div class="kpi-sub" style="color:var(--text3)">段取り設定済み</div></div>
     <div class="kpi-card"><div class="kpi-label">${t('needMaint')}</div><div class="kpi-value" style="color:var(--danger)">${danger}</div></div>
     <div class="kpi-card"><div class="kpi-label">${t('caution')}</div><div class="kpi-value" style="color:var(--warning)">${warning}</div></div>
     <div class="kpi-card"><div class="kpi-label">${t('normal')}</div><div class="kpi-value" style="color:var(--success)">${normal}</div></div>
@@ -1304,7 +1333,7 @@ function renderLineAlertBars() {
         ${d>0?`<div style="width:${dPct}%;background:var(--danger);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff">${d}</div>`:''}
         ${w>0?`<div style="width:${wPct}%;background:var(--warning);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#1c1917">${w}</div>`:''}
       </div>
-      <div style="font-size:11px;color:var(--text3);width:30px;text-align:right">${d+w}件</div>
+      <div style="font-size:11px;color:var(--text3);width:30px;text-align:right">${d+w}${t('readMore')||'件'}</div>
     </div>`;
   }).join('');
 }
@@ -1344,10 +1373,10 @@ async function renderList(el) {
         <button class="seg-btn" onclick="setListViewMode('simple',this)" style="padding:3px 8px;font-size:10px">${t('simple')}</button>
       </div>
       <select onchange="setListSort(this.value)" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:5px;padding:4px 8px;font-size:11px;color:var(--text2);cursor:pointer">
-        <option value="maint_asc">▼ メンテ近い順</option>
-        <option value="maint_desc">▼ メンテ遠い順</option>
-        <option value="machine_asc">▼ 機番昇順</option>
-        <option value="machine_desc">▼ 機番降順</option>
+        <option value="maint_asc">▼ ${t('sortMaintAsc')}</option>
+        <option value="maint_desc">▼ ${t('sortMaintDesc')}</option>
+        <option value="machine_asc">▼ ${t('sortMachineAsc')}</option>
+        <option value="machine_desc">▼ ${t('sortMachineDesc')}</option>
       </select>
     </div>
   </div>
@@ -1407,7 +1436,7 @@ function renderListBody() {
   // 段取り未設定が全台の場合は「稼働中」セクションを作らず全台を通常表示
   const hasDandori = active.length > 0;
   document.getElementById('list-count').textContent = hasDandori
-    ? `${sorted.length}台（稼働中 ${active.length}台）`
+    ? `${sorted.length}${t('tai')} (${t('normal')} ${active.length}${t('tai')})`
     : `${sorted.length}台`;
   if (!sorted.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
 
@@ -1437,16 +1466,16 @@ function renderListBody() {
       <td class="rt-pct" style="color:${color};font-weight:${isOverdue?'600':'400'}">${pctDisplay}</td>
       <td style="color:var(--info-text);font-size:11px;font-weight:500">${fmtNum(totalShot)}</td>
       <td class="rt-status">${dim?'':statusBadge(status)}</td>
-      <td><span style="font-size:11px;color:var(--accent);cursor:pointer" onclick="openShotModal('${m.id}')">入力 ›</span></td>
+      <td><span style="font-size:11px;color:var(--accent);cursor:pointer" onclick="openShotModal('${m.id}')">${t('inputHere')}</span></td>
     </tr>`;
   };
 
   const tableHTML = `<div class="table-wrap"><table>
-    <tr><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>型番</th><th>${t('type')}</th><th>${t('line')}</th><th>${t('progress')}</th><th>${t('remainShot')}</th><th>${t('remainTime')}</th><th>%</th><th style="color:var(--info-text)">累計shot</th><th>ステータス</th><th></th></tr>
+    <tr><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>${t('modelNo')}</th><th>${t('type')}</th><th>${t('line')}</th><th>${t('progress')}</th><th>${t('remainShot')}</th><th>${t('remainTime')}</th><th>%</th><th style="color:var(--info-text)">累計shot</th><th>ステータス</th><th></th></tr>
     ${hasDandori ? `
-      ${active.length>0?`<tr><td colspan="13" style="background:var(--bg3);font-size:10px;font-weight:500;color:var(--info-text);padding:5px 8px">● 稼働中（段取り設定済み）${active.length}台</td></tr>`:''}
+      ${active.length>0?`<tr><td colspan="13" style="background:var(--bg3);font-size:10px;font-weight:500;color:var(--info-text);padding:5px 8px">● ${t('normal')} ${active.length}${t('tai')}</td></tr>`:''}
       ${active.map(m=>makeRow(m,false)).join('')}
-      ${inactive.length>0?`<tr><td colspan="13" style="background:var(--bg3);font-size:10px;color:var(--text4);padding:5px 8px">段取り未設定 ${inactive.length}台</td></tr>`:''}
+      ${inactive.length>0?`<tr><td colspan="13" style="background:var(--bg3);font-size:10px;color:var(--text4);padding:5px 8px">${t('dandoriOnly')||'段取り未設定'} ${inactive.length}${t('tai')}</td></tr>`:''}
       ${inactive.map(m=>makeRow(m,true)).join('')}
     ` : sorted.map(m=>makeRow(m,false)).join('')}
   </table></div>`;
@@ -1472,7 +1501,7 @@ function renderListBody() {
       <div class="mold-card-meta rt-meta">
         ${isOverdue
           ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span><span style="color:var(--text3)">累計${fmtNum(calcEstimatedTotalShot(m))}</span>`
-          : `<span style="color:${color}">残 ${fmtNum(rem)}shot</span><span style="color:${color}">${fmtTime(remMin)}</span><span style="color:${color}">${pct}%</span>`
+          : `<span style="color:${color}">${t('remainLabel')} ${fmtNum(rem)}shot</span><span style="color:${color}">${fmtTime(remMin)}</span><span style="color:${color}">${pct}%</span>`
         }
       </div>
       ${dim?'':`<div class="mold-card-btn ${(isOverdue||status==='danger')?'hot':''}" onclick="openShotModal('${m.id}')">${t('shotUpdate')} / ${t('maintDone2')}</div>`}
@@ -1481,9 +1510,9 @@ function renderListBody() {
 
   const cardsHTML = `<div class="mold-cards">
     ${hasDandori ? `
-      ${active.length>0?`<div style="font-size:10px;font-weight:500;color:var(--info-text);padding:4px 2px 6px;display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:var(--success)"></div>稼働中 ${active.length}台</div>`:''}
+      ${active.length>0?`<div style="font-size:10px;font-weight:500;color:var(--info-text);padding:4px 2px 6px;display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:var(--success)"></div>${t('normal')} ${active.length}${t('tai')}</div>`:''}
       ${active.map(m=>makeCard(m,false)).join('')}
-      ${inactive.length>0?`<div class="section-sep" style="font-size:10px;color:var(--text4);padding:8px 2px 4px;margin-top:4px;border-top:1px solid var(--border)">段取り未設定 ${inactive.length}台</div>`:''}
+      ${inactive.length>0?`<div class="section-sep" style="font-size:10px;color:var(--text4);padding:8px 2px 4px;margin-top:4px;border-top:1px solid var(--border)">${t('dandoriOnly')||'段取り未設定'} ${inactive.length}${t('tai')}</div>`:''}
       ${inactive.map(m=>makeCard(m,true)).join('')}
     ` : sorted.map(m=>makeCard(m,false)).join('')}
   </div>`;
@@ -1499,7 +1528,7 @@ function renderAlert(el) {
   <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">
     <div style="display:flex;align-items:center;gap:8px">
       <div style="font-size:14px;font-weight:600;color:var(--text)">${t('alert')}</div>
-      <span style="font-size:11px;background:var(--danger-bg);color:var(--danger-text);padding:2px 8px;border-radius:4px;font-weight:600" id="alert-header-count">${alerts.length}件</span>
+      <span style="font-size:11px;background:var(--danger-bg);color:var(--danger-text);padding:2px 8px;border-radius:4px;font-weight:600" id="alert-header-count">${alerts.length}${t('readMore')||'件'}</span>
     </div>
   </div>
   <div class="seg-wrap" id="alert-line-seg">
@@ -1541,7 +1570,7 @@ function renderAlertBody() {
       <div style="background:var(--bg2);border-radius:6px;padding:8px 10px;border-left:2px solid ${statusColor(m.status)};display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <div style="flex:1;min-width:0">
           <div style="font-size:11px;font-weight:600;color:var(--text)">#${m.machine_no||'?'}　<span style="font-weight:400;color:var(--text2)">${m.part_name}</span></div>
-          <div style="font-size:10px;color:${statusColor(m.status)};margin-top:1px">残 ${fmtNum(m.remaining_shot)}shot・${fmtTime(m.remaining_min)}・${m.progress_pct}%</div>
+          <div style="font-size:10px;color:${statusColor(m.status)};margin-top:1px">${t('remainLabel')} ${fmtNum(m.remaining_shot)}shot・${fmtTime(m.remaining_min)}・${m.progress_pct}%</div>
         </div>
         ${statusBadge(m.status)}
         <div class="btn btn-sm ${m.status==='danger'?'btn-success':'btn-secondary'}" onclick="${m.status==='danger'?`openMaintenanceFromAlert('${m.id}')`:`openShotModal('${m.id}')`}">${m.status==='danger'?t('maintDone2'):t('shotUpdate')}</div>
@@ -1564,13 +1593,13 @@ function renderAlertBody() {
           <div style="width:${m.progress_pct}%;height:100%;border-radius:2px;background:${statusColor(m.status)}"></div>
         </div>
         <div class="alert-stats">
-          <div class="alert-stat"><div class="alert-stat-label">残りshot</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${fmtNum(m.remaining_shot)}</div></div>
-          <div class="alert-stat"><div class="alert-stat-label">残り時間</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${fmtTime(m.remaining_min)}</div></div>
-          <div class="alert-stat"><div class="alert-stat-label">進捗</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${m.progress_pct}%</div></div>
+          <div class="alert-stat"><div class="alert-stat-label">${t('remainShot')}</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${fmtNum(m.remaining_shot)}</div></div>
+          <div class="alert-stat"><div class="alert-stat-label">${t('remainTime')}</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${fmtTime(m.remaining_min)}</div></div>
+          <div class="alert-stat"><div class="alert-stat-label">${t('progress')}</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${m.progress_pct}%</div></div>
         </div>
         <div class="alert-btns">
-          <div class="alert-btn" style="background:var(--info-bg);color:var(--info-text)" onclick="openShotModal('${m.id}')">ショット更新</div>
-          <div class="alert-btn" style="background:var(--success);color:#052e16" onclick="openMaintenanceFromAlert('${m.id}')">メンテ完了</div>
+          <div class="alert-btn" style="background:var(--info-bg);color:var(--info-text)" onclick="openShotModal('${m.id}')">${t('shotUpdate')}</div>
+          <div class="alert-btn" style="background:var(--success);color:#052e16" onclick="openMaintenanceFromAlert('${m.id}')">${t('maintDone2')}</div>
         </div>
       </div>`).join('');
   }
@@ -1589,9 +1618,9 @@ async function renderHistory(el) {
       <div class="filter-pill" onclick="setHistFilter('simple',this)">${t('simpleFilter')}</div>
       ${state.lines.map(l=>`<div class="filter-pill" onclick="setHistFilter('${l.name}',this)">${l.name}</div>`).join('')}
     </div>
-    <button id="hist-edit-btn" onclick="toggleHistEditMode()" style="font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--border);background:${histEditMode?'#3a1515':'var(--bg2)'};color:${histEditMode?'var(--danger-text)':'var(--text3)'};cursor:pointer;flex-shrink:0;margin-left:8px">${histEditMode?'完了':'編集'}</button>
+    <button id="hist-edit-btn" onclick="toggleHistEditMode()" style="font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--border);background:${histEditMode?'#3a1515':'var(--bg2)'};color:${histEditMode?'var(--danger-text)':'var(--text3)'};cursor:pointer;flex-shrink:0;margin-left:8px">${histEditMode?t('close'):t('edit')}</button>
   </div>
-  ${histEditMode?`<div style="font-size:11px;color:var(--danger-text);padding:5px 12px 0">削除する履歴を選択してください</div>`:''}
+  ${histEditMode?`<div style="font-size:11px;color:var(--danger-text);padding:5px 12px 0">${t('selectToDelete')}</div>`:''}
   <div id="hist-body" style="padding:6px 12px">
     <div class="loading-overlay"><div class="spinner"></div></div>
   </div>
@@ -1613,25 +1642,24 @@ function updateHistDeleteBar() {
   if (!bar) return;
   const count = histSelectedIds.size;
   bar.innerHTML = count > 0
-    ? `<div style="background:var(--danger);border-radius:8px;padding:10px;text-align:center;font-size:13px;font-weight:600;color:#fff;cursor:pointer" onclick="deleteSelectedHist()">選択した${count}件を削除</div>`
-    : `<div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center;font-size:12px;color:var(--text3);border:0.5px solid var(--border)">削除する履歴を選択してください</div>`;
+    ? `<div style="background:var(--danger);border-radius:8px;padding:10px;text-align:center;font-size:13px;font-weight:600;color:#fff;cursor:pointer" onclick="deleteSelectedHist()">${t('delete')} ${count}${t('readMore')||'件'}</div>`
+    : `<div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center;font-size:12px;color:var(--text3);border:0.5px solid var(--border)">${t('selectToDelete')}</div>`;
 }
 
 async function deleteSelectedHist() {
   if (!histSelectedIds.size) return;
-  if (!confirm(`選択した${histSelectedIds.size}件のメンテ履歴を削除しますか？
-この操作は取り消せません。`)) return;
+  if (!confirm(`${histSelectedIds.size}` + (t('histDeleteConfirm')||'件のメンテ履歴を削除しますか？\nこの操作は取り消せません。'))) return;
   try {
     for (const id of histSelectedIds) {
       await sb('maintenance_logs','DELETE',null,`?id=eq.${id}`);
     }
-    showToast(`${histSelectedIds.size}件の履歴を削除しました`, 'success');
+    showToast(`${histSelectedIds.size}` + t('histDeleted'), 'success');
     histSelectedIds = new Set();
     histEditMode = false;
     const el = document.getElementById('main-content');
     if (el) renderHistory(el);
   } catch(e) {
-    showToast('削除エラー: ' + e.message, 'error');
+    showToast(t('histDeleteError') + e.message, 'error');
   }
 }
 
@@ -1670,7 +1698,7 @@ async function loadHistory() {
 
     // PC テーブル
     const tableHTML = `<div class="table-wrap"><table>
-      <tr>${histEditMode?'<th></th>':''}<th>日時</th><th>機番</th><th>品名</th><th>品番</th><th>ライン</th><th>種別</th><th>実施shot</th><th>作業者/直</th></tr>
+      <tr>${histEditMode?'<th></th>':''}<th>${t('execDate')}</th><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>${t('line')}</th><th>${t('maintType')}</th><th>${t('shotCount')}</th><th>${t('worker')}/${t('shift')}</th></tr>
       ${filtered.map(log => {
         const r = getRow(log);
         return `<tr data-lid="${log.id}" style="${r.sel?'background:var(--info-bg);':''}" onclick="${histEditMode?`histToggle('${log.id}')`:''}" ${histEditMode?'style="cursor:pointer"':''}>
@@ -1680,7 +1708,7 @@ async function loadHistory() {
           <td>${log.molds?.part_name||'-'}</td>
           <td style="font-size:11px;color:var(--text3)">${log.molds?.part_no||'-'}</td>
           <td>${r.lineName}</td>
-          <td><span class="hist-tag ${r.isOH?'hist-tag-oh':'hist-tag-simple'}">${r.isOH?'OH':'簡易'}</span></td>
+          <td><span class="hist-tag ${r.isOH?'hist-tag-oh':'hist-tag-simple'}">${r.isOH?'OH':t('simple')}</span></td>
           <td>${r.shot} shot</td>
           <td style="font-size:11px;color:var(--text3)">${log.users?.name||'-'} / ${log.shift||'-'}</td>
         </tr>`;
@@ -1694,8 +1722,8 @@ async function loadHistory() {
         <div class="hist-row1">#${r.machineNo}　${log.molds?.part_name||'-'}　${r.lineName}</div>
         <div class="hist-row2">
           <div style="display:flex;gap:3px">
-            <span class="hist-tag ${r.isOH?'hist-tag-oh':'hist-tag-simple'}">${r.isOH?'OH':'簡易'}</span>
-            <span class="hist-tag ${log.is_reset?'hist-tag-reset':'hist-tag-keep'}">${log.is_reset?'リセット':'継続'}</span>
+            <span class="hist-tag ${r.isOH?'hist-tag-oh':'hist-tag-simple'}">${r.isOH?'OH':t('simple')}</span>
+            <span class="hist-tag ${log.is_reset?'hist-tag-reset':'hist-tag-keep'}">${log.is_reset?t('withReset'):t('noReset')}</span>
           </div>
           <span style="font-size:9px;color:var(--text3)">${r.shot} shot</span>
         </div>
@@ -1719,7 +1747,7 @@ async function loadHistory() {
     if (histEditMode) updateHistDeleteBar();
   } catch(e) {
     console.error('loadHistory:', e);
-    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger-text)">読み込みエラー: ${e.message}</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger-text)">${t('loadError')}: ${e.message}</div>`;
   }
 }
 
@@ -1826,7 +1854,7 @@ async function loadDandori() {
     }
     renderDandoriMachines();
   } catch(e) {
-    document.getElementById('dandori-body').innerHTML = `<div style="color:var(--danger-text)">エラー</div>`;
+    document.getElementById('dandori-body').innerHTML = `<div style="color:var(--danger-text)">${t('errorPrefix')}</div>`;
   }
 }
 
@@ -1910,10 +1938,10 @@ async function saveDandori() {
       }
       saved++;
     }
-    showToast(`段取り設定を保存しました（${saved}件）`, 'success');
+    showToast(t('dandoriSave') + `（${saved}${t('readMore')||'件'}）`, 'success');
   } catch(e) {
     console.error('saveDandori error:', e);
-    showToast('保存エラー: ' + e.message, 'error');
+    showToast(t('dandoriSaveError') + ' ' + e.message, 'error');
   }
 }
 
@@ -1943,28 +1971,28 @@ function showMasterTab(tab, el) {
 function renderMasterMolds(el) {
   el.innerHTML = `
   <div class="toolbar">
-    <input type="text" class="search-box" placeholder="🔍 品番・品名で検索..." oninput="filterMasterMolds(this.value)">
+    <input type="text" class="search-box" placeholder="🔍 ${t('partNo')}・${t('partName')}..." oninput="filterMasterMolds(this.value)">
     <div class="toolbar-right">
-      <button class="btn btn-secondary" onclick="exportMaster('molds')">↓ CSVエクスポート</button>
-      <button class="btn btn-secondary" onclick="openImportModal('molds')">↑ CSVインポート</button>
-      <button class="btn btn-primary" onclick="openAddMoldModal()">＋ 金型追加</button>
+      <button class="btn btn-secondary" onclick="exportMaster('molds')">${t('exportCsv')}</button>
+      <button class="btn btn-secondary" onclick="openImportModal('molds')">${t('importCsv')}</button>
+      <button class="btn btn-primary" onclick="openAddMoldModal()">${t('addMold')}</button>
     </div>
   </div>
   <div class="table-wrap"><table>
     <tr>
       <th>ID</th>
-      <th style="cursor:pointer" onclick="setMasterSort('part_no')">品番${masterSortKey==='part_no'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('part_name')">品名${masterSortKey==='part_name'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('category_name')">分類${masterSortKey==='category_name'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('model_no')">型番${masterSortKey==='model_no'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('machine_no')">機番${masterSortKey==='machine_no'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('line_name')">ライン${masterSortKey==='line_name'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('maintenance_interval')">メンテ間隔${masterSortKey==='maintenance_interval'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('cycle_time_sec')">サイクル${masterSortKey==='cycle_time_sec'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('simple_maint_time_min')">簡易所要${masterSortKey==='simple_maint_time_min'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('oh_maint_time_min')">OH所要${masterSortKey==='oh_maint_time_min'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('alert_min_danger')">アラート設定${masterSortKey==='alert_min_danger'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th>操作</th>
+      <th style="cursor:pointer" onclick="setMasterSort('part_no')">${t('partNo')}${masterSortKey==='part_no'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('part_name')">${t('partName')}${masterSortKey==='part_name'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('category_name')">${t('type')}${masterSortKey==='category_name'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('model_no')">${t('modelNo')}${masterSortKey==='model_no'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('machine_no')">${t('machineNo')}${masterSortKey==='machine_no'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('line_name')">${t('line')}${masterSortKey==='line_name'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('maintenance_interval')">${t('maintInterval')}${masterSortKey==='maintenance_interval'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('cycle_time_sec')">${t('cycleTime')}${masterSortKey==='cycle_time_sec'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('simple_maint_time_min')">${t('simpleTime')}${masterSortKey==='simple_maint_time_min'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('oh_maint_time_min')">${t('ohTime')}${masterSortKey==='oh_maint_time_min'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer" onclick="setMasterSort('alert_min_danger')">${t('alertSettingCol')}${masterSortKey==='alert_min_danger'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th>${t('operationCol')}</th>
     </tr>
     ${sortMoldMaster(state.molds, masterSortKey, masterSortDir).map(m=>`<tr>
       <td style="font-size:10px;color:var(--text4)">${m.id||''}</td>
@@ -1976,12 +2004,12 @@ function renderMasterMolds(el) {
       <td>${m.line_name||'-'}</td>
       <td>${fmtNum(m.maintenance_interval)} shot</td>
       <td>${m.cycle_time_sec}秒</td>
-      <td style="color:var(--accent);font-weight:500">${m.simple_maint_time_min||20}分</td>
-      <td style="color:var(--text3)">${m.oh_maint_time_min||60}分</td>
-      <td style="font-size:10px;color:var(--text3)">要${m.alert_min_danger||120}分前<br>注${m.alert_min_warning||480}分前</td>
+      <td style="color:var(--accent);font-weight:500">${m.simple_maint_time_min||20}${t('minUnit')}</td>
+      <td style="color:var(--text3)">${m.oh_maint_time_min||60}${t('minUnit')}</td>
+      <td style="font-size:10px;color:var(--text3)">${t('needMaint')}${m.alert_min_danger||120}${t('minUnit')}<br>${t('caution')}${m.alert_min_warning||480}${t('minUnit')}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-secondary btn-sm" onclick="editMold('${m.id}')">編集</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteMold('${m.id}')">削除</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMold('${m.id}')">${t('delete')}</button>
       </div></td>
     </tr>`).join('')}  </table></div>
   <div class="mold-cards">${state.molds.map(m=>`
@@ -1992,7 +2020,7 @@ function renderMasterMolds(el) {
       </div></div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <button class="btn btn-secondary btn-sm" style="flex:1" onclick="editMold('${m.id}')">編集</button>
-        <button class="btn btn-danger btn-sm" style="flex:1" onclick="deleteMold('${m.id}')">削除</button>
+        <button class="btn btn-danger btn-sm" style="flex:1" onclick="deleteMold('${m.id}')">${t('delete')}</button>
       </div>
     </div>`).join('')}</div>`;
 }
@@ -2002,20 +2030,20 @@ function renderMasterMachines(el) {
   <div class="toolbar">
     <div></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-secondary" onclick="exportMaster('machines')">↓ CSVエクスポート</button>
-      <button class="btn btn-secondary" onclick="openImportModal('machines')">↑ CSVインポート</button>
-      <button class="btn btn-secondary" onclick="openBulkMachineModal()">＋＋ 一括追加</button>
-      <button class="btn btn-primary" onclick="openAddMachineModal()">＋ 機械追加</button>
+      <button class="btn btn-secondary" onclick="exportMaster('machines')">${t('exportCsv')}</button>
+      <button class="btn btn-secondary" onclick="openImportModal('machines')">${t('importCsv')}</button>
+      <button class="btn btn-secondary" onclick="openBulkMachineModal()">${t('bulkAdd')}</button>
+      <button class="btn btn-primary" onclick="openAddMachineModal()">${t('addMachine')}</button>
     </div>
   </div>
   <div class="table-wrap"><table>
     <tr>
       <th>ID</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('machine_no')">機番${masterSortState[masterCurrentTab]?.key==='machine_no'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('line_name')">ライン${masterSortState[masterCurrentTab]?.key==='line_name'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('is_dandori')">段替え${masterSortState[masterCurrentTab]?.key==='is_dandori'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('note')">備考${masterSortState[masterCurrentTab]?.key==='note'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th>操作</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('machine_no')">${t('machineNo')}${masterSortState[masterCurrentTab]?.key==='machine_no'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('line_name')">${t('line')}${masterSortState[masterCurrentTab]?.key==='line_name'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('is_dandori')">${t('isChangeoverCol')}${masterSortState[masterCurrentTab]?.key==='is_dandori'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('note')">${t('noteCol')}${masterSortState[masterCurrentTab]?.key==='note'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
+      <th>${t('operationCol')}</th>
     </tr>
     ${sortMasterData(state.machines, masterSortState[masterCurrentTab]?.key||'machine_no', masterSortState[masterCurrentTab]?.dir||'asc').map(m=>{
       const line = state.lines.find(l=>l.id===m.line_id);
@@ -2027,7 +2055,7 @@ function renderMasterMachines(el) {
         <td style="color:var(--text3)">${m.note||'—'}</td>
         <td><div style="display:flex;gap:4px">
           <button class="btn btn-secondary btn-sm" onclick="editMachine('${m.id}')">編集</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteMachine('${m.id}')">削除</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteMachine('${m.id}')">${t('delete')}</button>
         </div></td>
       </tr>`;
     }).join('')}
@@ -2044,19 +2072,19 @@ function renderMasterLines(el) {
   el.innerHTML = `
   <div class="toolbar">
     <div></div>
-    <button class="btn btn-primary" onclick="openAddLineModal()">＋ ライン追加</button>
+    <button class="btn btn-primary" onclick="openAddLineModal()">${t('addLine')}</button>
   </div>
   <div class="table-wrap"><table>
     <tr>
       <th>ID</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('name')">ライン名${sa('name')}</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('machine_count')">機械台数${sa('machine_count')}</th>
-      <th>操作</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('name')">${t('line')}${sa('name')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('machine_count')">${t('machineCountCol')}${sa('machine_count')}</th>
+      <th>${t('operationCol')}</th>
     </tr>
     ${sorted.map(l=>`<tr>
       <td style="font-size:10px;color:var(--text4);font-family:monospace">${(l.id||'').slice(0,8)}</td>
       <td style="font-weight:600">${l.name}</td>
-      <td>${l.machine_count}台</td>
+      <td>${l.machine_count}${t('tai')}</td>
       <td><button class="btn btn-secondary btn-sm" onclick="editLine('${l.id}')">編集</button></td>
     </tr>`).join('')}
   </table></div>`;
@@ -2064,12 +2092,12 @@ function renderMasterLines(el) {
 
 async function renderMasterUsers(el) {
   // ローディング表示
-  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">読み込み中...</div>';
+  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">' + t('loadingText') + '</div>';
   try {
     var users = await sb('users', 'GET', null, '?is_active=eq.true&order=name');
     if (users) state.users = users;
   } catch(e) {
-    showToast('ユーザー取得エラー: ' + e.message, 'error');
+    showToast(t('errorPrefix') + ' ' + e.message, 'error');
   }
   renderMasterUsersTable(el);
 }
@@ -2118,17 +2146,17 @@ function renderMasterAlerts(el) {
   function sa(k) { return s.key===k ? (s.dir==='asc' ? ' ↑' : ' ↓') : ' ↕'; }
   const sorted = sortMasterData(state.molds, s.key, s.dir);
   el.innerHTML = `
-  <div style="padding:10px 16px;font-size:12px;color:var(--text3)">各金型のアラートしきい値を設定します</div>
+  <div style="padding:10px 16px;font-size:12px;color:var(--text3)">${t('alertSetting')}</div>
   <div class="table-wrap"><table>
     <tr>
       <th>ID</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('part_no')">品番${sa('part_no')}</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('part_name')">品名${sa('part_name')}</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('category_name')">分類${sa('category_name')}</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('maintenance_interval')">メンテ間隔${sa('maintenance_interval')}</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('alert_min_danger')">要メンテ(分前)${sa('alert_min_danger')}</th>
-      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('alert_min_warning')">注意(分前)${sa('alert_min_warning')}</th>
-      <th>操作</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('part_no')">${t('partNo')}${sa('part_no')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('part_name')">${t('partName')}${sa('part_name')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('category_name')">${t('type')}${sa('category_name')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('maintenance_interval')">${t('maintInterval')}${sa('maintenance_interval')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('alert_min_danger')">${t('needMaint')}${sa('alert_min_danger')}</th>
+      <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('alert_min_warning')">${t('caution')}${sa('alert_min_warning')}</th>
+      <th>${t('operationCol')}</th>
     </tr>
     ${sorted.map(m=>`<tr>
       <td style="font-size:10px;color:var(--text4);font-family:monospace">${(m.id||'').slice(0,8)}</td>
@@ -2165,8 +2193,8 @@ function openShotModal(moldId) {
   prog.style.width = mold.progress_pct + '%';
   prog.style.background = statusColor(mold.status);
 
-  document.getElementById('shot-remaining-label').textContent = `残り ${fmtNum(mold.remaining_shot)}shot・${fmtTime(mold.remaining_min)}`;
-  document.getElementById('shot-limit-label').textContent = `上限 ${fmtNum(mold.maintenance_interval)}shot`;
+  document.getElementById('shot-remaining-label').textContent = `${t('remainLabel')} ${fmtNum(mold.remaining_shot)}shot・${fmtTime(mold.remaining_min)}`;
+  document.getElementById('shot-limit-label').textContent = `${t('limitLabel')} ${fmtNum(mold.maintenance_interval)}shot`;
   document.getElementById('shot-submit-btn').textContent = t('update');
   document.getElementById('shot-cancel-label').textContent = t('cancel');
   document.getElementById('shot-maint-btn').textContent = t('maintComplete');
@@ -2216,7 +2244,7 @@ function updateShotHint() {
   const val = parseInt(state.shotInputValue) || 0;
   const remaining = mold.maintenance_interval - val;
   const mins = remaining * mold.cycle_time_sec / 60;
-  document.getElementById('shot-time-hint').textContent = `${mold.cycle_time_sec}秒/shot → 残り約${fmtTime(mins)}`;
+  document.getElementById('shot-time-hint').textContent = `${mold.cycle_time_sec}s/shot → ${t('remainLabel')} ${fmtTime(mins)}`;
 }
 
 async function submitShot() {
@@ -2249,7 +2277,7 @@ async function submitShot() {
     state.currentMold = null;
     showSection(section);
   } catch(e) {
-    showToast('更新エラー: '+e.message, 'error');
+    showToast(t('updateError2') + ' ' + e.message, 'error');
   }
 }
 
@@ -2261,7 +2289,7 @@ function openMaintenanceModal() {
   state.isReset = false;
 
   document.getElementById('maint-machine').textContent = `#${mold.machine_no||'?'}　${mold.line_name||'-'}`;
-  document.getElementById('maint-part').textContent = `${mold.part_no}　${mold.part_name}　現在: ${fmtNum(mold.current_shot)} shot`;
+  document.getElementById('maint-part').textContent = `${mold.part_no}　${mold.part_name}　${t('currentLabel')} ${fmtNum(mold.current_shot)} shot`;
 
   const prog = document.getElementById('maint-progress-bar');
   prog.style.width = mold.progress_pct + '%';
@@ -2315,17 +2343,17 @@ function confirmMaintenance() {
   const mold = state.currentMold;
   const card = document.getElementById('confirm-card-content');
   card.innerHTML = `
-    <div class="confirm-row"><div class="confirm-label">機番 / ライン</div><div class="confirm-value">#${mold.machine_no||'?'}　${mold.line_name||'-'}</div></div>
-    <div class="confirm-row"><div class="confirm-label">品番</div><div class="confirm-value">${mold.part_no}</div></div>
-    <div class="confirm-row"><div class="confirm-label">品名</div><div class="confirm-value">${mold.part_name}</div></div>
+    <div class="confirm-row"><div class="confirm-label">${t('machineAndLine')}</div><div class="confirm-value">#${mold.machine_no||'?'}　${mold.line_name||'-'}</div></div>
+    <div class="confirm-row"><div class="confirm-label">${t('partNo')}</div><div class="confirm-value">${mold.part_no}</div></div>
+    <div class="confirm-row"><div class="confirm-label">${t('partName')}</div><div class="confirm-value">${mold.part_name}</div></div>
     <div class="confirm-row"><div class="confirm-label">${t('maintType')}</div><div class="confirm-value" style="color:${state.maintType==='OH'?'var(--accent)':'var(--info-text)'}">${state.maintType==='OH'?t('ohMaint'):t('simpleMaint')}</div></div>
     <div class="confirm-row"><div class="confirm-label">${t('resetStatus')}</div><div class="confirm-value" style="color:${state.isReset?'var(--danger-text)':'var(--text3)'}">${state.isReset?t('withReset'):t('noReset')}</div></div>
     <div class="confirm-row">
-      <div class="confirm-label">メンテ間ショット数</div>
+      <div class="confirm-label">${t('maintShotLabel')}</div>
       <div class="confirm-value">${fmtNum(calcEstimatedShot(mold))} shot</div>
     </div>
     <div class="confirm-row">
-      <div class="confirm-label">累計ショット数</div>
+      <div class="confirm-label">${t('totalShotLabel')}</div>
       <div class="confirm-value">${fmtNum(calcEstimatedTotalShot(mold))} shot</div>
     </div>
     <div class="confirm-row"><div class="confirm-label">${t('worker')} / ${t('shift')}</div><div class="confirm-value">${state.currentUser.name} / ${state.currentShift}</div></div>`;
@@ -2374,7 +2402,7 @@ async function executeMaintenance() {
       if (sbEl) renderScheduleBody();
     }
   } catch(e) {
-    showToast('登録エラー: '+e.message, 'error');
+    showToast(t('registerError') + ' ' + e.message, 'error');
   }
 }
 
@@ -2390,8 +2418,8 @@ let editingAlertMoldId = null;
 
 async function openAddMoldModal() {
   editingMoldId = null;
-  document.getElementById('mold-edit-title').textContent = '金型追加';
-  document.getElementById('mold-save-btn').textContent = '追加する';
+  document.getElementById('mold-edit-title').textContent = t('moldAddTitle');
+  document.getElementById('mold-save-btn').textContent = t('addTitle');
   document.getElementById('mold-f-part-no').value = '';
   document.getElementById('mold-f-part-name').value = '';
   document.getElementById('mold-f-model-no').value = '';
@@ -2410,8 +2438,8 @@ async function editMold(id) {
   const mold = state.molds.find(m=>m.id===id);
   if (!mold) return;
   editingMoldId = id;
-  document.getElementById('mold-edit-title').textContent = '金型編集';
-  document.getElementById('mold-save-btn').textContent = '更新する';
+  document.getElementById('mold-edit-title').textContent = t('moldEditTitle2');
+  document.getElementById('mold-save-btn').textContent = t('updateTitle');
   document.getElementById('mold-f-part-no').value = mold.part_no || '';
   document.getElementById('mold-f-part-name').value = mold.part_name || '';
   document.getElementById('mold-f-model-no').value = mold.model_no || '';
@@ -2428,10 +2456,10 @@ async function editMold(id) {
 
 function populateMoldSelects(mold=null) {
   const catSel = document.getElementById('mold-f-category');
-  catSel.innerHTML = '<option value="">選択してください</option>' +
+  catSel.innerHTML = `<option value="">${t('selectPlaceholder')}</option>` +
     state.categories.map(c=>`<option value="${c.id}" ${mold&&c.name===mold.category_name?'selected':''}>${c.name}</option>`).join('');
   const macSel = document.getElementById('mold-f-machine');
-  macSel.innerHTML = '<option value="">選択してください</option>' +
+  macSel.innerHTML = `<option value="">${t('selectPlaceholder')}</option>` +
     state.machines.map(m=>{
       const line = state.lines.find(l=>l.id===m.line_id);
       return `<option value="${m.id}" ${mold&&m.machine_no===mold.machine_no?'selected':''}>#${m.machine_no} ${line?.name||''}</option>`;
@@ -2448,17 +2476,17 @@ async function saveMold() {
   const errEl = document.getElementById('mold-edit-error');
 
   if (!partNo || !partName || !catId || !machId || !interval) {
-    errEl.textContent = '★マークの項目を全て入力してください';
+    errEl.textContent = t('requiredError');
     errEl.style.display = 'block';
     return;
   }
   if (!cycle || cycle <= 0) {
-    errEl.textContent = 'サイクルタイムは1秒以上の値を入力してください（0は不可）';
+    errEl.textContent = t('cycleMinError');
     errEl.style.display = 'block';
     return;
   }
   errEl.style.display = 'none';
-  document.getElementById('mold-save-btn').textContent = '保存中...';
+  document.getElementById('mold-save-btn').textContent = t('savingText');
 
   try {
     const data = {
@@ -2474,46 +2502,45 @@ async function saveMold() {
     };
     if (editingMoldId) {
       await sb('molds','PATCH',data,`?id=eq.${editingMoldId}`);
-      showToast('金型を更新しました', 'success');
+      showToast(t('moldUpdated'), 'success');
     } else {
       await sb('molds','POST',{...data, current_shot:0, created_at:new Date().toISOString()});
-      showToast('金型を追加しました', 'success');
+      showToast(t('moldAdded'), 'success');
     }
     closeModal('modal-mold-edit');
     await loadMolds();
     showMasterTabByIndex(0);
   } catch(e) {
-    errEl.textContent = 'エラー: ' + e.message;
+    errEl.textContent = t('errorPrefix') + ' ' + e.message;
     errEl.style.display = 'block';
   } finally {
-    document.getElementById('mold-save-btn').textContent = editingMoldId ? '更新する' : '追加する';
+    document.getElementById('mold-save-btn').textContent = editingMoldId ? t('updateTitle') : t('addTitle');
   }
 }
 
 async function deleteMold(id) {
   const mold = state.molds.find(m=>m.id===id);
-  if (!confirm(`「${mold?.part_name}（${mold?.part_no}）」を削除しますか？
-メンテ履歴は残ります。`)) return;
+  if (!confirm(`「${mold?.part_name}（${mold?.part_no}）」${t('deleteConfirmSuffix')||'を削除しますか？'}`)) return;
   try {
     await sb('molds','PATCH',{is_active:false,updated_at:new Date().toISOString()},`?id=eq.${id}`);
-    showToast('削除しました', 'success');
+    showToast(t('deleted'), 'success');
     await loadMolds();
     showMasterTabByIndex(0);
-  } catch(e) { showToast('削除エラー', 'error'); }
+  } catch(e) { showToast(t('deleteError'), 'error'); }
 }
 
 // ===== 機械 CRUD =====
 async function openAddMachineModal() {
   editingMachineId = null;
   machineDandori = false;
-  document.getElementById('machine-edit-title').textContent = '機械追加';
-  document.getElementById('machine-save-btn').textContent = '追加する';
+  document.getElementById('machine-edit-title').textContent = t('machineAddTitle');
+  document.getElementById('machine-save-btn').textContent = t('addTitle');
   document.getElementById('machine-f-no').value = '';
   document.getElementById('machine-f-note').value = '';
   document.getElementById('machine-edit-error').style.display = 'none';
   updateMachineDandoriToggle();
   const lineSel = document.getElementById('machine-f-line');
-  lineSel.innerHTML = '<option value="">選択してください</option>' +
+  lineSel.innerHTML = `<option value="">${t('selectPlaceholder')}</option>` +
     state.lines.map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
   openModal('modal-machine-edit');
 }
@@ -2523,14 +2550,14 @@ async function editMachine(id) {
   if (!machine) return;
   editingMachineId = id;
   machineDandori = machine.is_dandori || false;
-  document.getElementById('machine-edit-title').textContent = '機械編集';
-  document.getElementById('machine-save-btn').textContent = '更新する';
+  document.getElementById('machine-edit-title').textContent = t('machineEditTitle2');
+  document.getElementById('machine-save-btn').textContent = t('updateTitle');
   document.getElementById('machine-f-no').value = machine.machine_no || '';
   document.getElementById('machine-f-note').value = machine.note || '';
   document.getElementById('machine-edit-error').style.display = 'none';
   updateMachineDandoriToggle();
   const lineSel = document.getElementById('machine-f-line');
-  lineSel.innerHTML = '<option value="">選択してください</option>' +
+  lineSel.innerHTML = `<option value="">${t('selectPlaceholder')}</option>` +
     state.lines.map(l=>`<option value="${l.id}" ${l.id===machine.line_id?'selected':''}>${l.name}</option>`).join('');
   openModal('modal-machine-edit');
 }
@@ -2543,7 +2570,7 @@ function updateMachineDandoriToggle() {
   const tog = document.getElementById('machine-dandori-toggle');
   const lbl = document.getElementById('machine-dandori-label');
   tog.classList.toggle('on', machineDandori);
-  lbl.textContent = machineDandori ? '段替え号機' : '固定機';
+  lbl.textContent = machineDandori ? t('dandoriLabel') : t('fixedLabel');
 }
 
 async function saveMachine() {
@@ -2551,48 +2578,48 @@ async function saveMachine() {
   const lineId = document.getElementById('machine-f-line').value;
   const errEl = document.getElementById('machine-edit-error');
   if (!no || !lineId) {
-    errEl.textContent = '★マークの項目を全て入力してください';
+    errEl.textContent = t('requiredError');
     errEl.style.display = 'block'; return;
   }
   errEl.style.display = 'none';
-  document.getElementById('machine-save-btn').textContent = '保存中...';
+  document.getElementById('machine-save-btn').textContent = t('savingText');
   try {
     const data = { machine_no: no, line_id: lineId, is_dandori: machineDandori, note: document.getElementById('machine-f-note').value.trim() };
     if (editingMachineId) {
       await sb('machines','PATCH',data,`?id=eq.${editingMachineId}`);
-      showToast('機械情報を更新しました', 'success');
+      showToast(t('machineUpdated'), 'success');
     } else {
       await sb('machines','POST',data);
-      showToast('機械を追加しました', 'success');
+      showToast(t('machineAdded'), 'success');
     }
     closeModal('modal-machine-edit');
     await loadMachines();
     showMasterTabByIndex(1);
   } catch(e) {
-    errEl.textContent = 'エラー: ' + e.message;
+    errEl.textContent = t('errorPrefix') + ' ' + e.message;
     errEl.style.display = 'block';
   } finally {
-    document.getElementById('machine-save-btn').textContent = editingMachineId ? '更新する' : '追加する';
+    document.getElementById('machine-save-btn').textContent = editingMachineId ? t('updateTitle') : t('addTitle');
   }
 }
 
 async function deleteMachine(id) {
   const m = state.machines.find(m=>m.id===id);
-  if (!confirm(`機番 #${m?.machine_no} を削除しますか？`)) return;
+  if (!confirm(`#${m?.machine_no} ${t('deleteConfirmSuffix')||'を削除しますか？'}`)) return;
   try {
     await sb('machines','DELETE',null,`?id=eq.${id}`);
-    showToast('削除しました', 'success');
+    showToast(t('deleted'), 'success');
     await loadMachines();
     showMasterTabByIndex(1);
-  } catch(e) { showToast('削除エラー（この機番に紐づく金型があります）', 'error'); }
+  } catch(e) { showToast(t('deleteErrorLinked'), 'error'); }
 }
 
 // ===== ユーザー CRUD =====
 async function openAddUserModal() {
   editingUserId = null;
   userActive = true;
-  document.getElementById('user-edit-title').textContent = 'ユーザー追加';
-  document.getElementById('user-save-btn').textContent = '追加する';
+  document.getElementById('user-edit-title').textContent = t('userAddTitle');
+  document.getElementById('user-save-btn').textContent = t('addTitle');
   document.getElementById('user-f-name').value = '';
   document.getElementById('user-f-role').value = 'worker';
   document.getElementById('user-edit-error').style.display = 'none';
@@ -2605,8 +2632,8 @@ async function editUser(id) {
   if (!user) return;
   editingUserId = id;
   userActive = user.is_active !== false;
-  document.getElementById('user-edit-title').textContent = 'ユーザー編集';
-  document.getElementById('user-save-btn').textContent = '更新する';
+  document.getElementById('user-edit-title').textContent = t('userEditTitle2');
+  document.getElementById('user-save-btn').textContent = t('updateTitle');
   document.getElementById('user-f-name').value = user.name || '';
   document.getElementById('user-f-role').value = user.role || 'worker';
   document.getElementById('user-edit-error').style.display = 'none';
@@ -2622,7 +2649,7 @@ function updateUserActiveToggle() {
   const tog = document.getElementById('user-active-toggle');
   const lbl = document.getElementById('user-active-label');
   tog.classList.toggle('on', userActive);
-  lbl.textContent = userActive ? '有効' : '無効';
+  lbl.textContent = userActive ? t('activeLabel') : t('inactiveLabel');
 }
 
 async function saveUser() {
@@ -2633,47 +2660,47 @@ async function saveUser() {
   const role = document.getElementById('user-f-role').value;
   const errEl = document.getElementById('user-edit-error');
   if (!name) {
-    errEl.textContent = '名前を入力してください';
+    errEl.textContent = t('nameRequired');
     errEl.style.display = 'block';
     if (saveBtn) saveBtn.disabled = false;
     return;
   }
   errEl.style.display = 'none';
-  if (saveBtn) saveBtn.textContent = '保存中...';
+  if (saveBtn) saveBtn.textContent = t('savingText');
   try {
     const data = { name, role, is_active: userActive };
     if (editingUserId) {
       await sb('users','PATCH',data,`?id=eq.${editingUserId}`);
-      showToast('ユーザーを更新しました', 'success');
+      showToast(t('userUpdated'), 'success');
     } else {
       await sb('users','POST',data);
-      showToast('ユーザーを追加しました', 'success');
+      showToast(t('userAdded'), 'success');
     }
     closeModal('modal-user-edit');
     state.users = await sb('users','GET',null,'?is_active=eq.true&order=name');
     const elU = document.getElementById('master-body');
     if (elU) renderMasterUsersTable(elU);
   } catch(e) {
-    errEl.textContent = 'エラー: ' + e.message;
+    errEl.textContent = t('errorPrefix') + ' ' + e.message;
     errEl.style.display = 'block';
   } finally {
     const btn = document.getElementById('user-save-btn');
-    if (btn) { btn.disabled = false; btn.textContent = editingUserId ? '更新する' : '追加する'; }
+    if (btn) { btn.disabled = false; btn.textContent = editingUserId ? t('updateTitle') : t('addTitle'); }
   }
 }
 
 async function deleteUser(id) {
-  if (!id) { showToast('IDが取得できませんでした', 'error'); return; }
+  if (!id) { showToast(t('idError'), 'error'); return; }
   try {
     await sb('users', 'PATCH', { is_active: false }, '?id=eq.' + id);
     var users = await sb('users', 'GET', null, '?is_active=eq.true&order=name');
     if (users) state.users = users;
-    showToast('削除しました', 'success');
+    showToast(t('deleted'), 'success');
     var body = document.getElementById('master-body');
     if (body) renderMasterUsersTable(body);
   } catch(e) {
     console.error('deleteUser error:', e);
-    showToast('エラー: ' + (e.message || JSON.stringify(e)), 'error');
+    showToast(t('errorPrefix') + ' ' + (e.message || JSON.stringify(e)), 'error');
   }
 }
 
@@ -2682,7 +2709,7 @@ async function editAlertSettings(id) {
   const mold = state.molds.find(m=>m.id===id);
   if (!mold) return;
   editingAlertMoldId = id;
-  document.getElementById('alert-edit-mold-info').textContent = `${mold.part_no}　${mold.part_name}　メンテ間隔: ${Number(mold.maintenance_interval).toLocaleString()} shot`;
+  document.getElementById('alert-edit-mold-info').textContent = `${mold.part_no}　${mold.part_name}　${t('maintInterval')}: ${Number(mold.maintenance_interval).toLocaleString()} shot`;
   document.getElementById('alert-f-danger-min').value = mold.alert_min_danger || 120;
   document.getElementById('alert-f-warning-min').value = mold.alert_min_warning || 480;
   document.getElementById('alert-edit-error').style.display = 'none';
@@ -2698,12 +2725,12 @@ async function saveAlertSettings() {
       updated_at: new Date().toISOString(),
     };
     await sb('molds','PATCH',data,`?id=eq.${editingAlertMoldId}`);
-    showToast('アラート設定を更新しました', 'success');
+    showToast(t('alertUpdated'), 'success');
     closeModal('modal-alert-edit');
     await loadMolds();
     showMasterTabByIndex(4);
   } catch(e) {
-    errEl.textContent = 'エラー: ' + e.message;
+    errEl.textContent = t('errorPrefix') + ' ' + e.message;
     errEl.style.display = 'block';
   }
 }
@@ -2714,23 +2741,23 @@ async function openAddLineModal() {
   if (!name || !name.trim()) return;
   try {
     await sb('lines','POST',{name:name.trim(), sort_order:state.lines.length+1});
-    showToast('ラインを追加しました', 'success');
+    showToast(t('lineAdded'), 'success');
     await loadLines();
     showMasterTabByIndex(2);
-  } catch(e) { showToast('追加エラー（同名のラインが存在する可能性があります）', 'error'); }
+  } catch(e) { showToast(t('lineAddError'), 'error'); }
 }
 
 async function editLine(id) {
   const line = state.lines.find(l=>l.id===id);
   if (!line) return;
-  const name = prompt('ライン名を変更してください', line.name);
+  const name = prompt(t('lineEditPrompt')||'ライン名を変更してください', line.name);
   if (!name || !name.trim() || name.trim()===line.name) return;
   try {
     await sb('lines','PATCH',{name:name.trim()},`?id=eq.${id}`);
-    showToast('ライン名を更新しました', 'success');
+    showToast(t('lineUpdated'), 'success');
     await loadLines();
     showMasterTabByIndex(2);
-  } catch(e) { showToast('更新エラー', 'error'); }
+  } catch(e) { showToast(t('lineUpdateError'), 'error'); }
 }
 
 function filterMasterMolds(q) {
@@ -2745,7 +2772,7 @@ function filterMasterMolds(q) {
 // ===== エクスポート機能 =====
 async function exportMaster(type) {
   try {
-    showToast('エクスポート準備中...', '');
+    showToast(t('exportingText'), '');
     let data, headers, filename;
     if (type === 'molds') {
       data = state.molds;
@@ -2784,15 +2811,15 @@ async function exportMaster(type) {
     const a = document.createElement('a');
     a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
-    showToast('エクスポートしました', 'success');
-  } catch(e) { showToast('エクスポートエラー', 'error'); }
+    showToast(t('exportDone'), 'success');
+  } catch(e) { showToast(t('exportError'), 'error'); }
 }
 
 // ===== インポート機能 =====
 function openImportModal(type) {
   state.importType = type;
   const labels = {molds:'金型マスタ', machines:'機械マスタ', users:'ユーザーマスタ'};
-  document.getElementById('import-modal-title').textContent = labels[type] + ' インポート';
+  document.getElementById('import-modal-title').textContent = labels[type] + ' ' + t('importModalDefault');
   document.getElementById('import-file-input').value = '';
   document.getElementById('import-preview').innerHTML = '';
   document.getElementById('import-status').textContent = '';
@@ -2807,7 +2834,7 @@ function handleImportFile(e) {
   if (!file) return;
   const ext = file.name.split('.').pop().toLowerCase();
   if (ext !== 'csv') {
-    showToast('CSVファイルを選択してください', 'error');
+    showToast(t('importNoFile'), 'error');
     return;
   }
   // バイナリで読んでBOMを確認してから文字コードを判定
@@ -2848,7 +2875,7 @@ function parseImportCSV(text) {
   // BOM除去・改行コード統一
   text = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines = text.trim().split('\n').filter(l=>l.trim());
-  if (lines.length < 2) { document.getElementById('import-status').textContent = 'データが見つかりません'; return; }
+  if (lines.length < 2) { document.getElementById('import-status').textContent = t('insufficientData'); return; }
 
   // タブ区切りかカンマ区切りかを自動判定
   const firstLine = lines[0];
@@ -2882,7 +2909,7 @@ function parseImportCSV(text) {
 
   const preview = document.getElementById('import-preview');
   const status = document.getElementById('import-status');
-  status.textContent = `${importRows.length}件のデータを読み込みました`;
+  status.textContent = `${importRows.length}${t('readMore')||'件'}` + (t('importLoaded')||'のデータを読み込みました');
   status.style.color = 'var(--success-text)';
 
   // プレビュー表示（最大5件）
@@ -2894,7 +2921,7 @@ function parseImportCSV(text) {
         ${cols.map(c=>`<td style="padding:4px 6px;color:var(--text2);border-bottom:0.5px solid var(--border);white-space:nowrap">${r[c]||'-'}</td>`).join('')}
         <td style="padding:4px 6px;color:var(--text3);border-bottom:0.5px solid var(--border)">...</td>
       </tr>`).join('')}
-      ${importRows.length>5?`<tr><td colspan="${cols.length+1}" style="padding:4px 6px;color:var(--text3);text-align:center">... 他${importRows.length-5}件</td></tr>`:''}
+      ${importRows.length>5?`<tr><td colspan="${cols.length+1}" style="padding:4px 6px;color:var(--text3);text-align:center">... +${importRows.length-5}${t('readMore')||'件'}</td></tr>`:''}
     </table>
   </div>`;
   document.getElementById('import-execute-btn').style.display = 'block';
@@ -2903,7 +2930,7 @@ function parseImportCSV(text) {
 async function executeImport() {
   if (!importRows.length) return;
   const btn = document.getElementById('import-execute-btn');
-  btn.textContent = 'インポート中...';
+  btn.textContent = t('importingText');
   btn.disabled = true;
   let success = 0, error = 0;
   try {
@@ -2920,9 +2947,9 @@ async function executeImport() {
     }
     closeModal('modal-import');
     if (error > 0) {
-      showToast(`${success}件インポート完了 / ${error}件エラー（コンソール確認）`, '');
+      showToast(`${success}${t('readMore')||'件'} OK / ${error}${t('readMore')||'件'} NG`, '');
     } else {
-      showToast(`${success}件のインポートが完了しました`, 'success');
+      showToast(`${success}${t('readMore')||'件'} ${t('importExecuteBtn')||'インポート'}OK`, 'success');
     }
     // データを全て再取得してから画面更新
     await Promise.all([loadMolds(), loadLines(), loadCategories(), loadMachines()]);
@@ -2930,9 +2957,9 @@ async function executeImport() {
     const tabIdx = {molds:0, machines:1, users:3}[state.importType] || 0;
     showMasterTabByIndex(tabIdx);
   } catch(e) {
-    showToast('インポートエラー: '+e.message, 'error');
+    showToast(t('importError')||'インポートエラー: ' + e.message, 'error');
   } finally {
-    btn.textContent = 'インポート実行';
+    btn.textContent = t('importExecuteBtn');
     btn.disabled = false;
   }
 }
@@ -3071,12 +3098,12 @@ async function generateMonthlyReport() {
   const month = now.getMonth() + 1;
 
   // 月選択ダイアログ
-  const input = prompt(`レポートを出力する年月を入力してください\n例: 2026/03`, `${year}/${String(month).padStart(2,'0')}`);
+  const input = prompt((t('reportPrompt')||'年月を入力（例: ') + `${year}/${String(month).padStart(2,'0')})`);
   if (!input) return;
   const [y, m] = input.split('/').map(Number);
-  if (!y || !m || m < 1 || m > 12) { showToast('年月の形式が正しくありません', 'error'); return; }
+  if (!y || !m || m < 1 || m > 12) { showToast(t('reportError2'), 'error'); return; }
 
-  showToast('レポート生成中...', '');
+  showToast(t('reportGenerating'), '');
 
   try {
     const startDate = `${y}-${String(m).padStart(2,'0')}-01`;
@@ -3197,11 +3224,11 @@ async function generateMonthlyReport() {
 
     // ファイル出力
     XLSX.writeFile(wb, `MenteLog_月次レポート_${y}年${String(m).padStart(2,'0')}月.xlsx`);
-    showToast(`${y}年${m}月度レポートを出力しました`, 'success');
+    showToast(`${y}/${m} ` + t('reportDone'), 'success');
 
   } catch(e) {
     console.error(e);
-    showToast('レポート生成エラー: ' + e.message, 'error');
+    showToast(t('errorPrefix') + ' ' + e.message, 'error');
   }
 }
 
@@ -3245,7 +3272,7 @@ async function loadSheetJS() {
 
 // ===== CSVバックアップ =====
 async function backupAllData() {
-  showToast('バックアップ準備中...', '');
+  showToast(t('backupPreparing'), '');
   try {
     await loadSheetJS();
     const wb = XLSX.utils.book_new();
@@ -3280,9 +3307,9 @@ async function backupAllData() {
     const now = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
     XLSX.writeFile(wb, `MenteLog_バックアップ_${dateStr}.xlsx`);
-    showToast('バックアップを出力しました', 'success');
+    showToast(t('backupDone'), 'success');
   } catch(e) {
-    showToast('バックアップエラー: ' + e.message, 'error');
+    showToast(t('backupError') + ' ' + e.message, 'error');
   }
 }
 
@@ -3350,13 +3377,13 @@ function renderSettings(el) {
     <div style="background:var(--bg2);border-radius:8px;overflow:hidden;margin-bottom:12px;border:0.5px solid var(--border)">
       <div style="padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between">
         <div>
-          <div style="font-size:13px;color:var(--text2)">アプリバージョン</div>
+          <div style="font-size:13px;color:var(--text2)">${t('appVersionLabel')}</div>
           <div style="font-size:11px;color:var(--text4);margin-top:2px">v${CURRENT_VERSION}</div>
         </div>
-        <button id="update-check-btn" onclick="checkForUpdate()" class="btn btn-secondary btn-sm" style="white-space:nowrap">更新確認</button>
+        <button id="update-check-btn" onclick="checkForUpdate()" class="btn btn-secondary btn-sm" style="white-space:nowrap">${t('updateCheckBtn')}</button>
       </div>
       <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="forceReload()">
-        <span style="font-size:13px;color:var(--text2)">🔄 強制リロード</span>
+        <span style="font-size:13px;color:var(--text2)">${t('reloadBtn')}</span>
         <span style="color:var(--text3)">›</span>
       </div>
     </div>
@@ -3433,10 +3460,10 @@ function showShortcutGuide() {
   
   document.getElementById('shortcut-guide-content').innerHTML = guideHTML + `
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">アプリのURL（ブックマーク・共有用）</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${t('urlLabel')||'URL'}</div>
       <div style="display:flex;gap:6px;align-items:center">
         <div style="flex:1;background:var(--bg);border:0.5px solid var(--border);border-radius:5px;padding:7px 10px;font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${url}</div>
-        <button class="btn btn-secondary btn-sm" onclick="copyURL()">コピー</button>
+        <button class="btn btn-secondary btn-sm" onclick="copyURL()">${t('copyBtn')}</button>
       </div>
     </div>`;
   openModal('modal-shortcut');
@@ -3444,9 +3471,9 @@ function showShortcutGuide() {
 
 function copyURL() {
   navigator.clipboard.writeText(window.location.href).then(() => {
-    showToast('URLをコピーしました', 'success');
+    showToast(t('urlCopied'), 'success');
   }).catch(() => {
-    showToast('コピーできませんでした', 'error');
+    showToast(t('urlCopyError'), 'error');
   });
 }
 
@@ -3467,15 +3494,15 @@ function addBulkMachineRow() {
   row.style.cssText = 'display:grid;grid-template-columns:80px 1fr 80px 1fr;gap:4px;align-items:center';
   row.className = 'bulk-machine-row';
   row.innerHTML = `
-    <input type="text" class="form-control bulk-machine-no" placeholder="例) 4" style="padding:5px 8px;font-size:12px">
+    <input type="text" class="form-control bulk-machine-no" placeholder="e.g. 4" style="padding:5px 8px;font-size:12px">
     <select class="form-control bulk-machine-line" style="padding:5px 8px;font-size:12px">
-      <option value="">選択</option>
+      <option value="">${t('selectPlaceholder')}</option>
       ${lineOptions}
     </select>
     <div style="display:flex;align-items:center;justify-content:center">
       <div class="toggle-wrap bulk-dandori-toggle" onclick="this.classList.toggle('on')" style="cursor:pointer"><div class="toggle-dot"></div></div>
     </div>
-    <input type="text" class="form-control bulk-machine-note" placeholder="備考（任意）" style="padding:5px 8px;font-size:12px">
+    <input type="text" class="form-control bulk-machine-note" placeholder="${t('noteCol')||'備考'}" style="padding:5px 8px;font-size:12px">
   `;
   container.appendChild(row);
 }
@@ -3492,12 +3519,12 @@ async function saveBulkMachines() {
     const lineName = row.querySelector('.bulk-machine-line').value;
     if (!no && !lineName) continue; // 空行はスキップ
     if (no && !lineName) {
-      errEl.textContent = `機番 ${no} のラインが選択されていません`;
+      errEl.textContent = `#${no} ` + (t('bulkNoLine')||'のラインが選択されていません');
       errEl.style.display = 'block';
       return;
     }
     if (!no && lineName) {
-      errEl.textContent = 'ラインが選択されていますが機番が空です';
+      errEl.textContent = t('bulkNoMachine')||'ラインが選択されていますが機番が空です';
       errEl.style.display = 'block';
       return;
     }
@@ -3508,13 +3535,13 @@ async function saveBulkMachines() {
   }
 
   if (!validRows.length) {
-    errEl.textContent = '追加するデータがありません';
+    errEl.textContent = t('bulkNoData');
     errEl.style.display = 'block';
     return;
   }
 
   errEl.style.display = 'none';
-  btn.textContent = '追加中...';
+  btn.textContent = t('bulkAddingText');
   btn.style.opacity = '0.6';
 
   let success = 0, updated = 0, error = 0;
@@ -3541,7 +3568,7 @@ async function saveBulkMachines() {
   if (error) msg += `${error}件エラー`;
   showToast(msg.trim(), error ? '' : 'success');
 
-  btn.textContent = '一括追加する';
+  btn.textContent = t('bulkSaveBtn2');
   btn.style.opacity = '1';
 }
 
@@ -3789,7 +3816,7 @@ function updateRealtimeDisplay() {
       ? alertMolds.filter(m=>m.line_name===state.alertFilter)
       : alertMolds;
     const countEl = document.getElementById('alert-header-count');
-    if (countEl) countEl.textContent = filtered.length + '件';
+    if (countEl) countEl.textContent = filtered.length + (t('readMore')||'件');
     // グローバルバッジ
     const badge = document.getElementById('alert-count-badge');
     if (badge) { badge.textContent = alertMolds.length; badge.style.display = alertMolds.length > 0 ? 'inline' : 'none'; }
@@ -3857,7 +3884,7 @@ function updateRealtimeDisplay() {
       if (meta) {
         meta.innerHTML = isOverdue
           ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span><span style="color:var(--text3)">累計${fmtNum(calcEstimatedTotalShot(mold))}</span>`
-          : `<span style="color:${color}">残 ${fmtNum(remaining)}shot</span><span style="color:${color}">${fmtTime(remainMin)}</span><span style="color:${color}">${pct}%</span>`;
+          : `<span style="color:${color}">${t('remainLabel')} ${fmtNum(remaining)}shot</span><span style="color:${color}">${fmtTime(remainMin)}</span><span style="color:${color}">${pct}%</span>`;
       }
     }
   });
@@ -4092,10 +4119,10 @@ async function saveShotUpdate(moldId) {
     const mold = state.molds.find(m => m.id === moldId);
     if (mold) { mold.maint_shot = val; mold.maint_shot_updated_at = new Date().toISOString(); }
     shotUpdateDoneIds.add(shotUpdateMachineId);
-    showToast('#' + shotUpdateMachineId + ' 保存完了（' + val.toLocaleString() + ' shot）', 'success');
+    showToast('#' + shotUpdateMachineId + ' ' + t('savedText') + '（' + val.toLocaleString() + ' shot）', 'success');
     backToSuGrid();
   } catch(e) {
-    showToast('保存に失敗しました', 'error');
+    showToast(t('shotUpdateFailed'), 'error');
   }
 }
 
@@ -4127,8 +4154,8 @@ function showSuMoldSelect() {
       ? 'background:#3b82f615;border:1.5px solid var(--info-text);'
       : 'background:var(--bg4);border:0.5px solid var(--border);';
     var badge = isCurrent
-      ? '<div style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--info-text);color:#fff;flex-shrink:0">現在</div>'
-      : '<div style="font-size:10px;color:var(--text3);flex-shrink:0">前回 ' + fmtNum(prevShot) + '</div>';
+      ? '<div style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--info-text);color:#fff;flex-shrink:0">' + t('shift') + '</div>'
+      : ('<div style="font-size:10px;color:var(--text3);flex-shrink:0">' + t('prevShot') + ' ' + fmtNum(prevShot) + '</div>');
     moldListHTML += '<div class="su-mold-item" data-mold-id="' + m.id + '" data-machine-id="' + (m.machine_id || '') + '"'
       + ' style="' + bg + 'border-radius:8px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:6px">'
       + '<div>'
@@ -4140,9 +4167,9 @@ function showSuMoldSelect() {
   var sheet = document.createElement('div');
   sheet.style.cssText = 'width:100%;max-width:480px;background:var(--bg2);border-radius:12px 12px 0 0;border-top:0.5px solid var(--border);padding:14px 14px 32px';
   sheet.innerHTML = '<div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px"></div>'
-    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">#' + machineNo + ' の金型を選択</div>'
+    + ('<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">#' + machineNo + ' ' + t('selectMoldFor') + '</div>')
     + moldListHTML
-    + '<div id="su-mold-cancel" style="margin-top:4px;padding:10px;text-align:center;font-size:13px;color:var(--text3);border:0.5px solid var(--border);border-radius:8px;cursor:pointer">キャンセル</div>';
+    + '<div id="su-mold-cancel" style="margin-top:4px;padding:10px;text-align:center;font-size:13px;color:var(--text3);border:0.5px solid var(--border);border-radius:8px;cursor:pointer">' + t('cancel') + '</div>';
 
   overlay.appendChild(sheet);
   document.body.appendChild(overlay);
@@ -4163,7 +4190,7 @@ function showSuMoldSelect() {
       if (el) renderShotUpdateInput(el);
       // 変更完了トースト
       if (selectedMold) {
-        showToast(selectedMold.part_name + (selectedMold.model_no ? ' 型' + selectedMold.model_no : '') + ' に変更しました', 'success');
+        showToast(selectedMold.part_name + (selectedMold.model_no ? ' ' + selectedMold.model_no : '') + ' ' + t('moldUpdated'), 'success');
       }
     });
   });
@@ -4200,7 +4227,7 @@ function renderSchedule(el) {
   <div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
       <div style="font-size:13px;font-weight:600;color:var(--text)">${t('scheduleTitle')}</div>
-      <div style="font-size:10px;color:var(--text3)">現在：${SHIFT_LABELS[curShift]}</div>
+      <div style="font-size:10px;color:var(--text3)">${t('currentLabel')} ${SHIFT_LABELS[curShift]}</div>
     </div>
     <div style="display:flex;gap:6px;align-items:center">
       <div style="display:flex;gap:2px;background:var(--bg3);border-radius:6px;padding:3px" id="sched-view-seg">
@@ -4496,7 +4523,7 @@ function renderScheduleBody() {
   const today = new Date(); today.setHours(0,0,0,0);
 
   if (!totalCount) {
-    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">全直にメンテ予定はありません</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('schedNoMaint')}</div>`;
     return;
   }
 
@@ -4518,9 +4545,9 @@ function renderScheduleBody() {
     const shiftDay = new Date(shiftStart); shiftDay.setHours(0,0,0,0);
     const isNextDay = shiftDay.getTime() > today.getTime();
     const badge = isCurrent
-      ? `<div style="font-size:10px;background:var(--info-bg);color:var(--info-text);padding:2px 8px;border-radius:4px;margin-left:auto">現在の直</div>`
+      ? `<div style="font-size:10px;background:var(--info-bg);color:var(--info-text);padding:2px 8px;border-radius:4px;margin-left:auto">${t('shift')||'現在'}</div>`
       : isNextDay
-        ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">翌日</div>`
+        ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">${t('shift2')||'翌日'}</div>`
         : '';
     return `<div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px">
       <div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>
@@ -4556,13 +4583,13 @@ function renderScheduleBody() {
           : fmtNum(calcEstimatedRemaining(s.mold));
         const shotSuffix = isOverdueCard ? 'shot超過' : 'shot残';
         const timeLabel = isOverdueCard ? (calcEstimatedOverMin(s.mold)+'分超過')
-          : s.lap > 1 ? ('残り'+fmtTime(s.lapRemMin))
+          : s.lap > 1 ? (t('remainLabel')+fmtTime(s.lapRemMin))
           : ('残り'+fmtTime(calcEstimatedRemainingMin(s.mold)));
         const timeStr = fmtHM(s.schedStart)+'〜'+fmtHM(s.schedEnd);
         // バッジ（2回目以降・直またぎ・緊急）
-        const lapBadge = s.lap>1 ? `<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px">${s.lap}回目</div>` : '';
-        const crossBadge = isCross ? `<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px">⚠ 直またぎ</div>` : '';
-        const urgentBadge = isOverdueCard ? `<div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block">緊急 — ショット超過中</div>` : '';
+        const lapBadge = s.lap>1 ? `<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px">${s.lap}${t('times')||'回目'}</div>` : '';
+        const crossBadge = isCross ? `<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px">⚠</div>` : '';
+        const urgentBadge = isOverdueCard ? `<div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block">${t('rightNow')}</div>` : '';
         const topBadges = lapBadge+crossBadge+urgentBadge;
         let c = '<div style="border-radius:12px;overflow:hidden;border:2px solid '+borderColor+';box-shadow:0 4px 20px '+shadowColor+';margin-bottom:10px;cursor:pointer" onclick="openMaintenanceFromAlert(\''+s.mold.id+'\')">';
         if (topBadges) c += '<div style="padding:6px 14px 0;background:var(--bg2)">'+topBadges+'</div>';
@@ -4587,7 +4614,7 @@ function renderScheduleBody() {
         c += '<div style="padding:13px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-left:1.5px solid '+borderColor+'40;flex-shrink:0">';
         c += '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="'+borderColor+'" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
         c += '<div style="font-size:22px;font-weight:900;color:'+borderColor+';line-height:1">'+s.dur+'</div>';
-        c += '<div style="font-size:10px;font-weight:700;color:'+timeColor+'">分</div></div></div></div>';
+        c += '<div style="font-size:10px;font-weight:700;color:'+timeColor+'">'+t('minUnit')+'</div></div></div></div>';
         return c;
       }).join('');
     });
@@ -4640,15 +4667,15 @@ function renderScheduleBody() {
       const maintBg = isCross?'#7c3aed':isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':status==='warning'?'var(--warning-text)':'var(--success-text)';
       const barTextColor = (status==='warning'||status==='normal')&&!isCross?'#1c1917':'#fff';
       const remDisplay = isOverdue
-        ? `${fmtNum(overShot)}shot超過　<span style="font-size:13px;color:${color};font-weight:700">${overMin}分超過</span>`
+        ? `${fmtNum(overShot)}${t('shotOverText')}　<span style="font-size:13px;color:${color};font-weight:700">${overMin}${t('minUnit')}${t('shotOverText')||'超過'}</span>`
         : remMin<120
-          ? `残 ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">残り${Math.round(remMin)}分</span>`
-          : `残 ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">残り${(remMin/60).toFixed(1)}h</span>`;
+          ? `${t('remainLabel')} ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">${t('remainLabel')}${Math.round(remMin)}${t('minUnit')}</span>`
+          : `${t('remainLabel')} ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">${t('remainLabel')}${(remMin/60).toFixed(1)}h</span>`;
 
       // バッジ
-      const lapBadge = s.lap>1?`<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">${s.lap}回目</div>`:'';
-      const crossBadge = isCross?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">⚠ 直またぎ</div>`:'';
-      const urgentBadge = isOverdue?`<div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;display:inline-block;margin-bottom:7px">緊急 — ショット超過中</div>`:'';
+      const lapBadge = s.lap>1?`<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">${s.lap}${t('times')||'回目'}</div>`:'';
+      const crossBadge = isCross?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">⚠</div>`:'';
+      const urgentBadge = isOverdue?`<div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;display:inline-block;margin-bottom:7px">${t('rightNow')}</div>`:'';
       const topBadges = urgentBadge+lapBadge+crossBadge;
 
       const metaHTML = `<div style="width:116px;flex-shrink:0">
@@ -4657,7 +4684,7 @@ function renderScheduleBody() {
           <div style="font-size:14px;font-weight:700;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
         </div>
         <div style="padding-left:26px;font-size:11px;font-weight:600;color:${color}">${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}</div>
-        <div style="padding-left:26px;margin-top:3px"><span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent2);padding:1px 7px;border-radius:3px;border:0.5px solid var(--accent)60">⏱ ${s.dur}分</span></div>
+        <div style="padding-left:26px;margin-top:3px"><span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent2);padding:1px 7px;border-radius:3px;border:0.5px solid var(--accent)60">⏱ ${s.dur}${t('minUnit')}</span></div>
       </div>`;
       const trackHTML = `<div style="flex:1;min-width:0">
         <div style="height:32px;border-radius:5px;background:${barBg};position:relative;overflow:hidden;margin-bottom:5px">
@@ -4683,11 +4710,11 @@ function renderScheduleBody() {
 
   // 凡例
   html += `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--overdue-text)"></div><span style="font-size:11px;color:var(--text3)">緊急（超過）</span></div>
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--maint-text)"></div><span style="font-size:11px;color:var(--text3)">要メンテ</span></div>
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#fbbf24"></div><span style="font-size:11px;color:var(--text3)">注意</span></div>
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#7c3aed"></div><span style="font-size:11px;color:var(--text3)">直またぎ</span></div>
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:12px;background:#ef4444"></div><span style="font-size:11px;color:var(--text3)">現在時刻</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--overdue-text)"></div><span style="font-size:11px;color:var(--text3)">${t('needMaint')}</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--maint-text)"></div><span style="font-size:11px;color:var(--text3)">${t('needMaint')}</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#fbbf24"></div><span style="font-size:11px;color:var(--text3)">${t('caution')}</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#7c3aed"></div><span style="font-size:11px;color:var(--text3)">→</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:12px;background:#ef4444"></div><span style="font-size:11px;color:var(--text3)">${t('shift')||'Now'}</span></div>
   </div>`;
 
   el.innerHTML = hint + html;
@@ -4772,33 +4799,33 @@ async function renderAnalysisList(el) {
       <div style="font-size:13px;font-weight:600;color:var(--text)">${t('analysisTitle')}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <select class="form-control" style="padding:4px 8px;font-size:11px;width:auto" onchange="setAnalysisFilter(this.value)">
-          <option value="all">全ライン</option>
+          <option value="all">${t('allLine')}</option>
           ${state.lines.map(l=>`<option value="${l.name}" ${l.name===analysisFilter?'selected':''}>${l.name}</option>`).join('')}
         </select>
         <select class="form-control" style="padding:4px 8px;font-size:11px;width:auto" onchange="setAnalysisPeriod(this.value)">
-          <option value="10" ${analysisPeriod===10?'selected':''}>直近10回</option>
-          <option value="20" ${analysisPeriod===20?'selected':''}>直近20回</option>
-          <option value="50" ${analysisPeriod===50?'selected':''}>直近50回</option>
+          <option value="10" ${analysisPeriod===10?'selected':''}>${t('last10')||'直近10回'}</option>
+          <option value="20" ${analysisPeriod===20?'selected':''}>${t('last20')||'直近20回'}</option>
+          <option value="50" ${analysisPeriod===50?'selected':''}>${t('last50')||'直近50回'}</option>
         </select>
         <select class="form-control" style="padding:4px 8px;font-size:11px;width:auto" onchange="setAnalysisSort(this.value)">
-          <option value="deviation_desc">乖離率の高い順</option>
-          <option value="deviation_asc">乖離率の低い順</option>
+          <option value="deviation_desc">${t('deviationDesc')||'乖離率の高い順'}</option>
+          <option value="deviation_asc">${t('deviationAsc')||'乖離率の低い順'}</option>
         </select>
         <div style="display:flex;gap:4px;margin-left:4px">
-          ${highCount?`<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--danger-bg);color:var(--danger-text);font-weight:500">要見直し ${highCount}件</span>`:''}
-          ${midCount?`<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--warning-bg);color:var(--warning-text);font-weight:500">注意 ${midCount}件</span>`:''}
+          ${highCount?`<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--danger-bg);color:var(--danger-text);font-weight:500">${t('needReview')} ${highCount}${t('readMore')||'件'}</span>`:''}
+          ${midCount?`<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--warning-bg);color:var(--warning-text);font-weight:500">${t('caution2')} ${midCount}${t('readMore')||'件'}</span>`:''}
         </div>
       </div>
     </div>
     <div class="table-wrap">
       <table>
         <tr>
-          <th>品番</th><th>型番</th><th>機番</th><th>品名</th>
+          <th>${t('partNo')}</th><th>${t('modelNo')}</th><th>${t('machineNo')}</th><th>${t('partName')}</th>
           <th>${t('settingVal')}</th><th>${t('actualAvg')}</th>
           <th>${t('maxVal')}</th><th>${t('minVal')}</th>
-          <th>${t('deviationRate')}</th><th>${t('recommendVal')}</th><th>判定</th><th></th>
+          <th>${t('deviationRate')}</th><th>${t('recommendVal')}</th><th>${t('analysisJudge')||'判定'}</th><th></th>
         </tr>
-        ${items.length===0?`<tr><td colspan="13" style="text-align:center;padding:30px;color:var(--text3)">データが不足しています（簡易メンテを2回以上実施した金型が対象）</td></tr>`:''}
+        ${items.length===0?`<tr><td colspan="13" style="text-align:center;padding:30px;color:var(--text3)">${t('insufficientData')}</td></tr>`:''}
         ${items.map(m=>{
           const color = m.judgment==='high'?'var(--danger-text)':m.judgment==='mid'?'var(--warning-text)':'var(--success-text)';
           const barPct = Math.min(100, Math.max(0, (1 + m.deviation/100) * 100));
@@ -4848,15 +4875,15 @@ async function renderAnalysisList(el) {
             <span style="font-size:13px;font-weight:600;color:${color}">${m.deviation>0?'+':''}${m.deviation}%</span>
           </div>
           <div style="display:flex;gap:12px;font-size:10px;color:var(--text3)">
-            <span>設定 <strong style="color:var(--text2)">${fmtNum(m.setting)}</strong></span>
-            <span>平均 <strong style="color:${color}">${fmtNum(m.avg)}</strong></span>
-            ${m.judgment!=='ok'?`<span>推奨 <strong style="color:var(--accent)">${fmtNum(m.recommended)}</strong></span>`:''}
+            <span>${t('settingVal')} <strong style="color:var(--text2)">${fmtNum(m.setting)}</strong></span>
+            <span>${t('actualAvg')} <strong style="color:${color}">${fmtNum(m.avg)}</strong></span>
+            ${m.judgment!=='ok'?`<span>${t('recommendVal')} <strong style="color:var(--accent)">${fmtNum(m.recommended)}</strong></span>`:''}
           </div>
         </div>`;
       }).join('')}
     </div>`;
   } catch(e) {
-    el.innerHTML = `<div style="padding:20px;color:var(--danger-text)">読み込みエラー: ${e.message}</div>`;
+    el.innerHTML = `<div style="padding:20px;color:var(--danger-text)">${t('loadError')}: ${e.message}</div>`;
     console.error(e);
   }
 }
@@ -4874,7 +4901,7 @@ async function renderAnalysisDetail(el, moldId) {
   el.innerHTML = `<div style="padding:16px;text-align:center"><div class="spinner"></div></div>`;
   try {
     const mold = state.molds.find(m=>m.id===moldId);
-    if (!mold) { el.innerHTML = `<div style="padding:16px;color:var(--danger-text)">金型が見つかりません</div>`; return; }
+    if (!mold) { el.innerHTML = `<div style="padding:16px;color:var(--danger-text)">${t('moldNotFound')}</div>`; return; }
 
     // この金型のメンテ履歴を取得
     const logs = await sb('maintenance_logs','GET',null,
@@ -4917,8 +4944,8 @@ async function renderAnalysisDetail(el, moldId) {
         <div style="flex:1;min-width:200px">
           <div style="font-size:12px;font-weight:600;color:var(--accent)">${t('reviewBanner')}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:2px">
-            実績平均が設定値より<strong style="color:${devColor}">${Math.abs(deviation)}%</strong>低いため、
-            <strong style="color:var(--accent)">${fmtNum(recommended)} shot</strong> への変更を推奨します
+            ${t('analysisDevDesc')||'実績平均が設定値より'}<strong style="color:${devColor}">${Math.abs(deviation)}%</strong>${t('analysisDevLow')||'低いため、'}
+            <strong style="color:var(--accent)">${fmtNum(recommended)} shot</strong> ${t('analysisRecommendChange')||'への変更を推奨します'}
           </div>
         </div>
         <button class="btn btn-primary" onclick="applyRecommended('${moldId}',${recommended})" style="white-space:nowrap">${t('updateMaster')}</button>
@@ -4949,7 +4976,7 @@ async function renderAnalysisDetail(el, moldId) {
       <!-- グラフ＋履歴 -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div style="background:var(--bg2);border-radius:8px;padding:12px;border:0.5px solid var(--border)">
-          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">${t('trendGraph')}（直近${graphShots.length}回）</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">${t('trendGraph')}（${graphShots.length}回）</div>
           ${graphShots.length >= 2 ? `
           <svg width="100%" height="${graphH+20}" viewBox="0 0 ${graphW} ${graphH+20}" preserveAspectRatio="none">
             <line x1="0" y1="${settingY}" x2="${graphW}" y2="${settingY}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>
@@ -4957,16 +4984,16 @@ async function renderAnalysisDetail(el, moldId) {
             <line x1="0" y1="${avgY}" x2="${graphW}" y2="${avgY}" stroke="var(--success)" stroke-width="1" stroke-dasharray="5,3" opacity="0.7"/>
             <polyline points="${polyline}" fill="none" stroke="var(--info-text)" stroke-width="1.5" stroke-linejoin="round"/>
             ${graphShots.map((s,i)=>`<circle cx="${toX(i)}" cy="${toY(s)}" r="3" fill="${s<min*1.1?'var(--danger)':'var(--info-text)'}"/>`).join('')}
-            <text x="2" y="${settingY-3}" font-size="7" fill="var(--accent)" opacity="0.8">設定${fmtNum(setting)}</text>
-            <text x="2" y="${avgY-3}" font-size="7" fill="var(--success)" opacity="0.8">平均${fmtNum(avg)}</text>
-            <text x="2" y="${graphH+15}" font-size="7" fill="var(--text4)">1回目</text>
-            <text x="${graphW-30}" y="${graphH+15}" font-size="7" fill="var(--text4)">最新</text>
+            <text x="2" y="${settingY-3}" font-size="7" fill="var(--accent)" opacity="0.8">${t('settingVal')}${fmtNum(setting)}</text>
+            <text x="2" y="${avgY-3}" font-size="7" fill="var(--success)" opacity="0.8">${t('actualAvg')}${fmtNum(avg)}</text>
+            <text x="2" y="${graphH+15}" font-size="7" fill="var(--text4)">${t('times')||'1'}${t('analysisFirst')||'回目'}</text>
+            <text x="${graphW-30}" y="${graphH+15}" font-size="7" fill="var(--text4)">${t('analysisLatest')||'最新'}</text>
           </svg>
           <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:2px;background:var(--info-text)"></div><span style="font-size:9px;color:var(--text3)">実績</span></div>
-            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:1px;background:var(--accent);opacity:0.6"></div><span style="font-size:9px;color:var(--text3)">設定値</span></div>
-            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:1px;background:var(--success);opacity:0.7"></div><span style="font-size:9px;color:var(--text3)">平均</span></div>
-          </div>` : `<div style="text-align:center;padding:20px;color:var(--text3)">データが不足しています</div>`}
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:2px;background:var(--info-text)"></div><span style="font-size:9px;color:var(--text3)">${t('actualAvg')}</span></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:1px;background:var(--accent);opacity:0.6"></div><span style="font-size:9px;color:var(--text3)">${t('settingVal')}</span></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:1px;background:var(--success);opacity:0.7"></div><span style="font-size:9px;color:var(--text3)">${t('actualAvg')}</span></div>
+          </div>` : `<div style="text-align:center;padding:20px;color:var(--text3)">${t('insufficientData')}</div>`}
         </div>
         <div style="background:var(--bg2);border-radius:8px;padding:12px;border:0.5px solid var(--border)">
           <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">${t('actualHistory')}</div>
@@ -4994,7 +5021,7 @@ async function renderAnalysisDetail(el, moldId) {
       </div>
     </div>`;
   } catch(e) {
-    el.innerHTML = `<div style="padding:20px;color:var(--danger-text)">読み込みエラー: ${e.message}</div>`;
+    el.innerHTML = `<div style="padding:20px;color:var(--danger-text)">${t('loadError')}: ${e.message}</div>`;
     console.error(e);
   }
 }
@@ -5005,17 +5032,17 @@ function backToAnalysisList() {
 }
 
 async function applyRecommended(moldId, recommended) {
-  if (!confirm(`メンテ間隔を ${fmtNum(recommended)} shot に更新しますか？`)) return;
+  if (!confirm(`${t('analysisIntervalUpdate')||'メンテ間隔を'} ${fmtNum(recommended)} shot ${t('analysisIntervalConfirm')||'に更新しますか？'}`)) return;
   try {
     await sb('molds','PATCH',{
       maintenance_interval: recommended,
       updated_at: new Date().toISOString()
     }, `?id=eq.${moldId}`);
-    showToast(`メンテ間隔を ${fmtNum(recommended)} shot に更新しました`, 'success');
+    showToast(`${t('analysisIntervalUpdate')||'メンテ間隔'} ${fmtNum(recommended)} shot ${t('analysisIntervalUpdated')||'に更新しました'}`, 'success');
     await loadMolds();
     renderAnalysis(document.getElementById('main-content'));
   } catch(e) {
-    showToast('更新エラー: '+e.message, 'error');
+    showToast(t('updateError2') + ' ' + e.message, 'error');
   }
 }
 
@@ -5026,7 +5053,7 @@ const CURRENT_VERSION = '1.5.1';
 async function checkForUpdate() {
   try {
     const btn = document.getElementById('update-check-btn');
-    if (btn) { btn.textContent = '確認中...'; btn.disabled = true; }
+    if (btn) { btn.textContent = t('checkingText'); btn.disabled = true; }
 
     // GitHub Pagesのindex.htmlからバージョンを取得
     const res = await fetch(window.location.href.split('?')[0] + '?cache=' + Date.now(), {
@@ -5039,25 +5066,25 @@ async function checkForUpdate() {
     const match = html.match(/name="app-version" content="([^"]+)"/);
     const latestVersion = match ? match[1] : null;
 
-    if (btn) { btn.textContent = '更新確認'; btn.disabled = false; }
+    if (btn) { btn.textContent = t('updateCheckBtn'); btn.disabled = false; }
 
     if (!latestVersion) {
-      showToast('バージョン情報を取得できませんでした', '');
+      showToast(t('errorPrefix') + ' version info', '');
       return;
     }
 
     if (latestVersion !== CURRENT_VERSION) {
       // 新しいバージョンあり
-      if (confirm(`新しいバージョン（v${latestVersion}）があります。\n現在: v${CURRENT_VERSION}\n\n今すぐ更新しますか？`)) {
+      if (confirm(`v${latestVersion} ${t('updateCheckBtn')||'更新'}\n${t('currentLabel')||'現在:'} v${CURRENT_VERSION}\n${t('updateNow')||'今すぐ更新しますか？'}`)) {
         forceReload();
       }
     } else {
-      showToast(`最新バージョン（v${CURRENT_VERSION}）です ✓`, 'success');
+      showToast(`v${CURRENT_VERSION} ✓`, 'success');
     }
   } catch(e) {
     const btn = document.getElementById('update-check-btn');
-    if (btn) { btn.textContent = '更新確認'; btn.disabled = false; }
-    showToast('更新確認エラー（通信を確認してください）', 'error');
+    if (btn) { btn.textContent = t('updateCheckBtn'); btn.disabled = false; }
+    showToast(t('updateError2') + ' (check connection)', 'error');
   }
 }
 
@@ -5136,7 +5163,7 @@ setTimeout(async () => {
       // 新バージョン通知をトーストで表示
       const toast = document.getElementById('toast');
       if (toast) {
-        toast.innerHTML = `新しいバージョン v${latest} があります <span onclick="forceReload()" style="text-decoration:underline;cursor:pointer;font-weight:600;margin-left:8px">今すぐ更新</span>`;
+        toast.innerHTML = `v${latest} ${t('updateNow')||'更新あり'} <span onclick="forceReload()" style="text-decoration:underline;cursor:pointer;font-weight:600;margin-left:8px">${t('updateCheckBtn')||'更新'}</span>`;
         toast.className = 'show';
         // 10秒間表示
         setTimeout(() => { if(toast) toast.className = ''; }, 10000);
@@ -5165,76 +5192,76 @@ if (state.currentUser) {
 <div class="modal-overlay" id="modal-mold-edit">
   <div class="modal" style="max-width:500px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:600;color:var(--text)" id="mold-edit-title">金型追加</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text)" id="mold-edit-title">${t('moldAddTitle')}</div>
       <div style="cursor:pointer;color:var(--text3);font-size:20px;line-height:1" onclick="closeModal('modal-mold-edit')">×</div>
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label">★品番</label>
-        <input type="text" class="form-control" id="mold-f-part-no" placeholder="例) 11445-25010">
+        <label class="form-label">${t('moldFormPartNo')||'★品番'}</label>
+        <input type="text" class="form-control" id="mold-f-part-no" placeholder="e.g. 11445-25010">
       </div>
       <div class="form-group">
-        <label class="form-label">★品名</label>
-        <input type="text" class="form-control" id="mold-f-part-name" placeholder="例) 940">
+        <label class="form-label">${t('moldFormPartName')||'★品名'}</label>
+        <input type="text" class="form-control" id="mold-f-part-name" placeholder="e.g. 940">
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">型番</label>
-      <input type="text" class="form-control" id="mold-f-model-no" placeholder="例) M-001">
+      <label class="form-label">${t('moldFormModelNo')||'型番'}</label>
+      <input type="text" class="form-control" id="mold-f-model-no" placeholder="e.g. M-001">
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label">★分類</label>
+        <label class="form-label">${t('moldFormCategory')||'★分類'}</label>
         <select class="form-control" id="mold-f-category">
-          <option value="">選択してください</option>
+          <option value="" data-t="selectPlaceholder">選択してください</option>
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">★機番</label>
+        <label class="form-label">${t('machineFormNo')||'★機番'}</label>
         <select class="form-control" id="mold-f-machine">
-          <option value="">選択してください</option>
+          <option value="" data-t="selectPlaceholder">選択してください</option>
         </select>
       </div>
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label">★メンテ間隔（shot）</label>
+        <label class="form-label" data-t="maintInterval">★メンテ間隔（shot）</label>
         <input type="number" class="form-control" id="mold-f-interval" placeholder="5000" min="1">
       </div>
       <div class="form-group">
-        <label class="form-label">★サイクルタイム（秒）</label>
+        <label class="form-label" data-t="cycleTime2">★サイクルタイム（秒）</label>
         <input type="number" class="form-control" id="mold-f-cycle" placeholder="30" min="1">
       </div>
     </div>
-    <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;padding-top:4px;border-top:1px solid var(--border)">メンテ所要時間</div>
+    <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;padding-top:4px;border-top:1px solid var(--border)" data-t="simpleMaintTime">メンテ所要時間</div>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label">簡易メンテ所要時間（分）</label>
+        <label class="form-label" data-t="simpleMaintTime">簡易メンテ所要時間（分）</label>
         <input type="number" class="form-control" id="mold-f-simple-time" placeholder="20" min="1">
       </div>
       <div class="form-group">
-        <label class="form-label">OHメンテ所要時間（分）</label>
+        <label class="form-label" data-t="ohMaintTime">OHメンテ所要時間（分）</label>
         <input type="number" class="form-control" id="mold-f-oh-time" placeholder="60" min="1">
       </div>
     </div>
-    <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;padding-top:4px;border-top:1px solid var(--border)">アラート設定</div>
+    <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;padding-top:4px;border-top:1px solid var(--border)" data-t="alertSetting">アラート設定</div>
     <div class="form-grid">
       
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label">要メンテ（分前）</label>
+        <label class="form-label" data-t="needMaint">要メンテ（分前）</label>
         <input type="number" class="form-control" id="mold-f-danger-min" placeholder="120" min="0">
       </div>
       <div class="form-group">
-        <label class="form-label">注意（分前）</label>
+        <label class="form-label" data-t="caution">注意（分前）</label>
         <input type="number" class="form-control" id="mold-f-warning-min" placeholder="480" min="0">
       </div>
     </div>
     <div id="mold-edit-error" style="font-size:11px;color:var(--danger-text);margin-bottom:8px;display:none"></div>
     <div class="modal-btns">
-      <div class="btn btn-secondary" onclick="closeModal('modal-mold-edit')">キャンセル</div>
-      <div class="btn btn-primary" onclick="saveMold()" id="mold-save-btn">保存する</div>
+      <div class="btn btn-secondary" onclick="closeModal('modal-mold-edit')">${t('cancel')}</div>
+      <div class="btn btn-primary" onclick="saveMold()" id="mold-save-btn">${t('save')}</div>
     </div>
   </div>
 </div>
@@ -5243,34 +5270,34 @@ if (state.currentUser) {
 <div class="modal-overlay" id="modal-machine-edit">
   <div class="modal" style="max-width:400px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:600;color:var(--text)" id="machine-edit-title">機械追加</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text)" id="machine-edit-title">${t('machineAddTitle')}</div>
       <div style="cursor:pointer;color:var(--text3);font-size:20px;line-height:1" onclick="closeModal('modal-machine-edit')">×</div>
     </div>
     <div class="form-group">
-      <label class="form-label">★機番</label>
-      <input type="text" class="form-control" id="machine-f-no" placeholder="例) 4">
+      <label class="form-label">${t('machineFormNo')||'★機番'}</label>
+      <input type="text" class="form-control" id="machine-f-no" placeholder="e.g. 4">
     </div>
     <div class="form-group">
-      <label class="form-label">★ライン</label>
+      <label class="form-label">${t('machineFormLine')||'★ライン'}</label>
       <select class="form-control" id="machine-f-line">
-        <option value="">選択してください</option>
+        <option value="" data-t-placeholder>選択してください</option>
       </select>
     </div>
     <div class="form-group">
-      <label class="form-label">段替え号機</label>
+      <label class="form-label" data-t="machineFormChangeover">段替え号機</label>
       <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
         <div class="toggle-wrap" id="machine-dandori-toggle" onclick="toggleMachineDandori()"><div class="toggle-dot"></div></div>
-        <span style="font-size:12px;color:var(--text2)" id="machine-dandori-label">固定機</span>
+        <span style="font-size:12px;color:var(--text2)" id="machine-dandori-label" data-t="fixedLabel">固定機</span>
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">備考</label>
-      <input type="text" class="form-control" id="machine-f-note" placeholder="例) 979RHのみ">
+      <label class="form-label" data-t="noteCol">備考</label>
+      <input type="text" class="form-control" id="machine-f-note" placeholder="e.g. 979RH">
     </div>
     <div id="machine-edit-error" style="font-size:11px;color:var(--danger-text);margin-bottom:8px;display:none"></div>
     <div class="modal-btns">
-      <div class="btn btn-secondary" onclick="closeModal('modal-machine-edit')">キャンセル</div>
-      <div class="btn btn-primary" onclick="saveMachine()" id="machine-save-btn">保存する</div>
+      <div class="btn btn-secondary" onclick="closeModal('modal-machine-edit')">${t('cancel')}</div>
+      <div class="btn btn-primary" onclick="saveMachine()" id="machine-save-btn">${t('save')}</div>
     </div>
   </div>
 </div>
@@ -5279,31 +5306,31 @@ if (state.currentUser) {
 <div class="modal-overlay" id="modal-user-edit">
   <div class="modal" style="max-width:380px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:600;color:var(--text)" id="user-edit-title">ユーザー追加</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text)" id="user-edit-title">${t('userAddTitle')}</div>
       <div style="cursor:pointer;color:var(--text3);font-size:20px;line-height:1" onclick="closeModal('modal-user-edit')">×</div>
     </div>
     <div class="form-group">
-      <label class="form-label">★名前</label>
-      <input type="text" class="form-control" id="user-f-name" placeholder="例) 田中">
+      <label class="form-label" data-t="userFormName">★名前</label>
+      <input type="text" class="form-control" id="user-f-name" placeholder="e.g. Tanaka">
     </div>
     <div class="form-group">
-      <label class="form-label">★権限</label>
+      <label class="form-label" data-t="userFormRole">★権限</label>
       <select class="form-control" id="user-f-role">
-        <option value="worker">作業者</option>
+        <option value="worker" data-t="workerRole">作業者</option>
         <option value="admin">管理者</option>
       </select>
     </div>
     <div class="form-group">
-      <label class="form-label">有効</label>
+      <label class="form-label" data-t="userFormActive">有効</label>
       <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
         <div class="toggle-wrap on" id="user-active-toggle" onclick="toggleUserActive()"><div class="toggle-dot"></div></div>
-        <span style="font-size:12px;color:var(--text2)" id="user-active-label">有効</span>
+        <span style="font-size:12px;color:var(--text2)" id="user-active-label" data-t="activeLabel">有効</span>
       </div>
     </div>
     <div id="user-edit-error" style="font-size:11px;color:var(--danger-text);margin-bottom:8px;display:none"></div>
     <div class="modal-btns">
-      <div class="btn btn-secondary" onclick="closeModal('modal-user-edit')">キャンセル</div>
-      <div class="btn btn-primary" onclick="saveUser()" id="user-save-btn">保存する</div>
+      <div class="btn btn-secondary" onclick="closeModal('modal-user-edit')">${t('cancel')}</div>
+      <div class="btn btn-primary" onclick="saveUser()" id="user-save-btn">${t('save')}</div>
     </div>
   </div>
 </div>
@@ -5312,34 +5339,34 @@ if (state.currentUser) {
 <div class="modal-overlay" id="modal-alert-edit">
   <div class="modal" style="max-width:420px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:600;color:var(--text)">アラート設定編集</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text)">${t('alertEditTitle')}</div>
       <div style="cursor:pointer;color:var(--text3);font-size:20px;line-height:1" onclick="closeModal('modal-alert-edit')">×</div>
     </div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:12px" id="alert-edit-mold-info"></div>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label" style="color:var(--danger-text)">要メンテ（shot前）</label>
+        <label class="form-label" style="color:var(--danger-text)" data-t="needMaint">要メンテ（shot前）</label>
         <input type="number" class="form-control" id="alert-f-danger-shot" min="0">
       </div>
       <div class="form-group">
-        <label class="form-label" style="color:var(--warning-text)">注意（shot前）</label>
+        <label class="form-label" style="color:var(--warning-text)" data-t="caution">注意（shot前）</label>
         <input type="number" class="form-control" id="alert-f-warning-shot" min="0">
       </div>
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label" style="color:var(--danger-text)">要メンテ（分前）</label>
+        <label class="form-label" style="color:var(--danger-text)" data-t="needMaint">要メンテ（分前）</label>
         <input type="number" class="form-control" id="alert-f-danger-min" min="0">
       </div>
       <div class="form-group">
-        <label class="form-label" style="color:var(--warning-text)">注意（分前）</label>
+        <label class="form-label" style="color:var(--warning-text)" data-t="caution">注意（分前）</label>
         <input type="number" class="form-control" id="alert-f-warning-min" min="0">
       </div>
     </div>
     <div id="alert-edit-error" style="font-size:11px;color:var(--danger-text);margin-bottom:8px;display:none"></div>
     <div class="modal-btns">
-      <div class="btn btn-secondary" onclick="closeModal('modal-alert-edit')">キャンセル</div>
-      <div class="btn btn-primary" onclick="saveAlertSettings()">保存する</div>
+      <div class="btn btn-secondary" onclick="closeModal('modal-alert-edit')">${t('cancel')}</div>
+      <div class="btn btn-primary" onclick="saveAlertSettings()">${t('save')}</div>
     </div>
   </div>
 </div>
@@ -5348,22 +5375,22 @@ if (state.currentUser) {
 <div class="modal-overlay" id="modal-import">
   <div class="modal" style="max-width:520px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div style="font-size:15px;font-weight:600;color:var(--text)" id="import-modal-title">インポート</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text)" id="import-modal-title">${t('importModalDefault')}</div>
       <div style="cursor:pointer;color:var(--text3);font-size:18px" onclick="closeModal('modal-import')">×</div>
     </div>
     <div style="background:var(--info-bg);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--info-text)">
-      CSVファイルをアップロードしてください。同じキー（品番など）のデータは上書き更新されます。
+      ${t('importDesc')||'CSVファイルをアップロードしてください。同じキー（品番など）のデータは上書き更新されます。'}
     </div>
     <div style="margin-bottom:10px">
-      <label style="display:block;font-size:11px;color:var(--text3);margin-bottom:6px">CSVファイルを選択</label>
+      <label style="display:block;font-size:11px;color:var(--text3);margin-bottom:6px" data-t="importCsv">CSVファイルを選択</label>
       <input type="file" id="import-file-input" accept=".csv" onchange="handleImportFile(event)"
         style="width:100%;background:var(--bg);border:0.5px solid var(--border2);border-radius:6px;padding:8px;font-size:12px;color:var(--text);cursor:pointer">
     </div>
     <div id="import-status" style="font-size:11px;margin-bottom:6px"></div>
     <div id="import-preview"></div>
     <div class="modal-btns" style="margin-top:12px">
-      <div class="btn btn-secondary" onclick="closeModal('modal-import')">キャンセル</div>
-      <div class="btn btn-primary" id="import-execute-btn" onclick="executeImport()" style="display:none">インポート実行</div>
+      <div class="btn btn-secondary" onclick="closeModal('modal-import')">${t('cancel')}</div>
+      <div class="btn btn-primary" id="import-execute-btn" onclick="executeImport()" style="display:none">${t('importExecuteBtn')}</div>
     </div>
   </div>
 </div>
@@ -5373,12 +5400,12 @@ if (state.currentUser) {
 <div class="modal-overlay" id="modal-shortcut">
   <div class="modal" style="max-width:440px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:600;color:var(--text)">ホーム画面に追加</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text)">${t('addHomeTitle')}</div>
       <div style="cursor:pointer;color:var(--text3);font-size:20px;line-height:1" onclick="closeModal('modal-shortcut')">×</div>
     </div>
     <div id="shortcut-guide-content"></div>
     <div style="margin-top:16px">
-      <div class="btn btn-secondary" onclick="closeModal('modal-shortcut')" style="width:100%;text-align:center;padding:10px">閉じる</div>
+      <div class="btn btn-secondary" onclick="closeModal('modal-shortcut')" style="width:100%;text-align:center;padding:10px">${t('close')}</div>
     </div>
   </div>
 </div>
@@ -5388,26 +5415,26 @@ if (state.currentUser) {
 <div class="modal-overlay" id="modal-machine-bulk">
   <div class="modal" style="max-width:500px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div style="font-size:15px;font-weight:600;color:var(--text)">機械を一括追加</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text)">${t('bulkModalTitle')}</div>
       <div style="cursor:pointer;color:var(--text3);font-size:20px;line-height:1" onclick="closeModal('modal-machine-bulk')">×</div>
     </div>
     <div style="background:var(--info-bg);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--info-text)">
       機番・ライン・段替えを1行ずつ入力してください。同じ機番が既にある場合は上書き更新されます。
     </div>
     <div style="display:grid;grid-template-columns:80px 1fr 80px 1fr;gap:6px;margin-bottom:6px;padding:0 2px">
-      <div style="font-size:10px;color:var(--text3);font-weight:500">★機番</div>
-      <div style="font-size:10px;color:var(--text3);font-weight:500">★ライン</div>
-      <div style="font-size:10px;color:var(--text3);font-weight:500">段替え</div>
-      <div style="font-size:10px;color:var(--text3);font-weight:500">備考</div>
+      <div style="font-size:10px;color:var(--text3);font-weight:500" data-t="bulkColMachineNo">★機番</div>
+      <div style="font-size:10px;color:var(--text3);font-weight:500" data-t="bulkColLine">★ライン</div>
+      <div style="font-size:10px;color:var(--text3);font-weight:500" data-t="isChangeoverCol">段替え</div>
+      <div style="font-size:10px;color:var(--text3);font-weight:500" data-t="noteCol">備考</div>
     </div>
     <div id="bulk-machine-rows" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto"></div>
     <div style="margin-top:8px;display:flex;gap:8px">
-      <button class="btn btn-secondary" onclick="addBulkMachineRow()" style="flex:1">＋ 行を追加</button>
+      <button class="btn btn-secondary" onclick="addBulkMachineRow()" style="flex:1">${t('addRowBtn')}</button>
     </div>
     <div id="bulk-machine-error" style="font-size:11px;color:var(--danger-text);margin-top:8px;display:none"></div>
     <div class="modal-btns" style="margin-top:12px">
-      <div class="btn btn-secondary" onclick="closeModal('modal-machine-bulk')">キャンセル</div>
-      <div class="btn btn-primary" onclick="saveBulkMachines()" id="bulk-machine-save-btn">一括追加する</div>
+      <div class="btn btn-secondary" onclick="closeModal('modal-machine-bulk')">${t('cancel')}</div>
+      <div class="btn btn-primary" onclick="saveBulkMachines()" id="bulk-machine-save-btn">${t('bulkSaveBtn2')}</div>
     </div>
   </div>
 </div>
