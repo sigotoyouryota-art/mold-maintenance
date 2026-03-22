@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.2.5">
+<meta name="app-version" content="1.2.6">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3968,7 +3968,7 @@ function renderScheduleBody() {
       const rem = isOverdue ? 0 : calcEstimatedRemaining(s.mold);
       const remMin = isOverdue ? 0 : calcEstimatedRemainingMin(s.mold);
       const overShot = isOverdue ? calcOverShot(s.mold) : 0;
-      const overMin = isOverdue ? Math.round(-remMin) : 0;
+      const overMin = isOverdue ? calcEstimatedOverMin(s.mold) : 0;
 
       const maintOffset = Math.max(0, Math.min(92, (s.schedStart - shiftStart) / 60000 / shiftDur * 100));
       const maintWidth = Math.max(4, Math.min(100 - maintOffset, s.dur / shiftDur * 100));
@@ -4352,7 +4352,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.2.5';
+const CURRENT_VERSION = '1.2.6';
 
 async function checkForUpdate() {
   try {
@@ -4492,7 +4492,7 @@ function renderAllScheduleBody(el) {
         const rem = isOverdue ? 0 : calcEstimatedRemaining(s.mold);
         const remMin = isOverdue ? 0 : calcEstimatedRemainingMin(s.mold);
         const overShot = isOverdue ? calcOverShot(s.mold) : 0;
-        const overMin = isOverdue ? Math.round(Math.abs(remMin)) : 0;
+        const overMin = isOverdue ? calcEstimatedOverMin(s.mold) : 0;
         const maintOffset = Math.max(0, Math.min(92, (s.schedStart - shiftStart) / 60000 / shiftDur * 100));
         const maintWidth = Math.max(4, Math.min(100 - maintOffset, s.dur / shiftDur * 100));
         const barRight = maintOffset + maintWidth;
