@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.4.7">
+<meta name="app-version" content="1.4.8">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3867,8 +3867,17 @@ function renderShotUpdateInput(el) {
     keypadHTML += '<div class="su-key" data-k="' + k + '" style="height:46px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:7px;font-size:' + fs + ';font-weight:500;color:' + color + ';cursor:pointer">' + k + '</div>';
   });
 
-  const changeBtn = molds.length > 1
-    ? '<div class="su-change-btn" style="padding:4px 10px;border:0.5px solid var(--border);border-radius:6px;font-size:11px;color:var(--info-text);cursor:pointer">\u5909\u66f4</div>'
+  var dandoriMoldIdForBtn = dandoriData[molds[0] && molds[0].machine_id];
+  var defaultMoldId = dandoriMoldIdForBtn
+    ? (molds.find(function(m){ return m.id===dandoriMoldIdForBtn; }) ? dandoriMoldIdForBtn : (molds[0]&&molds[0].id))
+    : (molds[0]&&molds[0].id);
+  var isChanged = shotUpdateSelectedMoldId && shotUpdateSelectedMoldId !== defaultMoldId;
+  var changeBtnLabel = isChanged ? '\u5909\u66f4\u6e08\u2713' : '\u5909\u66f4';
+  var changeBtnColor = isChanged ? 'var(--success-text)' : 'var(--info-text)';
+  var changeBtnBorder = isChanged ? 'var(--success-text)' : 'var(--border)';
+  var changeBtnBg = isChanged ? 'var(--success-bg)' : 'transparent';
+  var changeBtn = molds.length > 1
+    ? '<div class="su-change-btn" style="padding:4px 10px;border:0.5px solid '+changeBtnBorder+';border-radius:6px;font-size:11px;color:'+changeBtnColor+';background:'+changeBtnBg+';cursor:pointer">'+changeBtnLabel+'</div>'
     : '';
 
   el.innerHTML = '<div style="background:var(--bg3);border-bottom:0.5px solid var(--border);height:46px;display:flex;align-items:center;padding:0 14px;justify-content:space-between">'
@@ -3950,10 +3959,13 @@ function showSuMoldSelect() {
   const molds = state.molds.filter(function(m) { return String(m.machine_no) === String(machineNo); });
   if (!molds.length) return;
 
+  // shotUpdateSelectedMoldId優先、なければdandori、なければ先頭
   const dandoriMoldId = dandoriData[molds[0] && molds[0].machine_id];
-  const currentMoldId = dandoriMoldId
-    ? (molds.find(function(m){ return m.id === dandoriMoldId; }) ? dandoriMoldId : (molds[0] && molds[0].id))
-    : (molds[0] && molds[0].id);
+  const currentMoldId = shotUpdateSelectedMoldId
+    ? shotUpdateSelectedMoldId
+    : dandoriMoldId
+      ? (molds.find(function(m){ return m.id === dandoriMoldId; }) ? dandoriMoldId : (molds[0] && molds[0].id))
+      : (molds[0] && molds[0].id);
 
   // オーバーレイ
   var overlay = document.createElement('div');
@@ -3994,10 +4006,20 @@ function showSuMoldSelect() {
   sheet.querySelectorAll('.su-mold-item').forEach(function(item) {
     item.addEventListener('click', function() {
       var moldId = this.getAttribute('data-mold-id');
-      shotUpdateSelectedMoldId = moldId; // 専用変数に保存
+      if (moldId === currentMoldId) {
+        // 同じ金型 → そのまま閉じる
+        document.body.removeChild(overlay);
+        return;
+      }
+      shotUpdateSelectedMoldId = moldId;
+      var selectedMold = state.molds.find(function(m){ return m.id === moldId; });
       document.body.removeChild(overlay);
       var el = document.getElementById('main-content');
       if (el) renderShotUpdateInput(el);
+      // 変更完了トースト
+      if (selectedMold) {
+        showToast(selectedMold.part_name + (selectedMold.model_no ? ' 型' + selectedMold.model_no : '') + ' に変更しました', 'success');
+      }
     });
   });
 
@@ -4718,7 +4740,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.4.7';
+const CURRENT_VERSION = '1.4.8';
 
 async function checkForUpdate() {
   try {
