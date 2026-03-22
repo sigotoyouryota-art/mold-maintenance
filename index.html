@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.1.4">
+<meta name="app-version" content="1.1.5">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -135,7 +135,7 @@ body { background: var(--bg); color: var(--text); transition: background 0.2s, c
 /* ===== KPIカード ===== */
 .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 12px 16px 8px; }
 .kpi-card { background: var(--bg2); border-radius: 8px; padding: 10px 12px; border: 0.5px solid var(--border); }
-.kpi-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.kpi-label { font-size: 13px; color: var(--text3); margin-bottom: 4px; }
 .kpi-value { font-size: 24px; font-weight: 600; }
 .kpi-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
 
@@ -147,7 +147,7 @@ body { background: var(--bg); color: var(--text); transition: background 0.2s, c
 
 /* ===== テーブル ===== */
 .table-wrap { padding: 0 16px 16px; overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { color: var(--text3); font-weight: 500; padding: 6px 8px; text-align: left; font-size: 11px; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
 td { padding: 8px 8px; color: var(--text2); border-bottom: 0.5px solid var(--border); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
@@ -1367,7 +1367,7 @@ function renderListBody() {
     const pctDisplay = isOverdue ? Math.round(pctRaw) + '%' : pctCapped + '%';
     const totalShot = calcEstimatedTotalShot(m);
     const color = dim ? 'var(--text4)' : statusColor(status);
-    const rowBg = !dim && isOverdue ? 'background:var(--danger-bg)20' : dim ? 'opacity:0.45' : '';
+    const rowBg = !dim && isOverdue ? 'background:#ef444415' : !dim && status==='danger' ? 'background:#f9731610' : dim ? 'opacity:0.45' : '';
     return `<tr data-mold-id="${m.id}" style="${rowBg}">
       <td style="font-weight:600">#${m.machine_no||'?'}</td>
       <td style="font-weight:500">${m.part_name}</td>
@@ -3639,7 +3639,8 @@ function updateRealtimeDisplay() {
     // スマホカード
     const card = document.querySelector(`.mold-card[data-mold-id="${mold.id}"]`);
     if (card) {
-      card.className = `mold-card ${isOverdue ? 'danger' : status}`;
+      card.className = `mold-card ${isOverdue ? 'overdue' : status}`;
+      card.style.borderLeftColor = isOverdue ? '#ef4444' : status==='danger' ? '#f97316' : '';
       const bar = card.querySelector('.rt-bar-fill');
       const meta = card.querySelector('.rt-meta');
       if (bar) { bar.style.width = pct + '%'; bar.style.background = color; }
@@ -3922,8 +3923,8 @@ function renderScheduleBody() {
 
       const maintOffset = Math.max(0, Math.min(95, (s.schedStart - shiftStart) / 60000 / shiftDur * 100));
       const maintWidth = Math.max(2, Math.min(100 - maintOffset, s.dur / shiftDur * 100));
-      const barBg = isNow ? '#7f1d1d50' : status==='warning' ? '#78350f40' : '#1e335840';
-      const maintBg = isNow ? '#ef4444' : status==='warning' ? '#f59e0b' : '#22c55e';
+      const barBg = isOverdue ? '#ef444420' : isNow ? '#f9731620' : status==='warning' ? '#fbbf2420' : '#22c55e20';
+      const maintBg = isOverdue ? '#ef4444' : isNow ? '#f97316' : status==='warning' ? '#fbbf24' : '#22c55e';
       const maintTextBg = isNow ? '#ef444490' : status==='warning' ? '#f59e0b90' : '#22c55e90';
       const maintTextColor = isNow ? '#fff' : '#1c1917';
 
@@ -4302,7 +4303,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.1.4';
+const CURRENT_VERSION = '1.1.5';
 
 async function checkForUpdate() {
   try {
