@@ -2600,15 +2600,20 @@ function updateUserActiveToggle() {
 }
 
 async function saveUser() {
+  const saveBtn = document.getElementById('user-save-btn');
+  if (saveBtn && saveBtn.disabled) return; // 二重送信防止
+  if (saveBtn) saveBtn.disabled = true;
   const name = document.getElementById('user-f-name').value.trim();
   const role = document.getElementById('user-f-role').value;
   const errEl = document.getElementById('user-edit-error');
   if (!name) {
     errEl.textContent = '名前を入力してください';
-    errEl.style.display = 'block'; return;
+    errEl.style.display = 'block';
+    if (saveBtn) saveBtn.disabled = false;
+    return;
   }
   errEl.style.display = 'none';
-  document.getElementById('user-save-btn').textContent = '保存中...';
+  if (saveBtn) saveBtn.textContent = '保存中...';
   try {
     const data = { name, role, is_active: userActive };
     if (editingUserId) {
@@ -2619,14 +2624,15 @@ async function saveUser() {
       showToast('ユーザーを追加しました', 'success');
     }
     closeModal('modal-user-edit');
-    state.users = await sb('users','GET',null,'?order=name');
+    state.users = await sb('users','GET',null,'?is_active=eq.true&order=name');
     const elU = document.getElementById('master-body');
     if (elU) renderMasterUsersTable(elU);
   } catch(e) {
     errEl.textContent = 'エラー: ' + e.message;
     errEl.style.display = 'block';
   } finally {
-    document.getElementById('user-save-btn').textContent = editingUserId ? '更新する' : '追加する';
+    const btn = document.getElementById('user-save-btn');
+    if (btn) { btn.disabled = false; btn.textContent = editingUserId ? '更新する' : '追加する'; }
   }
 }
 
