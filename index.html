@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.1.6">
+<meta name="app-version" content="1.1.7">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -99,8 +99,8 @@ body { background: var(--bg); color: var(--text); transition: background 0.2s, c
   overflow-y: auto;
 }
 .sidebar-item {
-  padding: 13px 20px;
-  font-size: 14px;
+  padding: 14px 20px;
+  font-size: 15px;
   color: var(--text4);
   cursor: pointer;
   display: flex;
@@ -148,7 +148,7 @@ body { background: var(--bg); color: var(--text); transition: background 0.2s, c
 /* ===== テーブル ===== */
 .table-wrap { padding: 0 16px 16px; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
-th { color: var(--text3); font-weight: 500; padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+th { color: var(--text3); font-weight: 500; padding: 12px 14px; text-align: left; font-size: 13px; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
 td { padding: 8px 8px; color: var(--text2); border-bottom: 0.5px solid var(--border); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--bg2); }
@@ -165,7 +165,7 @@ tr:hover td { background: var(--bg2); }
 .type-tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
 
 /* ===== プログレスバー ===== */
-.progress-wrap { height: 7px; border-radius: 3px; background: var(--border); overflow: hidden; width: 80px; }
+.progress-wrap { height: 9px; border-radius: 3px; background: var(--border); overflow: hidden; width: 80px; }
 .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
 
 /* ===== ツールバー ===== */
@@ -1369,12 +1369,12 @@ function renderListBody() {
     const color = dim ? 'var(--text4)' : statusColor(status);
     const rowBg = !dim && isOverdue ? 'background:#ef444415' : !dim && status==='danger' ? 'background:#f9731610' : dim ? 'opacity:0.45' : '';
     return `<tr data-mold-id="${m.id}" style="${rowBg}">
-      <td style="font-weight:600">#${m.machine_no||'?'}</td>
-      <td style="font-weight:500">${m.part_name}</td>
-      <td style="color:var(--text3);font-size:11px">${m.part_no}</td>
-      <td style="color:var(--text3);font-size:11px">${m.model_no||'-'}</td>
+      <td style="font-weight:700;font-size:17px">#${m.machine_no||'?'}</td>
+      <td style="font-weight:600;font-size:17px">${m.part_name}</td>
+      <td style="color:var(--text3);font-size:13px">${m.part_no}</td>
+      <td style="color:var(--text3);font-size:13px">${m.model_no||'-'}</td>
       <td>${typeBadge(m.category_name)}</td>
-      <td>${m.line_name||'-'}</td>
+      <td style="font-size:15px">${m.line_name||'-'}</td>
       <td><div class="progress-wrap"><div class="progress-fill rt-progress" style="width:${pctCapped}%;background:${color}"></div></div></td>
       <td class="rt-remain-shot" style="color:${color};font-weight:600">${isOverdue ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span>` : fmtNum(rem)}</td>
       <td class="rt-remain-time" style="color:${color}">${isOverdue ? '-' : fmtTime(remMin)}</td>
@@ -1900,7 +1900,7 @@ function renderMasterMolds(el) {
       <td>${m.part_name}</td>
       <td>${typeBadge(m.category_name)}</td>
       <td style="font-weight:500">#${m.machine_no||'?'}</td>
-      <td>${m.line_name||'-'}</td>
+      <td style="font-size:15px">${m.line_name||'-'}</td>
       <td>${fmtNum(m.maintenance_interval)} shot</td>
       <td>${m.cycle_time_sec}秒</td>
       <td style="color:var(--accent);font-weight:500">${m.simple_maint_time_min||20}分</td>
@@ -3860,9 +3860,9 @@ function renderScheduleBody() {
           <div style="font-size:9px;color:var(--text4);white-space:nowrap">${isOverdueCard ? '' : '〜'+fmtHM(s.schedEnd)}</div>
           <div style="width:1.5px;flex:1;background:${color};opacity:0.35;margin-top:3px"></div>
         </div>
-        <div style="flex:1;background:var(--bg2);border-radius:8px;padding:9px 11px;border-left:3px solid ${color}">
+        <div style="flex:1;background:var(--bg2);border-radius:8px;padding:13px 14px;border-left:3px solid ${color}">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            <div style="font-size:12px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
+            <div style="font-size:15px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
             ${statusBadge(s.status)}
           </div>
           <div style="height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:5px">
@@ -3876,8 +3876,8 @@ function renderScheduleBody() {
               <span style="font-size:10px;color:${color}">残 ${fmtNum(calcEstimatedRemaining(s.mold))}shot</span>
             </div>
             <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-              <span style="font-size:10px;color:var(--text3)">${t('duration')}</span>
-              <span style="font-size:11px;font-weight:600;color:var(--accent)">${s.dur}${t('minuteUnit')}</span>
+              <span style="font-size:12px;color:var(--text3)">${t('duration')}</span>
+              <span style="font-size:14px;font-weight:600;color:var(--accent)">${s.dur}${t('minuteUnit')}</span>
             </div>
           </div>
         </div>
@@ -4303,7 +4303,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.1.6';
+const CURRENT_VERSION = '1.1.7';
 
 async function checkForUpdate() {
   try {
@@ -4390,7 +4390,7 @@ function renderAllScheduleBody(el) {
         const overShot = isOverdueMold ? calcOverShot(s.mold) : 0;
         return `<div onclick="openMaintenanceFromAlert('${s.mold.id}')" style="margin-left:11px;margin-bottom:4px;background:var(--bg2);border-radius:8px;padding:8px 11px;border-left:3px solid ${color};cursor:pointer${isOverdueMold?';background:var(--danger-bg)10':''}">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-            <div style="font-size:12px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
+            <div style="font-size:15px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
             ${statusBadge(s.status)}
           </div>
           <div style="height:3px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:4px">
