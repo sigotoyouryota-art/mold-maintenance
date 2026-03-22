@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.4.4">
+<meta name="app-version" content="1.4.5">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3894,6 +3894,10 @@ function renderShotUpdateInput(el) {
   document.getElementById('su-save-btn').addEventListener('click', function() {
     saveShotUpdate(this.getAttribute('data-mold-id'));
   });
+  var suChangeBtnEl = el.querySelector('.su-change-btn');
+  if (suChangeBtnEl) {
+    suChangeBtnEl.addEventListener('click', function() { showSuMoldSelect(); });
+  }
 }
 
 
@@ -4644,7 +4648,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.4.4';
+const CURRENT_VERSION = '1.4.5';
 
 async function checkForUpdate() {
   try {
