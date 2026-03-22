@@ -2867,7 +2867,7 @@ async function importMoldRow(row) {
   // メンテ間隔・サイクル（各種表記対応）
   const interval = parseInt(row['メンテ間隔(shot)']||row['メンテ間隔']||row['maintenance_interval']||'5000')||5000;
   const cycle = parseInt(row['サイクル(秒)']||row['サイクルタイム']||row['cycle_time_sec']||'30')||30;
-      const dangerMin = parseInt(row['要メンテ(分前)']||row['alert_min_danger']||'120')||120;
+  const dangerMin = parseInt(row['要メンテ(分前)']||row['alert_min_danger']||'120')||120;
   const warnMin = parseInt(row['注意(分前)']||row['alert_min_warning']||'480')||480;
 
   const data = {
@@ -2877,7 +2877,7 @@ async function importMoldRow(row) {
     category_id: cat?.id||null,
     machine_id: machine?.id||null,
     maintenance_interval: interval,
-    cycle_time_sec: cycle
+    cycle_time_sec: cycle,
     alert_min_danger: dangerMin,
     alert_min_warning: warnMin,
     is_active: true,
