@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.1.1">
+<meta name="app-version" content="1.1.2">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -1348,7 +1348,9 @@ function renderListBody() {
     const overShot = isOverdue ? calcOverShot(m) : 0;
     const rem = isOverdue ? 0 : calcEstimatedRemaining(m);
     const remMin = isOverdue ? 0 : calcEstimatedRemainingMin(m);
-    const pct = isOverdue ? 100 : calcEstimatedProgress(m);
+    const pctRaw = calcEstimatedProgress(m);
+    const pctCapped = Math.min(100, pctRaw);
+    const pctDisplay = isOverdue ? Math.round(pctRaw) + '%' : pctCapped + '%';
     const totalShot = calcEstimatedTotalShot(m);
     const color = dim ? 'var(--text4)' : statusColor(status);
     const rowBg = !dim && isOverdue ? 'background:var(--danger-bg)20' : dim ? 'opacity:0.45' : '';
@@ -1359,10 +1361,10 @@ function renderListBody() {
       <td style="color:var(--text3);font-size:11px">${m.model_no||'-'}</td>
       <td>${typeBadge(m.category_name)}</td>
       <td>${m.line_name||'-'}</td>
-      <td><div class="progress-wrap"><div class="progress-fill rt-progress" style="width:${pct}%;background:${color}"></div></div></td>
+      <td><div class="progress-wrap"><div class="progress-fill rt-progress" style="width:${pctCapped}%;background:${color}"></div></div></td>
       <td class="rt-remain-shot" style="color:${color};font-weight:600">${isOverdue ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span>` : fmtNum(rem)}</td>
       <td class="rt-remain-time" style="color:${color}">${isOverdue ? '-' : fmtTime(remMin)}</td>
-      <td class="rt-pct" style="color:${color}">${isOverdue ? '超過' : pct+'%'}</td>
+      <td class="rt-pct" style="color:${color};font-weight:${isOverdue?'600':'400'}">${pctDisplay}</td>
       <td style="color:var(--info-text);font-size:11px;font-weight:500">${fmtNum(totalShot)}</td>
       <td class="rt-status">${dim?'':statusBadge(status)}</td>
       <td><span style="font-size:11px;color:var(--accent);cursor:pointer" onclick="openShotModal('${m.id}')">入力 ›</span></td>
@@ -3465,7 +3467,13 @@ function calcEstimatedTotalShot(mold) {
 function calcEstimatedProgress(mold) {
   const estimated = calcEstimatedShot(mold);
   const interval = mold.maintenance_interval || 5000;
-  return Math.min(100, Math.round(estimated / interval * 1000) / 10);
+  // 超過時は100%超を返す（例：102%）
+  return Math.round(estimated / interval * 1000) / 10;
+}
+
+function calcEstimatedProgressCapped(mold) {
+  // バー表示用（100%上限）
+  return Math.min(100, calcEstimatedProgress(mold));
 }
 
 function calcEstimatedRemaining(mold) {
@@ -3605,7 +3613,12 @@ function updateRealtimeDisplay() {
         remainShotEl.style.color = color;
       }
       if (remainTimeEl) { remainTimeEl.textContent = isOverdue ? '-' : fmtTime(remainMin); remainTimeEl.style.color = color; }
-      if (pctEl) { pctEl.textContent = isOverdue ? '超過' : pct + '%'; pctEl.style.color = color; }
+      if (pctEl) {
+        const pctRawRT = calcEstimatedProgress(mold);
+        pctEl.textContent = isOverdue ? Math.round(pctRawRT) + '%' : Math.min(100, pctRawRT) + '%';
+        pctEl.style.color = color;
+        if (isOverdue) pctEl.style.fontWeight = '600';
+      }
       if (statusEl) statusEl.innerHTML = statusBadge(status);
     }
 
@@ -4270,7 +4283,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.1.1';
+const CURRENT_VERSION = '1.1.2';
 
 async function checkForUpdate() {
   try {
@@ -4320,36 +4333,13 @@ function forceReload() {
 function renderAllScheduleBody(el) {
   const shifts = ['1S','2S','3S'];
   const SHIFT_LABELS = {'1S':'1S（08:00〜16:00）','2S':'2S（16:00〜24:00）','3S':'3S（00:00〜08:00）'};
-  let html = '';
   let totalCount = 0;
 
-  shifts.forEach(shift => {
-    const { scheduled, shiftStart, shiftEnd } = buildSchedule(shift);
-    if (!scheduled.length) return;
-    totalCount += scheduled.length;
-    html += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px">
-      <div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>
-      <span style="font-size:11px;font-weight:600;color:var(--info-text)">${SHIFT_LABELS[shift]}</span>
-    </div>`;
-    html += scheduled.map(s => {
-      const color = statusColor(s.status);
-      const isNow = (s.schedStart - new Date()) / 60000 < 30 && s.status === 'danger';
-      const timeLabel = isNow ? '今すぐ!' : `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
-      const pct = calcEstimatedProgress(s.mold);
-      return `<div onclick="openMaintenanceFromAlert('${s.mold.id}')" style="margin-left:11px;margin-bottom:4px;background:var(--bg2);border-radius:8px;padding:8px 11px;border-left:3px solid ${color};cursor:pointer">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-          <div style="font-size:12px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
-          ${statusBadge(s.status)}
-        </div>
-        <div style="height:3px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:4px">
-          <div style="width:${pct}%;height:100%;border-radius:2px;background:${color}"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-size:10px;color:${color};font-weight:600">${timeLabel}</div>
-          <div style="font-size:10px;color:var(--text3)">${typeBadge(s.mold.category_name)}　${s.mold.line_name||'-'}　${s.dur}分</div>
-        </div>
-      </div>`;
-    }).join('');
+  // 各直のscheduledを収集
+  const allShiftData = shifts.map(shift => {
+    const result = buildSchedule(shift);
+    totalCount += result.scheduled.length;
+    return { shift, ...result };
   });
 
   if (!totalCount) {
@@ -4357,11 +4347,99 @@ function renderAllScheduleBody(el) {
     return;
   }
 
-  const hint = `<div style="font-size:11px;color:var(--text3);padding:6px 0 4px;display:flex;align-items:center;gap:5px">
+  const hint = `<div style="font-size:11px;color:var(--text3);padding:6px 0 8px;display:flex;align-items:center;gap:5px">
     <div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>
-    タップしてメンテ完了を登録
+    ${scheduleView === 'card' ? 'カードをタップしてメンテ完了を登録' : 'タイムラインをタップしてメンテ完了を登録'}
   </div>`;
-  el.innerHTML = hint + html;
+
+  if (scheduleView === 'card') {
+    let html = '';
+    allShiftData.forEach(({ shift, scheduled }) => {
+      if (!scheduled.length) return;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin:8px 0 6px">
+        <div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>
+        <span style="font-size:11px;font-weight:600;color:var(--info-text)">${SHIFT_LABELS[shift]}</span>
+      </div>`;
+      html += scheduled.map(s => {
+        const color = statusColor(s.status);
+        const isOverdueMold = s.status === 'overdue';
+        const isNow = (s.schedStart - new Date()) / 60000 < 30 && (s.status === 'danger' || isOverdueMold);
+        const timeLabel = isOverdueMold ? '異常・超過中' : (isNow ? '今すぐ!' : `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`);
+        const pctRaw = calcEstimatedProgress(s.mold);
+        const pctCap = Math.min(100, pctRaw);
+        const overShot = isOverdueMold ? calcOverShot(s.mold) : 0;
+        return `<div onclick="openMaintenanceFromAlert('${s.mold.id}')" style="margin-left:11px;margin-bottom:4px;background:var(--bg2);border-radius:8px;padding:8px 11px;border-left:3px solid ${color};cursor:pointer${isOverdueMold?';background:var(--danger-bg)10':''}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+            <div style="font-size:12px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
+            ${statusBadge(s.status)}
+          </div>
+          <div style="height:3px;border-radius:2px;background:var(--border);overflow:hidden;margin-bottom:4px">
+            <div style="width:${pctCap}%;height:100%;border-radius:2px;background:${color}"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:10px;color:${color};font-weight:600">${timeLabel}</div>
+            <div style="font-size:10px;color:var(--text3)">
+              ${isOverdueMold ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過 ${Math.round(pctRaw)}%</span>` : ''}
+              ${s.dur}分
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    });
+    el.innerHTML = hint + html;
+  } else {
+    // タイムライン表示（全直）
+    let html = '';
+    allShiftData.forEach(({ shift, scheduled, shiftStart, shiftEnd }) => {
+      if (!scheduled.length) return;
+      const shiftDur = (shiftEnd - shiftStart) / 60000;
+      const nowOffset = Math.max(0, Math.min(100, (new Date() - shiftStart) / 60000 / shiftDur * 100));
+      html += `<div style="display:flex;align-items:center;gap:8px;margin:10px 0 6px">
+        <div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>
+        <span style="font-size:11px;font-weight:600;color:var(--info-text)">${SHIFT_LABELS[shift]}</span>
+      </div>`;
+      const hours = [];
+      for (let i = 0; i <= 8; i++) {
+        const pct = (i/8)*100;
+        const h = (shiftStart.getHours() + i) % 24;
+        hours.push({pct, label: String(h).padStart(2,'0')+':00'});
+      }
+      const axisHTML = hours.map(h=>`<div style="position:absolute;left:calc(80px + ${h.pct}% * ((100% - 80px) / 100%));transform:translateX(-50%);font-size:8px;color:var(--text4);white-space:nowrap">${h.label}</div>`).join('');
+      html += `<div style="position:relative;padding-left:80px;height:16px;margin-bottom:4px">${axisHTML}</div>`;
+      html += scheduled.map(s => {
+        const status = s.status;
+        const isOverdueMold = status === 'overdue';
+        const color = statusColor(status);
+        const pctRaw = calcEstimatedProgress(s.mold);
+        const rem = isOverdueMold ? 0 : calcEstimatedRemaining(s.mold);
+        const overShot = isOverdueMold ? calcOverShot(s.mold) : 0;
+        const maintOffset = Math.max(0, Math.min(95, (s.schedStart - shiftStart) / 60000 / shiftDur * 100));
+        const maintWidth = Math.max(2, Math.min(100 - maintOffset, s.dur / shiftDur * 100));
+        const barBg = isOverdueMold ? '#7f1d1d50' : status==='warning' ? '#78350f40' : '#1e335840';
+        const maintBg = isOverdueMold ? '#ef4444' : status==='warning' ? '#f59e0b' : '#22c55e';
+        const timeLabel = isOverdueMold ? '異常・超過中' : `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
+        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:26px;cursor:pointer" onclick="openMaintenanceFromAlert('${s.mold.id}')">
+          <div style="width:76px;flex-shrink:0">
+            <div style="font-size:10px;font-weight:600;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
+            <div style="font-size:9px;font-weight:600;color:${color}">${timeLabel}</div>
+          </div>
+          <div style="flex:1;height:32px;background:var(--bg3);border-radius:4px;position:relative;overflow:visible">
+            <div style="position:absolute;inset:0;border-radius:4px;background:${barBg}"></div>
+            <div style="position:absolute;left:${maintOffset}%;top:0;bottom:0;width:${maintWidth}%;background:${maintBg};border-radius:2px;z-index:2;display:flex;align-items:center;justify-content:center">
+              <span style="font-size:8px;font-weight:700;color:${isOverdueMold?'#fff':'#1c1917'}">${s.dur}分</span>
+            </div>
+            <div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:2px;background:#ef4444;z-index:3"></div>
+            <div style="position:absolute;left:${maintOffset}%;top:-14px;transform:translateX(-50%);font-size:8px;color:${color};font-weight:600;white-space:nowrap">${isOverdueMold?'超過':fmtHM(s.schedStart)}</div>
+            <div style="position:absolute;left:${maintOffset+maintWidth}%;bottom:-14px;transform:translateX(-50%);font-size:8px;color:${color};font-weight:600;white-space:nowrap">${isOverdueMold?'':('〜'+fmtHM(s.schedEnd))}</div>
+            <div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);font-size:8px;color:${color};font-weight:500;z-index:1;white-space:nowrap">
+              ${isOverdueMold ? fmtNum(overShot)+'shot超過　'+Math.round(pctRaw)+'%' : '残'+fmtNum(rem)+'shot　'+Math.min(100,Math.round(pctRaw))+'%'}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    });
+    el.innerHTML = hint + html;
+  }
 }
 
 
