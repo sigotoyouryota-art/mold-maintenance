@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.2.8">
+<meta name="app-version" content="1.2.9">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3803,35 +3803,52 @@ function buildSchedule(shift) {
 
   if (!targets.length) return { scheduled: [], shiftStart, shiftEnd };
 
-  // ③ 後ろから逆算してスタート時刻を確定（重複回避）
+  // ③ スタート時刻を確定（重複回避）
+  // overdueは前から順番に配置、dangerは後ろから逆算
   const n = targets.length;
   const schedTimes = new Array(n);
+  const nowMs = Math.max(now.getTime(), shiftStart.getTime());
 
-  // 最後の金型：ギリギリ開始（overdueはmax(shiftStart,now)）
-  const effectiveStart = (t) => {
-    const s = t.status === 'overdue'
-      ? Math.max(shiftStart.getTime(), now.getTime())
-      : t.deadlineMs;
-    return Math.max(shiftStart.getTime(), s);
-  };
-  schedTimes[n-1] = {
-    start: new Date(effectiveStart(targets[n-1])),
-    end: new Date(effectiveStart(targets[n-1]) + targets[n-1].dur * 60000)
-  };
+  // overdueとdanger以降を分離
+  const overdueTargets = targets.filter(t => t.status === 'overdue');
+  const nonOverdueTargets = targets.filter(t => t.status !== 'overdue');
 
-  // 後ろから前へ逆算
-  for (let i = n - 2; i >= 0; i--) {
-    const nextStart = schedTimes[i + 1].start.getTime();
-    const myDur = targets[i].dur * 60000;
-    const myDeadline = targets[i].status === 'overdue'
-      ? Math.max(shiftStart.getTime(), now.getTime())
-      : targets[i].deadlineMs;
-    const mustStartBy = nextStart - myDur;
-    const actualStart = Math.max(shiftStart.getTime(), Math.min(myDeadline, mustStartBy));
-    schedTimes[i] = {
-      start: new Date(actualStart),
-      end: new Date(actualStart + myDur)
+  // Step1: overdueを前から順番に配置（重ならないよう順番に）
+  let cursor = nowMs;
+  overdueTargets.forEach((t, i) => {
+    const idx = targets.indexOf(t);
+    const s = cursor;
+    const e = cursor + t.dur * 60000;
+    schedTimes[idx] = { start: new Date(s), end: new Date(e) };
+    cursor = e; // 次のoverdueはこの直後から
+  });
+
+  // overdueの終了時刻（非overdueの逆算の基準）
+  const overdueEndMs = cursor;
+
+  // Step2: 非overdueを後ろから逆算
+  if (nonOverdueTargets.length > 0) {
+    const nonIdx = nonOverdueTargets.map(t => targets.indexOf(t));
+    const lastT = nonOverdueTargets[nonOverdueTargets.length - 1];
+    const lastIdx = nonIdx[nonIdx.length - 1];
+    const lastDeadline = Math.max(overdueEndMs, lastT.deadlineMs);
+    schedTimes[lastIdx] = {
+      start: new Date(lastDeadline),
+      end: new Date(lastDeadline + lastT.dur * 60000)
     };
+    for (let i = nonOverdueTargets.length - 2; i >= 0; i--) {
+      const t = nonOverdueTargets[i];
+      const idx = nonIdx[i];
+      const nextStart = schedTimes[nonIdx[i + 1]].start.getTime();
+      const myDur = t.dur * 60000;
+      const myDeadline = Math.max(overdueEndMs, t.deadlineMs);
+      const mustStartBy = nextStart - myDur;
+      const actualStart = Math.max(overdueEndMs, Math.min(myDeadline, mustStartBy));
+      schedTimes[idx] = {
+        start: new Date(actualStart),
+        end: new Date(actualStart + myDur)
+      };
+    }
   }
 
   // ④ 直の時間帯と重なるものをスケジュールとして返す
@@ -4357,7 +4374,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.2.8';
+const CURRENT_VERSION = '1.2.9';
 
 async function checkForUpdate() {
   try {
