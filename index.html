@@ -4445,6 +4445,9 @@ function buildAllShifts() {
 }
 
 function buildEntry(e, sr, crossShift=false) {
+  const isLap = e.lap > 1;
+  const interval = e.mold.maintenance_interval || 5000;
+  const cycSec = e.mold.cycle_time_sec > 0 ? e.mold.cycle_time_sec : 30;
   return {
     mold: e.mold,
     status: e.status,
@@ -4454,6 +4457,10 @@ function buildEntry(e, sr, crossShift=false) {
     schedEnd:   new Date(e.endMs),
     crossShift,
     lap: e.lap,
+    // 2回目以降：メンテ完了直後想定の固定値
+    lapRemShot: isLap ? interval : null,
+    lapRemMin:  isLap ? Math.round(interval * cycSec / 60) : null,
+    lapPct:     isLap ? 0 : null,
   };
 }
 
@@ -4537,12 +4544,17 @@ function renderScheduleBody() {
         const trackBg = isOverdueCard ? 'var(--overdue-bar-bg)' : isMaint ? 'var(--danger-bar-bg)' : isWarn ? 'var(--warning-bg)' : 'var(--success-bg)';
         const shadowColor = isCross ? 'rgba(124,58,237,0.15)' : isOverdueCard ? 'rgba(220,38,38,0.20)' : isMaint ? 'rgba(234,88,12,0.16)' : 'rgba(0,0,0,0.06)';
         const timeColor = isCross ? '#c4b5fd' : isOverdueCard ? 'var(--overdue-text)' : isMaint ? 'var(--maint-text)' : isWarn ? 'var(--warning-text)' : 'var(--success-text)';
-        const pct = Math.min(130, calcEstimatedProgress(s.mold));
+        // 2回目以降は固定値、1回目は実データから計算
+        const pct = s.lap > 1 ? 0 : Math.min(130, calcEstimatedProgress(s.mold));
         const circumference = 182;
         const offset = isOverdueCard ? -29 : Math.max(0, circumference*(1-pct/100));
-        const shotNum = isOverdueCard ? fmtNum(calcOverShot(s.mold)) : fmtNum(calcEstimatedRemaining(s.mold));
+        const shotNum = isOverdueCard ? fmtNum(calcOverShot(s.mold))
+          : s.lap > 1 ? fmtNum(s.lapRemShot)
+          : fmtNum(calcEstimatedRemaining(s.mold));
         const shotSuffix = isOverdueCard ? 'shot超過' : 'shot残';
-        const timeLabel = isOverdueCard ? (calcEstimatedOverMin(s.mold)+'分超過') : ('残り'+fmtTime(calcEstimatedRemainingMin(s.mold)));
+        const timeLabel = isOverdueCard ? (calcEstimatedOverMin(s.mold)+'分超過')
+          : s.lap > 1 ? ('残り'+fmtTime(s.lapRemMin))
+          : ('残り'+fmtTime(calcEstimatedRemainingMin(s.mold)));
         const timeStr = fmtHM(s.schedStart)+'〜'+fmtHM(s.schedEnd);
         // バッジ（2回目以降・直またぎ・緊急）
         const lapBadge = s.lap>1 ? `<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px">${s.lap}回目</div>` : '';
@@ -4609,8 +4621,9 @@ function renderScheduleBody() {
       const isOverdue = status==='overdue';
       const isCross = s.crossShift;
       const color = isCross ? '#c4b5fd' : statusColor(status);
-      const rem = isOverdue?0:calcEstimatedRemaining(s.mold);
-      const remMin = isOverdue?0:calcEstimatedRemainingMin(s.mold);
+      // 2回目以降は固定値、1回目は実データから計算
+      const rem = isOverdue ? 0 : s.lap > 1 ? s.lapRemShot : calcEstimatedRemaining(s.mold);
+      const remMin = isOverdue ? 0 : s.lap > 1 ? s.lapRemMin : calcEstimatedRemainingMin(s.mold);
       const overShot = isOverdue?calcOverShot(s.mold):0;
       const overMin = isOverdue?calcEstimatedOverMin(s.mold):0;
       const maintOffset = Math.max(0,Math.min(92,(s.schedStart-shiftStart)/60000/shiftDur*100));
