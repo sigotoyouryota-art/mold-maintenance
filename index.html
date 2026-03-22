@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.5.0">
+<meta name="app-version" content="1.5.1">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -2040,26 +2040,38 @@ function renderMasterLines(el) {
 }
 
 function renderMasterUsers(el) {
-  el.innerHTML = `
-  <div class="toolbar">
-    <div></div>
-    <div style="display:flex;gap:6px">
-      <button class="btn btn-secondary" onclick="exportMaster('users')">↓ CSVエクスポート</button>
-      <button class="btn btn-secondary" onclick="openImportModal('users')">↑ CSVインポート</button>
-      <button class="btn btn-primary" onclick="openAddUserModal()">＋ ユーザー追加</button>
-    </div>
-  </div>
-  <div class="table-wrap"><table>
-    <tr><th>名前</th><th>権限</th><th>操作</th></tr>
-    ${state.users.map(u=>`<tr>
-      <td style="font-weight:600">${u.name}</td>
-      <td><span class="badge ${u.role==='admin'?'badge-warning':'badge-gray'}">${u.role==='admin'?'管理者':'作業者'}</span></td>
-      <td><div style="display:flex;gap:4px">
-        <button class="btn btn-secondary btn-sm" onclick="editUser('${u.id}')">編集</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">削除</button>
-      </div></td>
-    </tr>`).join('')}
-  </table></div>`;
+  sb('users', 'GET', null, '?order=name').then(function(users) {
+    if (users) { state.users = users; renderMasterUsersTable(el); }
+  }).catch(function(){});
+  renderMasterUsersTable(el);
+}
+
+function renderMasterUsersTable(el) {
+  let rows = '';
+  if (!state.users || state.users.length === 0) {
+    rows = '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">ユーザーが登録されていません</td></tr>';
+  } else {
+    state.users.forEach(function(u) {
+      const lastLogin = u.last_login_at || u.updated_at;
+      const lastStr = lastLogin ? new Date(lastLogin).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
+      const editBtn = '<button class="btn btn-secondary btn-sm" onclick="editUser(this.dataset.id)" data-id="' + u.id + '">編集</button>';
+      const delBtn  = '<button class="btn btn-danger btn-sm" onclick="deleteUser(this.dataset.id)" data-id="' + u.id + '">削除</button>';
+      rows += '<tr>'
+        + '<td style="font-weight:600">' + (u.name||'') + '</td>'
+        + '<td><span class="badge ' + (u.role==='admin'?'badge-warning':'badge-gray') + '">' + (u.role==='admin'?'管理者':'作業者') + '</span></td>'
+        + '<td style="font-size:12px;color:var(--text3)">' + lastStr + '</td>'
+        + '<td><div style="display:flex;gap:4px">' + editBtn + delBtn + '</div></td></tr>';
+    });
+  }
+  el.innerHTML = '<div class="toolbar"><div></div>'
+    + '<div style="display:flex;gap:6px">'
+    + '<button class="btn btn-secondary" onclick="exportMaster(\'users\')">↓ CSVエクスポート</button>'
+    + '<button class="btn btn-secondary" onclick="openImportModal(\'users\')">↑ CSVインポート</button>'
+    + '<button class="btn btn-primary" onclick="openAddUserModal()">＋ ユーザー追加</button>'
+    + '</div></div>'
+    + '<div class="table-wrap"><table>'
+    + '<tr><th>名前</th><th>権限</th><th>最終ログイン</th><th>操作</th></tr>'
+    + rows + '</table></div>';
 }
 
 function renderMasterAlerts(el) {
@@ -4786,7 +4798,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.5.0';
+const CURRENT_VERSION = '1.5.1';
 
 async function checkForUpdate() {
   try {
