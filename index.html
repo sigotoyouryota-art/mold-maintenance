@@ -2060,7 +2060,7 @@ async function renderMasterUsers(el) {
   // ローディング表示
   el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">読み込み中...</div>';
   try {
-    var users = await sb('users', 'GET', null, '?order=name');
+    var users = await sb('users', 'GET', null, '?is_active=eq.true&order=name');
     if (users) state.users = users;
   } catch(e) {
     showToast('ユーザー取得エラー: ' + e.message, 'error');
@@ -2634,7 +2634,7 @@ async function deleteUser(id) {
   if (!id) { showToast('IDが取得できませんでした', 'error'); return; }
   try {
     await sb('users', 'PATCH', { is_active: false }, '?id=eq.' + id);
-    var users = await sb('users', 'GET', null, '?order=name');
+    var users = await sb('users', 'GET', null, '?is_active=eq.true&order=name');
     if (users) state.users = users;
     showToast('削除しました', 'success');
     var body = document.getElementById('master-body');
