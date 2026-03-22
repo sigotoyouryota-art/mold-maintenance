@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.4.5">
+<meta name="app-version" content="1.4.6">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3940,6 +3940,72 @@ async function saveShotUpdate(moldId) {
   }
 }
 
+function showSuMoldSelect() {
+  const machineNo = shotUpdateMachineId;
+  const molds = state.molds.filter(function(m) { return String(m.machine_no) === String(machineNo); });
+  if (!molds.length) return;
+
+  const dandoriMoldId = dandoriData[molds[0] && molds[0].machine_id];
+  const currentMoldId = dandoriMoldId
+    ? (molds.find(function(m){ return m.id === dandoriMoldId; }) ? dandoriMoldId : (molds[0] && molds[0].id))
+    : (molds[0] && molds[0].id);
+
+  // オーバーレイ
+  var overlay = document.createElement('div');
+  overlay.id = 'su-mold-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+
+  var moldListHTML = '';
+  molds.forEach(function(m) {
+    var isCurrent = m.id === currentMoldId;
+    var prevShot = m.maint_shot || m.current_shot || 0;
+    var prevTime = m.maint_shot_updated_at || m.last_shot_updated_at;
+    var prevStr = prevTime ? new Date(prevTime).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
+    var bg = isCurrent
+      ? 'background:#3b82f615;border:1.5px solid var(--info-text);'
+      : 'background:var(--bg4);border:0.5px solid var(--border);';
+    var badge = isCurrent
+      ? '<div style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--info-text);color:#fff;flex-shrink:0">現在</div>'
+      : '<div style="font-size:10px;color:var(--text3);flex-shrink:0">前回 ' + fmtNum(prevShot) + '</div>';
+    moldListHTML += '<div class="su-mold-item" data-mold-id="' + m.id + '" data-machine-id="' + (m.machine_id || '') + '"'
+      + ' style="' + bg + 'border-radius:8px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:6px">'
+      + '<div>'
+      + '<div style="font-size:14px;font-weight:500;color:var(--text)">' + m.part_name + (m.part_no ? '　' + m.part_no : '') + '</div>'
+      + '<div style="font-size:10px;color:var(--text3)">' + (m.model_no || '') + (prevTime ? '　' + prevStr : '') + '</div>'
+      + '</div>' + badge + '</div>';
+  });
+
+  var sheet = document.createElement('div');
+  sheet.style.cssText = 'width:100%;max-width:480px;background:var(--bg2);border-radius:12px 12px 0 0;border-top:0.5px solid var(--border);padding:14px 14px 32px';
+  sheet.innerHTML = '<div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px"></div>'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">#' + machineNo + ' の金型を選択</div>'
+    + moldListHTML
+    + '<div id="su-mold-cancel" style="margin-top:4px;padding:10px;text-align:center;font-size:13px;color:var(--text3);border:0.5px solid var(--border);border-radius:8px;cursor:pointer">キャンセル</div>';
+
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+
+  // 金型選択
+  sheet.querySelectorAll('.su-mold-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      var moldId = this.getAttribute('data-mold-id');
+      var machineId = this.getAttribute('data-machine-id');
+      if (machineId) dandoriData[machineId] = moldId;
+      document.body.removeChild(overlay);
+      var el = document.getElementById('main-content');
+      if (el) renderShotUpdateInput(el);
+    });
+  });
+
+  document.getElementById('su-mold-cancel').addEventListener('click', function() {
+    document.body.removeChild(overlay);
+  });
+
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) document.body.removeChild(overlay);
+  });
+}
+
 function backToSuGrid() {
   shotUpdateView = 'grid';
   shotUpdateInputVal = '';
@@ -4648,7 +4714,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.4.5';
+const CURRENT_VERSION = '1.4.6';
 
 async function checkForUpdate() {
   try {
