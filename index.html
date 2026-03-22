@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MenteLog</title>
-<meta name="app-version" content="1.3.9">
+<meta name="app-version" content="1.4.0">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -3737,33 +3737,40 @@ function renderShotUpdate(el) {
 
 function renderShotUpdateGrid(el) {
   const doneCount = shotUpdateDoneIds.size;
-  const totalMachines = state.machines.length;
+
+  // 機番ごとにmoldsをグループ化（machine_noで昇順）
+  const machineMap = {};
+  state.molds.forEach(m => {
+    const key = m.machine_no || '?';
+    if (!machineMap[key]) machineMap[key] = { machine_no: key, machine_id: m.machine_id, line_name: m.line_name, molds: [] };
+    machineMap[key].molds.push(m);
+  });
 
   // 機番昇順でソート
-  const sorted = [...state.machines].sort((a, b) => {
-    const an = parseInt(String(a.machine_no||'0').replace(/\D/g,''))||0;
-    const bn = parseInt(String(b.machine_no||'0').replace(/\D/g,''))||0;
+  const sorted = Object.values(machineMap).sort((a, b) => {
+    const an = parseInt(String(a.machine_no).replace(/[^0-9]/g,'')) || 0;
+    const bn = parseInt(String(b.machine_no).replace(/[^0-9]/g,'')) || 0;
     return an - bn;
   });
 
-  // ラインフィルター
-  const lines = ['全て', ...new Set(state.machines.map(m => m.line_name).filter(Boolean).sort())];
+  const totalMachines = sorted.length;
+
+  // ラインフィルター（line_nameから収集）
+  const lineNames = [...new Set(sorted.map(m => m.line_name).filter(Boolean).sort())];
+  const lines = ['全て', ...lineNames];
+  let suLineFilter = window.suLineFilterVal || '全て';
 
   const gridItems = sorted.map(m => {
-    const isDone = shotUpdateDoneIds.has(m.id);
-    const moldCount = state.molds.filter(mo => mo.machine_id === m.id).length;
-    // ステータスは表示しない（機番昇順のみ）
-    const border = isDone
-      ? '0.5px solid var(--success-text)'
-      : '0.5px solid var(--border)';
+    const isDone = shotUpdateDoneIds.has(m.machine_no);
+    const hidden = (suLineFilter !== '全て' && m.line_name !== suLineFilter) ? 'display:none;' : '';
+    const border = isDone ? '0.5px solid var(--success-text)' : '0.5px solid var(--border)';
     const bg = isDone ? 'var(--success-bg)' : 'var(--bg2)';
     const textColor = isDone ? 'var(--success-text)' : 'var(--text)';
-    const sub = isDone ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">済✓</div>'
-      : moldCount > 0 ? `<div style="width:5px;height:5px;border-radius:50%;background:var(--border2);margin:3px auto 0"></div>` : '<div style="font-size:9px;color:var(--text4);margin-top:2px">金型なし</div>';
-    const cursor = moldCount > 0 ? 'pointer' : 'default';
-    const onclick = moldCount > 0 ? `onclick="openShotUpdateInput('${m.id}')"` : '';
-    return `<div style="padding:9px 4px;border:${border};border-radius:8px;text-align:center;background:${bg};cursor:${cursor}" ${onclick}>
-      <div style="font-size:14px;font-weight:500;color:${textColor}">#${m.machine_no||'?'}</div>
+    const sub = isDone
+      ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">済✓</div>'
+      : '<div style="width:5px;height:5px;border-radius:50%;background:var(--border2);margin:3px auto 0"></div>';
+    return `<div data-line="${m.line_name||''}" style="${hidden}padding:9px 4px;border:${border};border-radius:8px;text-align:center;background:${bg};cursor:pointer" onclick="openShotUpdateInput('${m.machine_no}')">
+      <div style="font-size:14px;font-weight:500;color:${textColor}">#${m.machine_no}</div>
       ${sub}
     </div>`;
   }).join('');
@@ -3771,9 +3778,9 @@ function renderShotUpdateGrid(el) {
   el.innerHTML = `
   <div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">
     <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">ショット数更新</div>
-    <div style="display:flex;gap:6px;align-items:center">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <div style="display:flex;gap:3px;background:var(--bg3);border-radius:6px;padding:3px" id="su-line-seg">
-        ${lines.map((l,i) => `<button class="seg-btn ${i===0?'active':''}" onclick="setSuLineFilter('${l}',this)" style="padding:5px 10px;font-size:11px">${l}</button>`).join('')}
+        ${lines.map(l => `<button class="seg-btn ${l===suLineFilter?'active':''}" onclick="setSuLineFilter('${l}',this)" style="padding:5px 10px;font-size:11px">${l}</button>`).join('')}
       </div>
       <span style="margin-left:auto;font-size:12px;color:var(--text3)">${doneCount} / ${totalMachines} 完了</span>
     </div>
@@ -3786,7 +3793,9 @@ function renderShotUpdateGrid(el) {
   </div>`;
 }
 
+
 function setSuLineFilter(line, btn) {
+  window.suLineFilterVal = line;
   document.querySelectorAll('#su-line-seg .seg-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const grid = document.getElementById('su-grid');
@@ -3796,8 +3805,8 @@ function setSuLineFilter(line, btn) {
   });
 }
 
-function openShotUpdateInput(machineId) {
-  shotUpdateMachineId = machineId;
+function openShotUpdateInput(machineNo) {
+  shotUpdateMachineId = machineNo;
   shotUpdateInputVal = '';
   shotUpdateView = 'input';
   const el = document.getElementById('main-content');
@@ -3805,13 +3814,13 @@ function openShotUpdateInput(machineId) {
 }
 
 function renderShotUpdateInput(el) {
-  const machine = state.machines.find(m => m.id === shotUpdateMachineId);
-  if (!machine) { shotUpdateView = 'grid'; renderShotUpdateGrid(el); return; }
+  const machineNo = shotUpdateMachineId;
+  const molds = state.molds.filter(m => String(m.machine_no) === String(machineNo));
+  if (!molds.length) { shotUpdateView = 'grid'; renderShotUpdateGrid(el); return; }
 
-  // 段取り設定から現在の金型を取得（dandori設定）
-  const dandoriMold = state.molds.find(m => m.machine_id === machine.id && m.is_active);
-  const molds = state.molds.filter(m => m.machine_id === machine.id);
-  const currentMold = dandoriMold || molds[0];
+  // dandori設定から現在の金型を取得、なければ先頭
+  const dandoriMoldId = dandoriData[molds[0]?.machine_id];
+  const currentMold = (dandoriMoldId ? molds.find(m => m.id === dandoriMoldId) : null) || molds[0];
   const prevShot = currentMold ? (currentMold.maint_shot || currentMold.current_shot || 0) : 0;
   const prevTime = currentMold?.maint_shot_updated_at || currentMold?.last_shot_updated_at;
   const prevTimeStr = prevTime ? new Date(prevTime).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
@@ -3894,8 +3903,8 @@ async function saveShotUpdate(moldId) {
     // ローカルのmoldsも更新
     const mold = state.molds.find(m => m.id === moldId);
     if (mold) { mold.maint_shot = val; mold.maint_shot_updated_at = new Date().toISOString(); }
-    shotUpdateDoneIds.add(shotUpdateMachineId);
-    showToast('#' + (state.machines.find(m=>m.id===shotUpdateMachineId)?.machine_no||'?') + ' 保存完了（' + val.toLocaleString() + ' shot）', 'success');
+    shotUpdateDoneIds.add(machineNo);
+    showToast('#' + machineNo + ' 保存完了（' + val.toLocaleString() + ' shot）', 'success');
     backToSuGrid();
   } catch(e) {
     showToast('保存に失敗しました', 'error');
@@ -3907,7 +3916,7 @@ function backToSuGrid() {
   shotUpdateInputVal = '';
   shotUpdateMachineId = null;
   const el = document.getElementById('main-content');
-  if (el) renderShotUpdateGrid(el);
+  if (el) renderShotUpdate(el);
 }
 
 
@@ -4610,7 +4619,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.3.9';
+const CURRENT_VERSION = '1.4.0';
 
 async function checkForUpdate() {
   try {
