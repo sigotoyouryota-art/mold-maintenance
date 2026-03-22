@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#161d2e">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e2433'/><text y='.9em' font-size='70' x='50%' text-anchor='middle'>🔧</text></svg>">
 <title>金型メンテ管理</title>
-<meta name="app-version" content="1.1.5">
+<meta name="app-version" content="1.1.6">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -36,7 +36,7 @@
   --success-text: #4ade80;
   --info-bg: #1e3358;
   --info-text: #7db8f7;
-  --sidebar-w: 160px;
+  --sidebar-w: 210px;
 }
 .light {
   --bg: #f1f5f9;
@@ -72,7 +72,7 @@ body { background: var(--bg); color: var(--text); transition: background 0.2s, c
 /* ===== ヘッダー ===== */
 .app-header {
   background: var(--bg3);
-  padding: 10px 16px;
+  padding: 12px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -99,8 +99,8 @@ body { background: var(--bg); color: var(--text); transition: background 0.2s, c
   overflow-y: auto;
 }
 .sidebar-item {
-  padding: 9px 16px;
-  font-size: 12px;
+  padding: 13px 20px;
+  font-size: 14px;
   color: var(--text4);
   cursor: pointer;
   display: flex;
@@ -135,7 +135,7 @@ body { background: var(--bg); color: var(--text); transition: background 0.2s, c
 /* ===== KPIカード ===== */
 .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 12px 16px 8px; }
 .kpi-card { background: var(--bg2); border-radius: 8px; padding: 10px 12px; border: 0.5px solid var(--border); }
-.kpi-label { font-size: 13px; color: var(--text3); margin-bottom: 4px; }
+.kpi-label { font-size: 14px; color: var(--text3); margin-bottom: 4px; }
 .kpi-value { font-size: 24px; font-weight: 600; }
 .kpi-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
 
@@ -147,8 +147,8 @@ body { background: var(--bg); color: var(--text); transition: background 0.2s, c
 
 /* ===== テーブル ===== */
 .table-wrap { padding: 0 16px 16px; overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { color: var(--text3); font-weight: 500; padding: 6px 8px; text-align: left; font-size: 11px; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { color: var(--text3); font-weight: 500; padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
 td { padding: 8px 8px; color: var(--text2); border-bottom: 0.5px solid var(--border); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--bg2); }
@@ -165,7 +165,7 @@ tr:hover td { background: var(--bg2); }
 .type-tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
 
 /* ===== プログレスバー ===== */
-.progress-wrap { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; width: 80px; }
+.progress-wrap { height: 7px; border-radius: 3px; background: var(--border); overflow: hidden; width: 80px; }
 .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
 
 /* ===== ツールバー ===== */
@@ -4303,7 +4303,7 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.1.5';
+const CURRENT_VERSION = '1.1.6';
 
 async function checkForUpdate() {
   try {
