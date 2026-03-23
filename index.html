@@ -4071,10 +4071,11 @@ let realtimeTimer = null;
 function calcEstimatedShot(mold) {
   // メンテ間ショット数ベースでリアルタイム計算
   const baseShot = mold.maint_shot !== undefined ? (mold.maint_shot || 0) : (mold.current_shot || 0);
-  const lastUpdated = mold.maint_shot_updated_at || mold.last_shot_updated_at;
+  const lastUpdated = mold.maint_shot_updated_at || mold.last_shot_updated_at || mold.updated_at;
   const cycleTime = mold.cycle_time_sec || 30;
   if (!lastUpdated) return baseShot;
   const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
+  if (elapsedSec < 0 || elapsedSec > 86400 * 30) return baseShot; // 異常値ガード
   const additionalShots = Math.floor(Math.max(0, elapsedSec) / cycleTime);
   return baseShot + additionalShots;
 }
@@ -4082,10 +4083,11 @@ function calcEstimatedShot(mold) {
 function calcEstimatedTotalShot(mold) {
   // 累計ショット数ベースでリアルタイム計算
   const baseShot = mold.current_shot || 0;
-  const lastUpdated = mold.last_shot_updated_at;
+  const lastUpdated = mold.last_shot_updated_at || mold.updated_at;
   const cycleTime = mold.cycle_time_sec || 30;
   if (!lastUpdated) return baseShot;
   const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
+  if (elapsedSec < 0 || elapsedSec > 86400 * 30) return baseShot; // 異常値ガード
   const additionalShots = Math.floor(Math.max(0, elapsedSec) / cycleTime);
   return baseShot + additionalShots;
 }
