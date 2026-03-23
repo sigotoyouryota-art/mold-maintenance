@@ -5037,8 +5037,21 @@ function renderScheduleBody() {
   // ===== シフトヘッダー生成 =====
   function makeShiftHeader(shiftData, shiftIndex) {
     const { shiftName, shiftStart } = shiftData;
-    // 1S・2S・3S（index 0-2）は「当日」、それ以降（index 3）は「翌日」
-    const isNextWorkDay = shiftIndex >= 3;
+    // 当日認定は 8:00〜翌8:00（ログイン直を基準に、3Sの次=8:00以降が翌日）
+    // ログイン直(index=0)は常に当日
+    // 3S(00:00〜08:00)が現れた後、次のシフト(8:00以降=1S or 2S)から翌日
+    // 具体的には allData の shiftStart が「翌日の08:00以降」かどうかで判定
+    const loginShiftStart = allData[0].shiftStart; // ログイン直の開始時刻
+    // 当日の8:00（当日認定の境界）
+    const dayBoundary = new Date(loginShiftStart);
+    // ログイン直が3Sなら境界は当日8:00、それ以外は翌日8:00
+    if (curShiftName === '3S') {
+      dayBoundary.setHours(8, 0, 0, 0); // 当日8:00が境界（3Sは0:00〜8:00なので当日認定は8:00まで）
+    } else {
+      dayBoundary.setDate(dayBoundary.getDate() + 1);
+      dayBoundary.setHours(8, 0, 0, 0); // 翌日8:00が境界
+    }
+    const isNextWorkDay = shiftIndex > 0 && shiftData.shiftStart.getTime() >= dayBoundary.getTime();
     const badge = isNextWorkDay
       ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">翌日</div>`
       : `<div style="font-size:10px;background:var(--info-bg);color:var(--info-text);padding:2px 8px;border-radius:4px;margin-left:auto">当日</div>`;
