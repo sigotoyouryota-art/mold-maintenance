@@ -2025,16 +2025,18 @@ async function loadHistory() {
 
     const filtered = (logs||[]).filter(log => {
       if (['all','OH','simple'].includes(state.histFilter)) return true;
-      return (log.machines?.lines?.name||'-') === state.histFilter;
+      const moldState = state.molds.find(m=>m.id===log.mold_id);
+      const lineName = log.machines?.lines?.name || moldState?.line_name || '-';
+      return lineName === state.histFilter;
     });
 
     if (!filtered.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
 
     const getRow = (log) => {
       const isOH = log.maintenance_type === 'OH';
-      const lineName = log.machines?.lines?.name || '-';
-      // 機番取得：JOINが取れない場合はstate.moldsから補完
       const moldState = state.molds.find(m=>m.id===log.mold_id);
+      const lineName = log.machines?.lines?.name || moldState?.line_name || '-';
+      // 機番取得：JOINが取れない場合はstate.moldsから補完
       const machineNo = log.machines?.machine_no || moldState?.machine_no || '';
       const machineNoDisp = machineNo ? machineNo : '-';
       const dt = new Date(log.performed_at);
@@ -4889,8 +4891,13 @@ function buildAllShifts() {
             break;
           }
         }
-        // 回せない → 直またぎでもこの直に入れる（crossShift=true）
+        // 回せない → 直またぎ: この直にクランプ版を入れる（crossShift=true）
         result[ri].scheduled.push(buildEntry(e, sr, true));
+        // 次の直にも続きエントリを追加
+        if (nextSr) {
+          const contEntry = { ...e, startMs: nextSr.start.getTime() };
+          result[ri+1].scheduled.unshift(buildEntry(contEntry, nextSr, true));
+        }
         assigned = true;
         break;
       }
@@ -5088,7 +5095,9 @@ function renderScheduleBody() {
       const maintOffset = Math.max(0,Math.min(92,(s.schedStart-shiftStart)/60000/shiftDur*100));
       const maintWidth = Math.max(4,Math.min(100-maintOffset, clampedDurMin/shiftDur*100));
       const barRight = maintOffset+maintWidth;
-      const timeTagText = `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
+      const timeTagText = (isCross && s.schedStart.getTime() === shiftStart.getTime())
+        ? `〜${fmtHM(s.schedEnd)}`
+        : `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
       const timeTag = barRight>=65
         ? `<div style="position:absolute;right:${(100-maintOffset+1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${timeTagText}</div>`
         : `<div style="position:absolute;left:${(barRight+1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${timeTagText}</div>`;
@@ -5108,13 +5117,19 @@ function renderScheduleBody() {
       const urgentBadge = isOverdue?`<div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;display:inline-block;margin-bottom:7px">${t('immediateMaint')}</div>`:'';;
       const topBadges = urgentBadge+lapBadge+crossBadge;
 
+      const metaTimeText = (isCross && s.schedStart.getTime() === shiftStart.getTime())
+        ? `〜${fmtHM(s.schedEnd)}`
+        : `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
+      const metaDurText = (isCross && s.schedStart.getTime() === shiftStart.getTime())
+        ? `残${Math.round((s.schedEnd - s.schedStart)/60000)}${t('minuteUnit')||'分'}`
+        : `${s.dur}${t('minuteUnit')||'分'}`;
       const metaHTML = `<div style="width:116px;flex-shrink:0">
         <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
           <div style="width:22px;height:22px;border-radius:50%;background:${maintBg};color:${barTextColor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--bg3);flex-shrink:0">${globalRank}</div>
           <div style="font-size:14px;font-weight:700;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
         </div>
-        <div style="padding-left:26px;font-size:11px;font-weight:600;color:${color}">${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}</div>
-        <div style="padding-left:26px;margin-top:3px"><span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent2);padding:1px 7px;border-radius:3px;border:0.5px solid var(--accent)60">⏱ ${s.dur}${t('minuteUnit')||'分'}</span></div>
+        <div style="padding-left:26px;font-size:11px;font-weight:600;color:${color}">${metaTimeText}</div>
+        <div style="padding-left:26px;margin-top:3px"><span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent2);padding:1px 7px;border-radius:3px;border:0.5px solid var(--accent)60">⏱ ${metaDurText}</span></div>
       </div>`;
       const trackHTML = `<div style="flex:1;min-width:0">
         <div style="height:32px;border-radius:5px;background:${barBg};position:relative;overflow:hidden;margin-bottom:5px">
