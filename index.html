@@ -792,7 +792,7 @@ const T = {
     viewTimeline:'タイムライン', viewCard:'カード',
     needMaintCount:'要メンテ', schedCount:'本日予定', doneCount:'完了',
     autoSorted:'優先度順で自動配置',
-    rightNow:'今すぐ!', duration:'所要', minuteUnit:'分', immediateMaint:'即メンテ', overShot:'超過', schedPlan:'メンテ予定',
+    rightNow:'今すぐ!', duration:'所要', minuteUnit:'分', immediateMaint:'即メンテ', overShot:'超過', schedPlan:'メンテ予定', shotUnregistered:'未入力', shotUnregisteredMsg:'ショット数が未入力のため加算されません', shotUnregisteredSched:'ショット数未入力のためスケジュール算出不可',
     simpleMaintTime:'簡易メンテ所要時間(分)', ohMaintTime:'OHメンテ所要時間(分)',
     shotUpdate:'ショット更新', maintDone2:'メンテ完了',
     lineAlertStatus:'ライン別アラート状況', top5Title:'進捗率が高い金型 TOP5',
@@ -976,7 +976,7 @@ const T = {
     viewTimeline:'Dòng thời gian', viewCard:'Thẻ',
     needMaintCount:'Cần BT', schedCount:'Hôm nay', doneCount:'Hoàn thành',
     autoSorted:'Tự động sắp xếp theo ưu tiên',
-    rightNow:'Ngay bây giờ!', duration:'Thời gian', minuteUnit:'phút', immediateMaint:'BT ngay', overShot:'Vượt', schedPlan:'Kế hoạch BT',
+    rightNow:'Ngay bây giờ!', duration:'Thời gian', minuteUnit:'phút', immediateMaint:'BT ngay', overShot:'Vượt', schedPlan:'Kế hoạch BT', shotUnregistered:'Chưa nhập', shotUnregisteredMsg:'Shot chưa được nhập, không tính tự động', shotUnregisteredSched:'Không thể tính lịch do chưa nhập shot',
     simpleMaintTime:'Thời gian BT đơn giản(phút)', ohMaintTime:'Thời gian BT tổng hợp(phút)',
     shotUpdate:'Cập nhật shot', maintDone2:'Hoàn thành BT',
     lineAlertStatus:'Cảnh báo theo dây', top5Title:'Top 5 khuôn gần BT nhất',
@@ -1160,7 +1160,7 @@ const T = {
     viewTimeline:'Timeline', viewCard:'Card',
     needMaintCount:'Needs maint.', schedCount:'Today', doneCount:'Done',
     autoSorted:'Auto-sorted by priority',
-    rightNow:'Now!', duration:'Duration', minuteUnit:'min', immediateMaint:'Maint. NOW', overShot:'Over', schedPlan:'Scheduled',
+    rightNow:'Now!', duration:'Duration', minuteUnit:'min', immediateMaint:'Maint. NOW', overShot:'Over', schedPlan:'Scheduled', shotUnregistered:'No data', shotUnregisteredMsg:'Shot count not entered, auto-calculation disabled', shotUnregisteredSched:'Cannot calculate schedule: no shot data',
     simpleMaintTime:'Simple maint. time(min)', ohMaintTime:'OH maint. time(min)',
     shotUpdate:'Update shot', maintDone2:'Complete maint.',
     lineAlertStatus:'Alert by line', top5Title:'Top 5 molds near maint.',
@@ -1833,29 +1833,34 @@ function renderListBody() {
 
   // スマホカード
   const makeCard = (m, dim=false) => {
+    const unregistered = isShotUnregistered(m);
     const status = calcStatus(m);
     const isOverdue = status === 'overdue';
     const overShot = isOverdue ? calcOverShot(m) : 0;
     const rem = isOverdue ? 0 : calcEstimatedRemaining(m);
     const remMin = isOverdue ? 0 : calcEstimatedRemainingMin(m);
     const pct = isOverdue ? 100 : calcEstimatedProgress(m);
-    const color = dim ? 'var(--text4)' : statusColor(status);
-    return `<div class="mold-card ${dim?'':(isOverdue?'danger':status)}" data-mold-id="${m.id}" style="${dim?'opacity:0.45;border-left-color:var(--border)':''}">
+    const color = (dim || unregistered) ? 'var(--text4)' : statusColor(status);
+    const cardStyle = unregistered ? 'opacity:0.7;border-left-color:var(--border)' : dim ? 'opacity:0.45;border-left-color:var(--border)' : '';
+    return `<div class="mold-card ${(dim||unregistered)?'':(isOverdue?'danger':status)}" data-mold-id="${m.id}" style="${cardStyle}">
       <div class="mold-card-top">
         <div>
           <div class="mold-card-name">#${m.machine_no||'?'}　${m.part_name}　<span style="font-size:9px;color:var(--text4)">${m.model_no||''}</span></div>
           <div class="mold-card-part">${m.part_no} / ${m.category_name||'-'} / ${m.line_name||'-'}</div>
         </div>
-        ${dim?'':statusBadge(status)}
+        ${unregistered?`<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:var(--warning-bg);color:var(--warning-text);font-weight:500">${t('shotUnregistered')}</span>`:dim?'':statusBadge(status)}
       </div>
-      <div class="mold-card-bar"><div class="rt-bar-fill" style="height:100%;border-radius:2px;background:${color};width:${pct}%"></div></div>
+      <div class="mold-card-bar"><div class="rt-bar-fill" style="height:100%;border-radius:2px;background:${color};width:${unregistered?0:pct}%"></div></div>
       <div class="mold-card-meta rt-meta">
-        ${isOverdue
-          ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span><span style="color:var(--text3)">累計${fmtNum(calcEstimatedTotalShot(m))}</span>`
-          : `<span style="color:${color}">${t('remainLabel')} ${fmtNum(rem)}shot</span><span style="color:${color}">${fmtTime(remMin)}</span><span style="color:${color}">${pct}%</span>`
+        ${unregistered
+          ? `<span style="color:var(--text4)">0 / ${fmtNum(m.maintenance_interval)}shot</span>`
+          : isOverdue
+            ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span><span style="color:var(--text3)">累計${fmtNum(calcEstimatedTotalShot(m))}</span>`
+            : `<span style="color:${color}">${t('remainLabel')} ${fmtNum(rem)}shot</span><span style="color:${color}">${fmtTime(remMin)}</span><span style="color:${color}">${pct}%</span>`
         }
       </div>
-      ${dim?'':`<div class="mold-card-btn ${(isOverdue||status==='danger')?'hot':''}" onclick="openShotModal('${m.id}')">${t('shotUpdate')} / ${t('maintDone2')}</div>`}
+      ${unregistered?`<div style="display:flex;align-items:center;gap:5px;background:var(--warning-bg);border-radius:5px;padding:5px 8px;margin-top:6px;font-size:10px;color:var(--warning-text)"><div style="width:5px;height:5px;border-radius:50%;background:var(--warning-text);flex-shrink:0"></div>${t('shotUnregisteredMsg')}</div>`
+      :dim?'':`<div class="mold-card-btn ${(isOverdue||status==='danger')?'hot':''}" onclick="openShotModal('${m.id}')">${t('shotUpdate')} / ${t('maintDone2')}</div>`}
     </div>`;
   };
 
@@ -4068,6 +4073,11 @@ function setListSort(mode) {
 
 let realtimeTimer = null;
 
+// ショット未入力判定
+function isShotUnregistered(mold) {
+  return !mold.maint_shot_updated_at && !mold.last_shot_updated_at;
+}
+
 function calcEstimatedShot(mold) {
   // メンテ間ショット数ベースでリアルタイム計算
   const baseShot = mold.maint_shot !== undefined ? (mold.maint_shot || 0) : (mold.current_shot || 0);
@@ -4342,12 +4352,17 @@ function renderShotUpdateGrid(el) {
   sorted.forEach(function(m) {
     const isDone = shotUpdateDoneIds.has(m.machine_no);
     const hidden = (suLineFilter !== t('allLine') && m.line_name !== suLineFilter) ? 'display:none;' : '';
-    const border = isDone ? '0.5px solid var(--success-text)' : '0.5px solid var(--border)';
+    // 未入力チェック: この機番に紐づく金型が全てisShotUnregisteredか
+    const moldsForMachine = state.molds.filter(function(mol) { return String(mol.machine_no) === String(m.machine_no); });
+    const isUnreg = moldsForMachine.length > 0 && moldsForMachine.every(function(mol) { return isShotUnregistered(mol); });
+    const border = isDone ? '0.5px solid var(--success-text)' : isUnreg ? '1px dashed var(--warning)' : '0.5px solid var(--border)';
     const bg = isDone ? 'var(--success-bg)' : 'var(--bg2)';
-    const tc = isDone ? 'var(--success-text)' : 'var(--text)';
+    const tc = isDone ? 'var(--success-text)' : isUnreg ? 'var(--text4)' : 'var(--text)';
     const sub = isDone
       ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">\u6e08\u2713</div>'
-      : '<div style="width:5px;height:5px;border-radius:50%;background:var(--border2);margin:3px auto 0"></div>';
+      : isUnreg
+        ? '<div style="font-size:8px;color:var(--warning-text);margin-top:3px">' + t('shotUnregistered') + '</div>'
+        : '<div style="width:5px;height:5px;border-radius:50%;background:var(--border2);margin:3px auto 0"></div>';
     gridHTML += '<div class="su-machine-btn" data-mno="' + m.machine_no + '" data-line="' + (m.line_name || '') + '"'
       + ' style="' + hidden + 'padding:9px 4px;border:' + border + ';border-radius:8px;text-align:center;background:' + bg + ';cursor:pointer">'
       + '<div style="font-size:14px;font-weight:500;color:' + tc + '">#' + m.machine_no + '</div>'
@@ -4759,9 +4774,10 @@ function buildAllShifts() {
   const dandoriMoldIds = new Set(Object.values(dandoriData).filter(Boolean));
 
   // まず段取り選択済み金型の1回目エントリを作る
-  let entries = state.molds
-    .filter(mold => dandoriMoldIds.size === 0 || dandoriMoldIds.has(mold.id))
-    .map(mold => {
+  const allDandoriMolds = state.molds.filter(mold => dandoriMoldIds.size === 0 || dandoriMoldIds.has(mold.id));
+  // 未入力金型を分離
+  const unregisteredMolds = allDandoriMolds.filter(mold => isShotUnregistered(mold));
+  let entries = allDandoriMolds.filter(mold => !isShotUnregistered(mold)).map(mold => {
     const cycSec = mold.cycle_time_sec || FALLBACK_CYCLE;
     const status  = calcStatus(mold);
     const dur     = (mold.simple_maint_time_min || 20) * 60000;
@@ -4906,6 +4922,7 @@ function buildAllShifts() {
     }
   }
 
+  result.unregisteredMolds = unregisteredMolds;
   return result;
 }
 
@@ -5053,6 +5070,25 @@ function renderScheduleBody() {
         return c;
       }).join('');
     });
+    // 未入力金型の表示（カードビュー）
+    const unregMoldsCard = allData.unregisteredMolds || [];
+    if (unregMoldsCard.length > 0) {
+      html += `<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
+        <div style="font-size:11px;color:var(--text4);margin-bottom:8px;display:flex;align-items:center;gap:5px">
+          <div style="width:6px;height:6px;border-radius:50%;background:var(--warning)"></div>${t('shotUnregistered')} (${unregMoldsCard.length})
+        </div>
+        ${unregMoldsCard.map(m=>`<div style="border:1.5px dashed var(--border);border-radius:12px;padding:10px 14px;margin-bottom:8px;opacity:0.65">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--border);color:var(--text4);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">-</div>
+            <div style="font-size:15px;font-weight:700;color:var(--text3)">#${m.machine_no||'?'}　${m.part_name}</div>
+            <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:var(--warning-bg);color:var(--warning-text);font-weight:500">${t('shotUnregistered')}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;background:var(--warning-bg);border-radius:5px;padding:6px 10px;font-size:11px;color:var(--warning-text)">
+            <div style="width:5px;height:5px;border-radius:50%;background:var(--warning-text);flex-shrink:0"></div>${t('shotUnregisteredSched')}
+          </div>
+        </div>`).join('')}
+      </div>`;
+    }
     el.innerHTML = hint + html;
     return;
   }
@@ -5154,6 +5190,26 @@ function renderScheduleBody() {
     // 時間軸（下）
     html += `<div style="padding-left:124px;margin-top:4px;padding-bottom:10px;border-bottom:0.5px solid var(--border)"><div style="position:relative;height:16px">${axisInner}</div></div>`;
   });
+
+  // 未入力金型の表示
+  const unregMolds = allData.unregisteredMolds || [];
+  if (unregMolds.length > 0) {
+    html += `<div style="margin-top:14px;padding-top:10px;border-top:0.5px solid var(--border)">
+      <div style="font-size:11px;color:var(--text4);margin-bottom:8px;display:flex;align-items:center;gap:5px">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--warning)"></div>${t('shotUnregistered')} (${unregMolds.length})
+      </div>
+      ${unregMolds.map(m=>`<div style="border:1.5px dashed var(--border);border-radius:10px;padding:9px 12px;margin-bottom:6px;opacity:0.65">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <div style="width:20px;height:20px;border-radius:50%;background:var(--border);color:var(--text4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600">-</div>
+          <span style="font-size:13px;font-weight:600;color:var(--text3)">#${m.machine_no||'?'}　${m.part_name}</span>
+          <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:var(--warning-bg);color:var(--warning-text);font-weight:500">${t('shotUnregistered')}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;background:var(--warning-bg);border-radius:5px;padding:5px 8px;font-size:10px;color:var(--warning-text)">
+          <div style="width:5px;height:5px;border-radius:50%;background:var(--warning-text);flex-shrink:0"></div>${t('shotUnregisteredSched')}
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }
 
   // 凡例
   html += `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
