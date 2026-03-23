@@ -803,7 +803,7 @@ const T = {
     navReport:'月次レポート', navBackup:'バックアップ', navLogout:'ログアウト',
     navSettings:'設定',
     maintInterval2:'メンテ間', inputShotHint:'現在のショット数を入力',
-    addRow:'＋ 行を追加', alertEditTitle:'アラート設定編集', addHomeTitle:'ホーム画面に追加', bulkMachineTitle:'機械を一括追加', importDesc:'CSVをアップロード。同じキーのデータは上書きされます。', maintTimeTitle:'メンテ所要時間', userName:'★名前', userRole:'★権限', importCsv:'CSVファイルを選択',
+    addRow:'＋ 行を追加', alertEditTitle:'アラート設定編集', addHomeTitle:'ホーム画面に追加', bulkMachineTitle:'機械を一括追加', importDesc:'CSVをアップロード。同じキーのデータは上書きされます。', maintTimeTitle:'メンテ所要時間', userName:'★名前', userRole:'★権限', importFileLabel:'CSVファイルを選択',
     dandoriSave:'の設定を保存', dandoriAutoLoaded:'前回構成を自動引継済み',
     confirm:'この内容で登録しますか',
     shotUpdated:'ショット数を更新しました',
@@ -987,7 +987,7 @@ const T = {
     navReport:'Báo cáo tháng', navBackup:'Sao lưu', navLogout:'Đăng xuất',
     navSettings:'Cài đặt',
     maintInterval2:'Chu kỳ BT', inputShotHint:'Nhập số shot hiện tại',
-    addRow:'＋ Thêm hàng', alertEditTitle:'Chỉnh sửa cảnh báo', addHomeTitle:'Thêm vào màn hình chính', bulkMachineTitle:'Thêm máy hàng loạt', importDesc:'Tải lên CSV. Dữ liệu trùng khóa sẽ bị ghi đè.', maintTimeTitle:'Thời gian BT', userName:'★Tên', userRole:'★Quyền', importCsv:'Chọn tệp CSV',
+    addRow:'＋ Thêm hàng', alertEditTitle:'Chỉnh sửa cảnh báo', addHomeTitle:'Thêm vào màn hình chính', bulkMachineTitle:'Thêm máy hàng loạt', importDesc:'Tải lên CSV. Dữ liệu trùng khóa sẽ bị ghi đè.', maintTimeTitle:'Thời gian BT', userName:'★Tên', userRole:'★Quyền', importFileLabel:'Chọn tệp CSV',
     dandoriSave:'Lưu cài đặt', dandoriAutoLoaded:'Đã kế thừa cấu hình hôm qua',
     confirm:'Xác nhận nội dung',
     shotUpdated:'Đã cập nhật số shot',
@@ -1171,7 +1171,7 @@ const T = {
     navReport:'Monthly report', navBackup:'Backup', navLogout:'Logout',
     navSettings:'Settings',
     maintInterval2:'Maint.', inputShotHint:'Enter current shot count',
-    addRow:'＋ Add row', alertEditTitle:'Edit alert settings', addHomeTitle:'Add to Home Screen', bulkMachineTitle:'Bulk add machines', importDesc:'Upload CSV. Duplicate key data will be overwritten.', maintTimeTitle:'Maint. time', userName:'★Name', userRole:'★Role', importCsv:'Select CSV file',
+    addRow:'＋ Add row', alertEditTitle:'Edit alert settings', addHomeTitle:'Add to Home Screen', bulkMachineTitle:'Bulk add machines', importDesc:'Upload CSV. Duplicate key data will be overwritten.', maintTimeTitle:'Maint. time', userName:'★Name', userRole:'★Role', importFileLabel:'Select CSV file',
     dandoriSave:'Save config', dandoriAutoLoaded:'Previous config auto-loaded',
     confirm:'Confirm details',
     shotUpdated:'Shot count updated',
@@ -2067,29 +2067,38 @@ async function loadHistory() {
       }).join('')}
     </table></div>`;
 
-    // スマホ カード
-    const cardsHTML = `<div style="display:flex;flex-direction:column;gap:5px">${filtered.map(log => {
+    // スマホ カード (タイムラインUI)
+    const cardsHTML = `<div style="display:flex;flex-direction:column;gap:0">${filtered.map((log, idx) => {
       const r = getRow(log);
-      const card = `<div class="hist-card ${r.isOH?'':'simple'}" style="flex:1">
-        <div class="hist-row1">#${r.machineNo}　${log.molds?.part_name||'-'}　${r.lineName}</div>
-        <div class="hist-row2">
-          <div style="display:flex;gap:3px">
+      const isLast = idx === filtered.length - 1;
+      const dotColor = r.isOH ? 'var(--success)' : 'var(--warning)';
+      const card = `<div style="display:flex;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:center;width:20px;flex-shrink:0">
+          <div style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0"></div>
+          ${isLast?'':`<div style="width:1px;flex:1;background:var(--border)"></div>`}
+        </div>
+        <div style="flex:1;background:var(--bg2);border:0.5px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <div style="font-size:13px;font-weight:600;color:var(--text)">#${r.machineNo}　${log.molds?.part_name||'-'}</div>
+            <div style="font-size:11px;color:var(--text4)">${r.dateStr} ${r.timeStr}</div>
+          </div>
+          <div style="display:flex;gap:5px;align-items:center;margin-bottom:5px">
             <span class="hist-tag ${r.isOH?'hist-tag-oh':'hist-tag-simple'}">${r.isOH?'OH':t('simple')}</span>
             <span class="hist-tag ${log.is_reset?'hist-tag-reset':'hist-tag-keep'}">${log.is_reset?t('withReset'):t('noReset')}</span>
+            <span style="font-size:10px;color:var(--text4)">${r.lineName}</span>
           </div>
-          <span style="font-size:9px;color:var(--text3)">${r.shot} shot</span>
+          <div style="display:flex;gap:14px;font-size:11px;color:var(--text3)">
+            <span>${t('shotCount')}: <b style="font-weight:600;color:var(--text)">${r.shot} shot</b></span>
+            <span>${t('worker')}: <b style="font-weight:600;color:var(--text)">${log.users?.name||'-'}</b></span>
+            <span>${t('shift')}: <b style="font-weight:600;color:var(--text)">${log.shift||'-'}</b></span>
+          </div>
         </div>
-        <div class="hist-row3">
-          <span style="font-size:10px;color:var(--text3)">${log.molds?.part_no||'-'} / ${log.molds?.mold_categories?.name||'-'}</span>
-          <span style="font-size:10px;color:var(--text4)">${log.users?.name||'-'} / ${log.shift||'-'}</span>
-        </div>
-        <div class="hist-row4">${r.dateStr} ${r.timeStr}</div>
       </div>`;
 
       if (histEditMode) {
-        return `<div style="display:flex;gap:8px;align-items:center" onclick="histToggle('${log.id}')">
-          <div data-chk="${log.id}" style="${r.chkStyle};flex-shrink:0;cursor:pointer">${r.chkInner}</div>
-          ${card}
+        return `<div style="display:flex;gap:8px;align-items:flex-start" onclick="histToggle('${log.id}')">
+          <div data-chk="${log.id}" style="${r.chkStyle};flex-shrink:0;cursor:pointer;margin-top:0">${r.chkInner}</div>
+          <div style="flex:1">${card}</div>
         </div>`;
       }
       return card;
@@ -2229,23 +2238,25 @@ function renderDandoriMachines() {
   el.innerHTML = machines.map(machine => {
     const machineMolds = state.molds.filter(m=>m.machine_no===machine.machine_no);
     const selectedMoldId = dandoriData[machine.id];
-    return `<div class="dandori-card">
-      <div class="dandori-hdr">
-        <span class="dandori-machine">#${machine.machine_no}</span>
-        <span class="badge ${machine.is_dandori?'badge-info':'badge-gray'}">${machine.is_dandori?t('dandori'):t('fixed')}</span>
-      </div>
-      <div style="padding:5px 0">
-        ${machineMolds.map(m=>`
-          <div class="radio-option ${selectedMoldId===m.id?'selected':''}" onclick="selectDandoriMold('${machine.id}','${m.id}',this)">
-            <div class="radio-circle ${selectedMoldId===m.id?'on':''}"></div>
-            <div>
-              <div class="radio-label-name">${m.part_name}　<span style="font-size:10px;color:var(--text3)">${m.part_no}</span></div>
-              <div class="radio-label-sub">${m.category_name||'-'}</div>
-            </div>
-          </div>`).join('')}
-        <div class="radio-none" onclick="selectDandoriMold('${machine.id}',null,this)">
-          <div class="radio-circle ${!selectedMoldId?'on':''}"></div>
-          <div class="radio-none-label">${t('stopMachine')}</div>
+    return `<div style="border:0.5px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
+      <div style="display:flex;align-items:stretch">
+        <div style="width:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg4);border-right:0.5px solid var(--border);padding:10px;flex-shrink:0">
+          <div style="font-size:18px;font-weight:600;color:var(--text)">#${machine.machine_no}</div>
+          <div style="font-size:10px;color:var(--text4);margin-top:2px">${machine.is_dandori?t('dandori'):t('fixed')}</div>
+        </div>
+        <div style="flex:1;padding:4px 10px">
+          ${machineMolds.map(m=>`
+            <div class="radio-option ${selectedMoldId===m.id?'selected':''}" onclick="selectDandoriMold('${machine.id}','${m.id}',this)" style="padding:6px 6px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px">
+              <div class="radio-circle ${selectedMoldId===m.id?'on':''}"></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;color:var(--text)">${m.part_name}　<span style="font-size:11px;color:var(--text3)">${m.part_no}</span></div>
+                <div style="font-size:10px;color:var(--text4)">${m.category_name||'-'} / ${t('maintInterval')} ${fmtNum(m.maintenance_interval)}shot</div>
+              </div>
+            </div>`).join('')}
+          <div onclick="selectDandoriMold('${machine.id}',null,this)" style="display:flex;align-items:center;gap:8px;padding:5px 6px;cursor:pointer;border-top:0.5px solid var(--border)">
+            <div class="radio-circle ${!selectedMoldId?'on':''}"></div>
+            <div style="font-size:11px;color:var(--text4)">${t('stopMachine')}</div>
+          </div>
         </div>
       </div>
     </div>`;
@@ -2483,8 +2494,8 @@ function renderMasterUsersTable(el) {
       }).join('');
   el.innerHTML = '<div class="toolbar"><div></div>'
     + '<div style="display:flex;gap:6px">'
-    + '<button class="btn btn-secondary" onclick="exportMaster(\'users\')">\u2193 CSV\u30a8\u30af\u30b9\u30dd\u30fc\u30c8</button>'
-    + '<button class="btn btn-secondary" onclick="openImportModal(\'users\')">\u2191 CSV\u30a4\u30f3\u30dd\u30fc\u30c8</button>'
+    + '<button class="btn btn-secondary" onclick="exportMaster(\'users\')">' + t('exportCsv') + '</button>'
+    + '<button class="btn btn-secondary" onclick="openImportModal(\'users\')">' + t('importCsv') + '</button>'
     + '<button class="btn btn-primary" onclick="openAddUserModal()">\uff0b \u30e6\u30fc\u30b6\u30fc\u8ffd\u52a0</button>'
     + '</div></div>'
     + '<div class="table-wrap"><table>' + thead + tbody + '</table></div>';
@@ -5051,8 +5062,11 @@ function renderScheduleBody() {
       const remMin = isOverdue ? 0 : s.lap > 1 ? s.lapRemMin : calcEstimatedRemainingMin(s.mold);
       const overShot = isOverdue?calcOverShot(s.mold):0;
       const overMin = isOverdue?calcEstimatedOverMin(s.mold):0;
+      // バーをシフト範囲内にクランプ
+      const clampedEnd = isCross ? Math.min(s.schedEnd, shiftEnd) : s.schedEnd;
+      const clampedDurMin = (clampedEnd - s.schedStart) / 60000;
       const maintOffset = Math.max(0,Math.min(92,(s.schedStart-shiftStart)/60000/shiftDur*100));
-      const maintWidth = Math.max(4,Math.min(100-maintOffset,s.dur/shiftDur*100));
+      const maintWidth = Math.max(4,Math.min(100-maintOffset, clampedDurMin/shiftDur*100));
       const barRight = maintOffset+maintWidth;
       const timeTagText = `${fmtHM(s.schedStart)}〜${fmtHM(s.schedEnd)}`;
       const timeTag = barRight>=65
@@ -5061,15 +5075,16 @@ function renderScheduleBody() {
       const barBg = isCross?'rgba(124,58,237,0.15)':isOverdue?'var(--overdue-bg)':status==='danger'?'var(--danger-row-bg)':status==='warning'?'var(--warning-bg)':'var(--bg4)';
       const maintBg = isCross?'#7c3aed':isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':status==='warning'?'var(--warning-text)':'var(--success-text)';
       const barTextColor = (status==='warning'||status==='normal')&&!isCross?'#1c1917':'#fff';
+      const crossSuffix = isCross ? `　<span style="font-size:11px;color:#c4b5fd">→${t('shift2')||'次直'}へ</span>` : '';
       const remDisplay = isOverdue
-        ? `${t('overShot')||'超過'} ${fmtNum(overShot)}shot　<span style="font-size:13px;color:${color};font-weight:700">${t('overShot')||'超過'} ${overMin}${t('minuteUnit')}</span>`
+        ? `${t('overShot')||'超過'} ${fmtNum(overShot)}shot　<span style="font-size:13px;color:${color};font-weight:700">${t('overShot')||'超過'} ${overMin}${t('minuteUnit')}</span>${crossSuffix}`
         : remMin<120
-          ? `${t('remainLabel')} ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">${Math.round(remMin)}${t('minuteUnit')}</span>`
-          : `${t('remainLabel')} ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">${(remMin/60).toFixed(1)}h</span>`;
+          ? `${t('remainLabel')} ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">${Math.round(remMin)}${t('minuteUnit')}</span>${crossSuffix}`
+          : `${t('remainLabel')} ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">${(remMin/60).toFixed(1)}h</span>${crossSuffix}`;
 
       // バッジ
       const lapBadge = s.lap>1?`<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">${s.lap}${t('times')||'回目'}</div>`:'';
-      const crossBadge = isCross?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">⚠</div>`:'';
+      const crossBadge = isCross?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">直またぎ</div>`:'';
       const urgentBadge = isOverdue?`<div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;display:inline-block;margin-bottom:7px">${t('immediateMaint')}</div>`:'';;
       const topBadges = urgentBadge+lapBadge+crossBadge;
 
@@ -5109,7 +5124,7 @@ function renderScheduleBody() {
     <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--maint-text)"></div><span style="font-size:11px;color:var(--text3)">${t('needMaint')}</span></div>
     <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#fbbf24"></div><span style="font-size:11px;color:var(--text3)">${t('caution')}</span></div>
     <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--success)"></div><span style="font-size:11px;color:var(--text3)">${t('schedPlan')}</span></div>
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#7c3aed"></div><span style="font-size:11px;color:var(--text3)">→</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#7c3aed"></div><span style="font-size:11px;color:var(--text3)">直またぎ</span></div>
     <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:12px;background:#ef4444"></div><span style="font-size:11px;color:var(--text3)">now</span></div>
   </div>`;
 
