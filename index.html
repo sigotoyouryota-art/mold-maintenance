@@ -68,7 +68,7 @@
   /* ベース背景 */
   --bg: #f1f5f9;
   --bg2: #ffffff;
-  --bg3: #0f172a;
+  --bg3: #e2e8f0;
   --bg4: #e2e8f0;
   --border: #cbd5e1;
   --border2: #94a3b8;
@@ -99,11 +99,11 @@
   /* 警告 */
   --warning: #d97706;
   --warning-bg: #fef3c7;
-  --warning-text: #92400e;
+  --warning-text: #ca8a04;
   /* 成功 */
   --success: #16a34a;
   --success-bg: #dcfce7;
-  --success-text: #15803d;
+  --success-text: #16a34a;
   /* 情報 */
   --info-bg: #eff6ff;
   --info-text: #1d4ed8;
@@ -5197,7 +5197,7 @@ function renderScheduleBody() {
       const lapBadge = (s.lap>1 && !isCont)?`<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">${s.lap}${t('times')||'回目'}</div>`:'';
       const crossBadge = isCont?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">直またぎ継続</div>`:isCross?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">${t('lvCross')}</div>`:'';
       const topBadges = lapBadge+crossBadge;
-      const urgentMsgHtml = isOverdue ? `<div style="display:flex;align-items:center;gap:3px;padding-left:26px;margin-top:1px"><div style="width:4px;height:4px;border-radius:50%;background:#ef4444"></div><span style="font-size:9px;color:#ff6b6b">${t('urgentMsg')}</span></div>` : '';
+      const urgentMsgHtml = isOverdue ? `<div style="display:flex;align-items:center;gap:4px;padding-left:0;margin-top:3px"><div style="width:5px;height:5px;border-radius:50%;background:#ef4444;flex-shrink:0"></div><span style="font-size:10px;color:#ff6b6b;white-space:nowrap">${t('urgentMsg')}</span></div>` : '';
 
       const metaTimeText = (isCross && s.schedStart.getTime() === shiftStart.getTime())
         ? `〜${fmtHM(s.schedEnd)}`
