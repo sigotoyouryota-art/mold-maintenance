@@ -793,7 +793,7 @@ const T = {
     viewTimeline:'タイムライン', viewCard:'カード',
     needMaintCount:'要メンテ', schedCount:'本日予定', doneCount:'完了',
     autoSorted:'優先度順で自動配置',
-    rightNow:'今すぐ!', duration:'所要', minuteUnit:'分',
+    rightNow:'今すぐ!', duration:'所要', minuteUnit:'分', immediateMaint:'即メンテ', overShot:'超過',
     simpleMaintTime:'簡易メンテ所要時間(分)', ohMaintTime:'OHメンテ所要時間(分)',
     shotUpdate:'ショット更新', maintDone2:'メンテ完了',
     lineAlertStatus:'ライン別アラート状況', top5Title:'進捗率が高い金型 TOP5',
@@ -977,7 +977,7 @@ const T = {
     viewTimeline:'Dòng thời gian', viewCard:'Thẻ',
     needMaintCount:'Cần BT', schedCount:'Hôm nay', doneCount:'Hoàn thành',
     autoSorted:'Tự động sắp xếp theo ưu tiên',
-    rightNow:'Ngay bây giờ!', duration:'Thời gian', minuteUnit:'phút',
+    rightNow:'Ngay bây giờ!', duration:'Thời gian', minuteUnit:'phút', immediateMaint:'BT ngay', overShot:'Vượt',
     simpleMaintTime:'Thời gian BT đơn giản(phút)', ohMaintTime:'Thời gian BT tổng hợp(phút)',
     shotUpdate:'Cập nhật shot', maintDone2:'Hoàn thành BT',
     lineAlertStatus:'Cảnh báo theo dây', top5Title:'Top 5 khuôn gần BT nhất',
@@ -1161,7 +1161,7 @@ const T = {
     viewTimeline:'Timeline', viewCard:'Card',
     needMaintCount:'Needs maint.', schedCount:'Today', doneCount:'Done',
     autoSorted:'Auto-sorted by priority',
-    rightNow:'Now!', duration:'Duration', minuteUnit:'min',
+    rightNow:'Now!', duration:'Duration', minuteUnit:'min', immediateMaint:'Maint. NOW', overShot:'Over',
     simpleMaintTime:'Simple maint. time(min)', ohMaintTime:'OH maint. time(min)',
     shotUpdate:'Update shot', maintDone2:'Complete maint.',
     lineAlertStatus:'Alert by line', top5Title:'Top 5 molds near maint.',
@@ -1626,7 +1626,7 @@ function statusMainColor(s) {
   return 'var(--success-text)';
 }
 function statusBadge(s) {
-  if (s==='overdue') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#ef4444;color:#fff;font-weight:700;border:1px solid #fca5a5">${t('needMaint')}</span>`;
+  if (s==='overdue') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#ef4444;color:#fff;font-weight:700;border:1px solid #fca5a5">${t('immediateMaint')}</span>`;
   if (s==='danger') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#f97316;color:#fff;font-weight:700">${t('needMaint')}</span>`;
   if (s==='warning') return `<span class="badge badge-warning">${t('caution')}</span>`;
   return `<span class="badge badge-success">${t('normal')}</span>`;
@@ -4933,15 +4933,15 @@ function renderScheduleBody() {
         const shotNum = isOverdueCard ? fmtNum(calcOverShot(s.mold))
           : s.lap > 1 ? fmtNum(s.lapRemShot)
           : fmtNum(calcEstimatedRemaining(s.mold));
-        const shotSuffix = isOverdueCard ? `shot${t('needMaint')||'超過'}` : `shot${t('remainLabel')||'残'}`;
-        const timeLabel = isOverdueCard ? (calcEstimatedOverMin(s.mold)+t('minuteUnit'))
+        const shotSuffix = isOverdueCard ? `shot ${t('overShot')||'超過'}` : `shot${t('remainLabel')||'残'}`;
+        const timeLabel = isOverdueCard ? ((t('overShot')||'超過')+' '+calcEstimatedOverMin(s.mold)+t('minuteUnit'))
           : s.lap > 1 ? (t('remainLabel')+fmtTime(s.lapRemMin))
           : (t('remainLabel')+fmtTime(calcEstimatedRemainingMin(s.mold)));
         const timeStr = fmtHM(s.schedStart)+'〜'+fmtHM(s.schedEnd);
         // バッジ（2回目以降・直またぎ・緊急）
         const lapBadge = s.lap>1 ? `<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px">${s.lap}${t('times')||'回目'}</div>` : '';
         const crossBadge = isCross ? `<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px">⚠</div>` : '';
-        const urgentBadge = isOverdueCard ? `<div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block">${t('needMaint')}</div>` : '';
+        const urgentBadge = isOverdueCard ? `<div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block">${t('immediateMaint')}</div>` : '';
         const topBadges = lapBadge+crossBadge+urgentBadge;
         let c = '<div style="border-radius:12px;overflow:hidden;border:2px solid '+borderColor+';box-shadow:0 4px 20px '+shadowColor+';margin-bottom:10px;cursor:pointer" onclick="openMaintenanceFromAlert(\''+s.mold.id+'\')">';
         if (topBadges) c += '<div style="padding:6px 14px 0;background:var(--bg2)">'+topBadges+'</div>';
@@ -5019,15 +5019,15 @@ function renderScheduleBody() {
       const maintBg = isCross?'#7c3aed':isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':status==='warning'?'var(--warning-text)':'var(--success-text)';
       const barTextColor = (status==='warning'||status==='normal')&&!isCross?'#1c1917':'#fff';
       const remDisplay = isOverdue
-        ? `${fmtNum(overShot)}shot　<span style="font-size:13px;color:${color};font-weight:700">${overMin}${t('minuteUnit')}</span>`
+        ? `${t('overShot')||'超過'} ${fmtNum(overShot)}shot　<span style="font-size:13px;color:${color};font-weight:700">${t('overShot')||'超過'} ${overMin}${t('minuteUnit')}</span>`
         : remMin<120
           ? `${t('remainLabel')} ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">${Math.round(remMin)}${t('minuteUnit')}</span>`
           : `${t('remainLabel')} ${fmtNum(rem)}shot　<span style="font-size:13px;color:${color};font-weight:700">${(remMin/60).toFixed(1)}h</span>`;
 
       // バッジ
       const lapBadge = s.lap>1?`<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">${s.lap}${t('times')||'回目'}</div>`:'';
-      const crossBadge = isCross?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">⚠</div>`:'';;
-      const urgentBadge = isOverdue?`<div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;display:inline-block;margin-bottom:7px">${t('needMaint')}</div>`:'';;
+      const crossBadge = isCross?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">⚠</div>`:'';
+      const urgentBadge = isOverdue?`<div style="background:var(--overdue-text);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:3px;display:inline-block;margin-bottom:7px">${t('immediateMaint')}</div>`:'';;
       const topBadges = urgentBadge+lapBadge+crossBadge;
 
       const metaHTML = `<div style="width:116px;flex-shrink:0">
@@ -5062,7 +5062,7 @@ function renderScheduleBody() {
 
   // 凡例
   html += `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--overdue-text)"></div><span style="font-size:11px;color:var(--text3)">${t('needMaint')}</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--overdue-text)"></div><span style="font-size:11px;color:var(--text3)">${t('immediateMaint')}</span></div>
     <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:var(--maint-text)"></div><span style="font-size:11px;color:var(--text3)">${t('needMaint')}</span></div>
     <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#fbbf24"></div><span style="font-size:11px;color:var(--text3)">${t('caution')}</span></div>
     <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:10px;border-radius:2px;background:#7c3aed"></div><span style="font-size:11px;color:var(--text3)">→</span></div>
