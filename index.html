@@ -4764,6 +4764,20 @@ function buildAllShifts() {
       }
     }
   }
+  // 4つ目の直を追加（直またぎ用の受け皿）
+  {
+    const prev = shiftRanges[2];
+    const si4 = (curIdx + 3) % 3;
+    const sName4 = SHIFT_ORDER[si4];
+    const prevEndDate = new Date(prev.end); prevEndDate.setHours(0,0,0,0);
+    const range4 = makeShiftRange(sName4, prevEndDate);
+    if (range4.start < prev.end) {
+      const nextDay = new Date(prevEndDate); nextDay.setDate(nextDay.getDate()+1);
+      shiftRanges.push(makeShiftRange(sName4, nextDay));
+    } else {
+      shiftRanges.push(range4);
+    }
+  }
 
   const totalStartMs = shiftRanges[0].start.getTime();
   const totalEndMs   = shiftRanges[2].end.getTime();
@@ -5150,7 +5164,11 @@ function renderScheduleBody() {
       const barBg = isCross?'rgba(124,58,237,0.15)':isOverdue?'var(--overdue-bg)':status==='danger'?'var(--danger-row-bg)':status==='warning'?'var(--warning-bg)':'var(--bg4)';
       const maintBg = isCross?'#7c3aed':isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':status==='warning'?'var(--warning-text)':'var(--success-text)';
       const barTextColor = (status==='warning'||status==='normal')&&!isCross?'#1c1917':'#fff';
-      const crossSuffix = isCont ? `　<span style="font-size:11px;color:#c4b5fd">（${s.fromShift||'前直'}から継続）</span>` : isCross ? `　<span style="font-size:11px;color:#c4b5fd">→${t('shift2')||'次直'}へ</span>` : '';
+      const crossSuffix = isCont
+        ? `　<span style="font-size:11px;color:#c4b5fd">（${s.fromShift||'前直'}から継続）</span>`
+        : (isCross && !isCont)
+          ? `　<span style="font-size:11px;color:#c4b5fd">→次の直へ継続</span>`
+          : '';
       const remDisplay = isOverdue
         ? `${t('overShot')||'超過'} ${fmtNum(overShot)}shot　<span style="font-size:13px;color:${color};font-weight:700">${t('overShot')||'超過'} ${overMin}${t('minuteUnit')}</span>${crossSuffix}`
         : remMin<120
