@@ -5151,9 +5151,11 @@ function renderScheduleBody() {
       const overMin = isOverdue?calcEstimatedOverMin(s.mold):0;
       // バーをシフト範囲内にクランプ
       const clampedEnd = isCross ? Math.min(s.schedEnd, shiftEnd) : s.schedEnd;
-      const clampedDurMin = (clampedEnd - s.schedStart) / 60000;
-      const maintOffset = Math.max(0,Math.min(92,(s.schedStart-shiftStart)/60000/shiftDur*100));
-      const maintWidth = Math.max(4,Math.min(100-maintOffset, clampedDurMin/shiftDur*100));
+      const clampedDurMin = Math.max(0, (clampedEnd - s.schedStart) / 60000);
+      const rawOffset = (s.schedStart-shiftStart)/60000/shiftDur*100;
+      const maintOffset = isCross ? Math.max(0, Math.min(99, rawOffset)) : Math.max(0,Math.min(92, rawOffset));
+      const rawWidth = clampedDurMin/shiftDur*100;
+      const maintWidth = isCross ? Math.max(1, Math.min(100-maintOffset, rawWidth)) : Math.max(4,Math.min(100-maintOffset, rawWidth));
       const barRight = maintOffset+maintWidth;
       const timeTagText = (isCross && s.schedStart.getTime() === shiftStart.getTime())
         ? `〜${fmtHM(s.schedEnd)}`
