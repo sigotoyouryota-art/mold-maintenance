@@ -13,6 +13,30 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MenteLog">
 <meta name="theme-color" content="#161d2e">
+<script>
+(function(){
+  // ホーム画面アイコン用 Web App Manifest を動的生成（Android Chrome対応）
+  const iconHref = document.querySelector('link[rel="apple-touch-icon"]')?.href;
+  if (!iconHref) return;
+  const manifest = {
+    name: 'MenteLog',
+    short_name: 'MenteLog',
+    start_url: './',
+    display: 'standalone',
+    background_color: '#161d2e',
+    theme_color: '#161d2e',
+    icons: [
+      { src: iconHref, sizes: '128x128', type: 'image/png', purpose: 'any maskable' }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = url;
+  document.currentScript.parentNode.insertBefore(link, document.currentScript.nextSibling);
+})();
+</script>
 
 <title>MenteLog</title>
 <meta name="app-version" content="1.5.1">
@@ -2244,7 +2268,7 @@ function renderDandoriMachines() {
   el.innerHTML = machines.map(machine => {
     const machineMolds = state.molds.filter(m=>m.machine_no===machine.machine_no);
     const selectedMoldId = dandoriData[machine.id];
-    return `<div style="border:0.5px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
+    return `<div class="dandori-card" style="border:0.5px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
       <div style="display:flex;align-items:stretch">
         <div style="width:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg4);border-right:0.5px solid var(--border);padding:10px;flex-shrink:0">
           <div style="font-size:18px;font-weight:600;color:var(--text)">#${machine.machine_no}</div>
@@ -5011,17 +5035,13 @@ function renderScheduleBody() {
   const curShiftName = h>=8&&h<16?'1S':h>=16?'2S':'3S';
 
   // ===== シフトヘッダー生成 =====
-  function makeShiftHeader(shiftData) {
+  function makeShiftHeader(shiftData, shiftIndex) {
     const { shiftName, shiftStart } = shiftData;
-    const isCurrent = shiftName === curShiftName && shiftStart.getDate() === now.getDate();
-    // 翌日判定：shiftStartの日付がtodayより後
-    const shiftDay = new Date(shiftStart); shiftDay.setHours(0,0,0,0);
-    const isNextDay = shiftDay.getTime() > today.getTime();
-    const badge = isCurrent
-      ? `<div style="font-size:10px;background:var(--info-bg);color:var(--info-text);padding:2px 8px;border-radius:4px;margin-left:auto">${t('shift')}</div>`
-      : isNextDay
-        ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">+1d</div>`
-        : '';
+    // 1S・2S・3S（index 0-2）は「当日」、それ以降（index 3）は「翌日」
+    const isNextWorkDay = shiftIndex >= 3;
+    const badge = isNextWorkDay
+      ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">翌日</div>`
+      : `<div style="font-size:10px;background:var(--info-bg);color:var(--info-text);padding:2px 8px;border-radius:4px;margin-left:auto">当日</div>`;
     return `<div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px">
       <div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>
       <span style="font-size:11px;font-weight:600;color:var(--info-text)">${SHIFT_LABELS[shiftName]}</span>
@@ -5033,9 +5053,9 @@ function renderScheduleBody() {
   if (scheduleView === 'card') {
     let html = '';
     let globalRank = 0;
-    allData.forEach(shiftData => {
+    allData.forEach((shiftData, shiftIdx) => {
       if (!shiftData.scheduled.length) return;
-      html += makeShiftHeader(shiftData);
+      html += makeShiftHeader(shiftData, shiftIdx);
       html += shiftData.scheduled.map(s => {
         globalRank++;
         const isOverdueCard = s.status === 'overdue';
@@ -5117,14 +5137,14 @@ function renderScheduleBody() {
   // ===== タイムラインビュー =====
   let html = '';
   let globalRank = 0;
-  allData.forEach(shiftData => {
+  allData.forEach((shiftData, shiftIdx) => {
     if (!shiftData.scheduled.length) return;
     const { shiftStart, shiftEnd, scheduled } = shiftData;
     const shiftDur = (shiftEnd - shiftStart) / 60000;
     const isCurShift = shiftData.shiftName === curShiftName && shiftStart.getDate() === now.getDate();
     const nowOffset = isCurShift ? Math.max(0,Math.min(100,(now-shiftStart)/60000/shiftDur*100)) : -1;
 
-    html += makeShiftHeader(shiftData);
+    html += makeShiftHeader(shiftData, shiftIdx);
 
     // 時間軸（上）
     const axisInner = [0,2,4,6,8].map(i=>{
