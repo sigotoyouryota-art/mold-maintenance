@@ -53,7 +53,7 @@
   /* 警告 */
   --warning: #f59e0b;
   --warning-bg: rgba(245,158,11,0.15);
-  --warning-text: #fcd34d;
+  --warning-text: #eab308;
   /* 成功 */
   --success: #22c55e;
   --success-bg: rgba(34,197,94,0.15);
@@ -2104,7 +2104,7 @@ async function loadHistory() {
       return card;
     }).join('')}</div>`;
 
-    el.innerHTML = tableHTML + cardsHTML;
+    el.innerHTML = cardsHTML;
     if (histEditMode) updateHistDeleteBar();
   } catch(e) {
     console.error('loadHistory:', e);
@@ -4619,7 +4619,7 @@ const SHIFT_HOURS = { '1S': [8,16], '2S': [16,24], '3S': [0,8] };
 let scheduleShift = 'all';
 let scheduleView = 'timeline'; // 'card' | 'timeline'
 
-function renderSchedule(el) {
+async function renderSchedule(el) {
   const now = new Date();
   const h = now.getHours();
   const curShift = h>=8&&h<16?'1S':h>=16?'2S':'3S';
@@ -4638,11 +4638,32 @@ function renderSchedule(el) {
       <span style="font-size:9px;color:var(--text4);margin-left:auto">${t('autoSorted')}</span>
     </div>
   </div>
-  <div id="sched-body" style="padding:10px 14px"></div>`;
+  <div id="sched-body" style="padding:10px 14px"><div class="loading-overlay"><div class="spinner"></div></div></div>`;
+  // 段取りデータをロード（スケジュールフィルタ用）
+  await loadDandoriForSchedule();
   renderScheduleBody();
 }
 
 // setSchedShift: タブ廃止により削除
+
+async function loadDandoriForSchedule() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    let settings = await sb('dandori_settings','GET',null,
+      `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
+    if (!settings || settings.length === 0) {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoStr = weekAgo.toISOString().split('T')[0];
+      settings = await sb('dandori_settings','GET',null,
+        `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
+    }
+    dandoriData = {};
+    (settings||[]).forEach(s => { if (s.mold_id) dandoriData[s.machine_id] = s.mold_id; });
+  } catch(e) {
+    console.error('loadDandoriForSchedule error:', e);
+  }
+}
 
 function renderAllSchedule() {
   // 全直のスケジュールを時系列で表示
