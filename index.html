@@ -2255,7 +2255,7 @@ function renderDandoriMachines() {
             <div class="radio-option ${selectedMoldId===m.id?'selected':''}" onclick="selectDandoriMold('${machine.id}','${m.id}',this)" style="padding:6px 6px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px">
               <div class="radio-circle ${selectedMoldId===m.id?'on':''}"></div>
               <div style="flex:1;min-width:0">
-                <div style="font-size:13px;color:var(--text)">${m.part_name}　<span style="font-size:11px;color:var(--text3)">${m.part_no}</span></div>
+                <div style="font-size:13px;color:var(--text)">${m.part_name}　<span style="font-size:11px;color:var(--text3)">${m.part_no}</span>${m.model_no?`　<span style="font-size:10px;color:var(--text4)">型${m.model_no}</span>`:''}</div>
                 <div style="font-size:10px;color:var(--text4)">${m.category_name||'-'} / ${t('maintInterval')} ${fmtNum(m.maintenance_interval)}shot</div>
               </div>
             </div>`).join('')}
@@ -4313,12 +4313,13 @@ let shotUpdateInputVal = '';
 let shotUpdateDoneIds = new Set();
 let shotUpdateSelectedMoldId = null; // 入力画面で選択中の金型ID
 
-function renderShotUpdate(el) {
-  if (shotUpdateView === 'input' && shotUpdateMachineId) {
-    renderShotUpdateInput(el);
-  } else {
-    renderShotUpdateGrid(el);
-  }
+async function renderShotUpdate(el) {
+  // セクション切替時は常にグリッド表示にリセット
+  shotUpdateView = 'grid';
+  shotUpdateMachineId = null;
+  // 段取りデータをロード
+  await loadDandoriForSchedule();
+  renderShotUpdateGrid(el);
 }
 
 function renderShotUpdateGrid(el) {
@@ -4434,7 +4435,9 @@ function renderShotUpdateInput(el) {
   if (!molds.length) { shotUpdateView = 'grid'; renderShotUpdateGrid(el); return; }
 
   // 選択中のmoldId優先、なければdandori設定、なければ先頭
-  const dandoriMoldId = dandoriData[molds[0] && molds[0].machine_id];
+  // dandoriDataはmachine.id(machinesテーブル)をキーとしているので、machine_noからmachine.idを引く
+  const machineObj = state.machines.find(function(mc) { return String(mc.machine_no) === String(machineNo); });
+  const dandoriMoldId = machineObj ? dandoriData[machineObj.id] : null;
   const currentMold = (shotUpdateSelectedMoldId ? molds.find(function(m){ return m.id === shotUpdateSelectedMoldId; }) : null)
     || (dandoriMoldId ? molds.find(function(m) { return m.id === dandoriMoldId; }) : null)
     || molds[0];
@@ -4458,7 +4461,7 @@ function renderShotUpdateInput(el) {
     keypadHTML += '<div class="su-key" data-k="' + k + '" style="height:46px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:7px;font-size:' + fs + ';font-weight:500;color:' + color + ';cursor:pointer">' + k + '</div>';
   });
 
-  var dandoriMoldIdForBtn = dandoriData[molds[0] && molds[0].machine_id];
+  var dandoriMoldIdForBtn = machineObj ? dandoriData[machineObj.id] : null;
   var defaultMoldId = dandoriMoldIdForBtn
     ? (molds.find(function(m){ return m.id===dandoriMoldIdForBtn; }) ? dandoriMoldIdForBtn : (molds[0]&&molds[0].id))
     : (molds[0]&&molds[0].id);
@@ -4551,7 +4554,8 @@ function showSuMoldSelect() {
   if (!molds.length) return;
 
   // shotUpdateSelectedMoldId優先、なければdandori、なければ先頭
-  const dandoriMoldId = dandoriData[molds[0] && molds[0].machine_id];
+  const machineObj2 = state.machines.find(function(mc) { return String(mc.machine_no) === String(machineNo); });
+  const dandoriMoldId = machineObj2 ? dandoriData[machineObj2.id] : null;
   const currentMoldId = shotUpdateSelectedMoldId
     ? shotUpdateSelectedMoldId
     : dandoriMoldId
