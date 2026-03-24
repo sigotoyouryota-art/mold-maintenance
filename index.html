@@ -766,7 +766,11 @@ async function sb(table, method='GET', body=null, query='') {
     },
     body: body ? JSON.stringify(body) : null
   });
-  if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  if (!res.ok) {
+    const detail = await res.text();
+    console.error(`[API Error] ${method} ${table}:`, detail); // 開発者だけが見れる
+    throw new Error(t('connError')); // ユーザーには汎用メッセージのみ
+  }
   const text = await res.text();
   return text ? JSON.parse(text) : null;
 }
@@ -1752,6 +1756,7 @@ async function handlePinSet() {
 }
 
 function doLogout() {
+  stopRealtimeUpdate(); // タイマーを確実に停止
   state.currentUser = null;
   localStorage.removeItem('currentUser');
   showPage('login');
@@ -2479,7 +2484,7 @@ async function loadHistory() {
     if (histEditMode) updateHistDeleteBar();
   } catch(e) {
     console.error('loadHistory:', e);
-    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger-text)">${t('loadError')}: ${e.message}</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger-text)">${t('loadError')}: ${esc(e.message)}</div>`;
   }
 }
 
@@ -2662,7 +2667,7 @@ async function saveDandori() {
 
     if (records.length > 0) {
       // 1回のPOSTで一括upsert（同じ日・機械・直があれば更新、なければ新規）
-      const url = `${SUPABASE_URL}/rest/v1/dandori_settings`;
+      const url = `${SUPABASE_URL}/rest/v1/dandori_settings?on_conflict=setting_date,machine_id,shift`;
       const res = await fetch(url, {
         method: 'POST',
         headers: {
@@ -4034,13 +4039,27 @@ function styleReportSheet(ws, data, hasHeader=false) {
 
 async function loadSheetJS() {
   if (window.XLSX) return;
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
+  const cdns = [
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  ];
+  for (const src of cdns) {
+    try {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        const timeout = setTimeout(() => { reject(new Error('timeout')); }, 10000);
+        script.onload = () => { clearTimeout(timeout); resolve(); };
+        document.head.appendChild(script);
+      });
+      if (window.XLSX) return; // 成功
+    } catch(e) {
+      console.warn('SheetJS load failed from:', src, e);
+    }
+  }
+  throw new Error('SheetJSの読み込みに失敗しました。ネットワーク接続を確認してください。');
 }
 
 // ===== CSVバックアップ =====
@@ -4057,8 +4076,8 @@ async function backupAllData() {
       sb('lines','GET',null,'?order=sort_order'),
       sb('users','GET',null,'?order=name'),
       sb('mold_categories','GET',null,'?order=sort_order'),
-      sb('maintenance_logs','GET',null,'?order=performed_at.desc&limit=1000'),
-      sb('shot_logs','GET',null,'?order=logged_at.desc&limit=1000'),
+      sb('maintenance_logs','GET',null,'?order=performed_at.desc&limit=10000'),
+      sb('shot_logs','GET',null,'?order=logged_at.desc&limit=10000'),
     ]);
 
     const sheets = [
@@ -4543,19 +4562,25 @@ function stopRealtimeUpdate() {
 }
 
 // ===== 30秒ポーリング（他端末の更新を同期） =====
+let isPolling = false; // 重複防止フラグ
+
+async function pollOnce() {
+  if (isPolling) return; // 前回が完了していなければスキップ
+  isPolling = true;
+  try {
+    await loadMolds();
+    updateRealtimeDisplay();
+    if (state.currentSection === 'dashboard') {
+      const content = document.getElementById('main-content');
+      if (content) renderDashboard(content);
+    }
+  } catch(e) { console.warn('Polling error:', e); }
+  finally { isPolling = false; }
+}
+
 function startPolling() {
   stopPolling();
-  pollingTimer = setInterval(async () => {
-    try {
-      await loadMolds();
-      updateRealtimeDisplay();
-      // ダッシュボード表示中ならポーリング時に再描画
-      if (state.currentSection === 'dashboard') {
-        const content = document.getElementById('main-content');
-        if (content) renderDashboard(content);
-      }
-    } catch(e) { console.warn('Polling error:', e); }
-  }, POLLING_INTERVAL);
+  pollingTimer = setInterval(pollOnce, POLLING_INTERVAL);
 }
 
 function stopPolling() {
@@ -4563,17 +4588,10 @@ function stopPolling() {
 }
 
 // バックグラウンド復帰時に即座にデータ再取得
-document.addEventListener('visibilitychange', async () => {
+document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && state.currentUser) {
-    try {
-      await loadMolds();
-      updateRealtimeDisplay();
-      if (state.currentSection === 'dashboard') {
-        const content = document.getElementById('main-content');
-        if (content) renderDashboard(content);
-      }
-      startPolling(); // タイマーをリセットして再開
-    } catch(e) { console.warn('Visibility reload error:', e); }
+    pollOnce(); // ガード付きなので重複しない
+    startPolling(); // タイマーをリセットして再開
   }
 });
 
@@ -5869,7 +5887,7 @@ async function renderAnalysisList(el) {
       }).join('')}
     </div>`;
   } catch(e) {
-    el.innerHTML = `<div style="padding:20px;color:var(--danger-text)">${t('loadError')}: ${e.message}</div>`;
+    el.innerHTML = `<div style="padding:20px;color:var(--danger-text)">${t('loadError')}: ${esc(e.message)}</div>`;
     console.error(e);
   }
 }
@@ -6006,7 +6024,7 @@ async function renderAnalysisDetail(el, moldId) {
       </div>
     </div>`;
   } catch(e) {
-    el.innerHTML = `<div style="padding:20px;color:var(--danger-text)">${t('loadError')}: ${e.message}</div>`;
+    el.innerHTML = `<div style="padding:20px;color:var(--danger-text)">${t('loadError')}: ${esc(e.message)}</div>`;
     console.error(e);
   }
 }
