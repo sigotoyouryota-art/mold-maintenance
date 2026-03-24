@@ -4806,8 +4806,8 @@ function buildAllShifts() {
   // 段取りで選択されている金型IDのセット
   const dandoriMoldIds = new Set(Object.values(dandoriData).filter(Boolean));
 
-  // まず段取り選択済み金型の1回目エントリを作る
-  const allDandoriMolds = state.molds.filter(mold => dandoriMoldIds.size === 0 || dandoriMoldIds.has(mold.id));
+  // 段取り設定で選択された金型のみをスケジュール対象にする（未選択時は空）
+  const allDandoriMolds = state.molds.filter(mold => dandoriMoldIds.has(mold.id));
   // 未入力金型を分離
   const unregisteredMolds = allDandoriMolds.filter(mold => isShotUnregistered(mold));
   let entries = allDandoriMolds.filter(mold => !isShotUnregistered(mold)).map(mold => {
