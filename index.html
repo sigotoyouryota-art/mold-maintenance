@@ -4803,11 +4803,19 @@ function buildAllShifts() {
   const FALLBACK_CYCLE = 30;
   const baseMs = Math.max(nowMs, totalStartMs);
 
-  // 段取りで選択されている金型IDのセット
+  // 段取り設定で各機械に割り当てられている金型のみをスケジュール対象にする
+  // dandoriData = { machine_id: mold_id } なので、金型の所属機械IDから段取り選択を判定
   const dandoriMoldIds = new Set(Object.values(dandoriData).filter(Boolean));
 
-  // 段取り設定で選択された金型のみをスケジュール対象にする（未選択時は空）
-  const allDandoriMolds = state.molds.filter(mold => dandoriMoldIds.has(mold.id));
+  const allDandoriMolds = state.molds.filter(mold => {
+    // 金型の所属機械IDを取得し、その機械の段取りで選択されている金型IDと一致するか確認
+    const machineId = mold.machine_id;
+    if (machineId && dandoriData[machineId]) {
+      return dandoriData[machineId] === mold.id;
+    }
+    // machine_idがない場合はmold.idがdandoriの値に含まれるかでフォールバック
+    return dandoriMoldIds.has(mold.id);
+  });
   // 未入力金型を分離
   const unregisteredMolds = allDandoriMolds.filter(mold => isShotUnregistered(mold));
   let entries = allDandoriMolds.filter(mold => !isShotUnregistered(mold)).map(mold => {
