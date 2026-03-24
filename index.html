@@ -4707,7 +4707,13 @@ function updateRealtimeDisplay() {
   }
 
   // 一覧テーブルのリアルタイム更新（DOM操作で高速更新）
+  // 段取り未設定判定用: dandoriDataにmold.idが含まれているかチェック
+  const dandoriMoldIds = Object.keys(dandoriData).length > 0 ? new Set(Object.values(dandoriData)) : null;
+
   state.molds.forEach(mold => {
+    // 段取り未設定の金型はリアルタイム更新をスキップ（dim表示を維持）
+    if (dandoriMoldIds && !dandoriMoldIds.has(mold.id)) return;
+
     const status = calcStatus(mold);
     const isOverdue = status === 'overdue';
     const overShot = isOverdue ? calcOverShot(mold) : 0;
