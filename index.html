@@ -2156,26 +2156,24 @@ function setHistFilter(filter, el) {
 async function renderDandori(el) {
   const lines = state.lines;
   el.innerHTML = `
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0;flex-wrap:wrap;gap:8px">
-    <div class="seg-wrap" style="margin:0" id="dandori-seg" style="flex:1">
-      ${lines.map((l,i)=>`<button class="seg-btn ${i===0?'active':''}" onclick="setDandoriFilter('${l.name}',this)" style="font-size:10px">${l.name}</button>`).join('')}
-    </div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)">
-        <div style="width:16px;height:16px;border-radius:3px;border:1.5px solid var(--border2);background:${state.dandoriDandoriOnly?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:11px;color:#1c1917;cursor:pointer" onclick="toggleDandoriFilter(this)" id="dandori-check">${state.dandoriDandoriOnly?'✓':''}</div>
+  <div style="position:sticky;top:0;z-index:20;background:var(--bg3);border-bottom:0.5px solid var(--border);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:0">
+      <div class="seg-wrap" style="margin:0" id="dandori-seg">
+        ${lines.map((l,i)=>`<button class="seg-btn ${i===0?'active':''}" onclick="setDandoriFilter('${l.name}',this)" style="font-size:10px">${l.name}</button>`).join('')}
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text2);white-space:nowrap">
+        <div style="width:15px;height:15px;border-radius:3px;border:1.5px solid var(--border2);background:${state.dandoriDandoriOnly?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:10px;color:#1c1917;cursor:pointer;flex-shrink:0" onclick="toggleDandoriFilter(this)" id="dandori-check">${state.dandoriDandoriOnly?'✓':''}</div>
         ${t('dandoriOnly')}
       </label>
-      <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text4)">
-        <div style="width:6px;height:6px;border-radius:50%;background:var(--success)"></div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text4);white-space:nowrap">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--success);flex-shrink:0"></div>
         ${t('dandoriAutoLoaded')}
       </div>
     </div>
+    <div class="btn btn-primary" onclick="saveDandori()" style="padding:8px 18px;white-space:nowrap;flex-shrink:0" id="dandori-save-btn"></div>
   </div>
   <div id="dandori-body" style="padding:8px 16px">
     <div class="loading-overlay"><div class="spinner"></div></div>
-  </div>
-  <div style="padding:0 16px 16px">
-    <div class="btn btn-primary" onclick="saveDandori()" style="width:100%;padding:12px" id="dandori-save-btn"></div>
   </div>`;
 
   state.dandoriFilter = lines[0]?.name || 'all';
@@ -4308,6 +4306,7 @@ async function renderShotUpdate(el) {
   // セクション切替時は常にグリッド表示にリセット
   shotUpdateView = 'grid';
   shotUpdateMachineId = null;
+  window.suLineFilterVal = t('allLine');
   // 段取りデータをロード
   await loadDandoriForSchedule();
   renderShotUpdateGrid(el);
@@ -4315,23 +4314,30 @@ async function renderShotUpdate(el) {
 
 function renderShotUpdateGrid(el) {
   const doneCount = shotUpdateDoneIds.size;
-  const suLineFilter = window.suLineFilterVal || t('allLine');
+  const ALL_LINE = t('allLine');
+  const suLineFilter = window.suLineFilterVal || ALL_LINE;
 
-  const machineMap = {};
+  // state.machinesを基準に全機番を収集（金型未設定の機番も含む）
+  const machineList = (state.machines || []).map(function(mc) {
+    const line = (state.lines || []).find(function(l) { return l.id === mc.line_id; });
+    return { machine_no: String(mc.machine_no || '?'), line_name: line ? line.name : '', machine_id: mc.id };
+  });
+  // state.moldsにしか存在しない機番も追加（後方互換）
   state.molds.forEach(function(m) {
     const key = String(m.machine_no || '?');
-    if (!machineMap[key]) machineMap[key] = { machine_no: key, line_name: m.line_name };
+    if (!machineList.find(function(mc) { return mc.machine_no === key; })) {
+      machineList.push({ machine_no: key, line_name: m.line_name || '', machine_id: null });
+    }
   });
-
-  const sorted = Object.values(machineMap).sort(function(a, b) {
+  machineList.sort(function(a, b) {
     return (parseInt(a.machine_no) || 0) - (parseInt(b.machine_no) || 0);
   });
 
-  const totalMachines = sorted.length;
-  const lineNamesFromMolds = new Set(sorted.map(function(m) { return m.line_name; }).filter(Boolean));
-  const lineNamesFromState = new Set((state.lines || []).map(function(l) { return l.name; }).filter(Boolean));
-  const allLineNames = Array.from(new Set([...lineNamesFromMolds, ...lineNamesFromState])).sort();
-  const lines = [t('allLine')].concat(allLineNames);
+  // state.linesをそのまま使用してABC全ラインを確実に表示
+  const lineNames = (state.lines || []).map(function(l) { return l.name; });
+  const lines = [ALL_LINE].concat(lineNames);
+
+  const totalMachines = machineList.length;
   const pct = totalMachines > 0 ? Math.round(doneCount / totalMachines * 100) : 0;
 
   let lineTabHTML = '';
@@ -4340,38 +4346,69 @@ function renderShotUpdateGrid(el) {
     lineTabHTML += '<button class="seg-btn' + active + '" style="padding:5px 10px;font-size:11px">' + l + '</button>';
   });
 
+  // dandoriDataをもとに「段取り設定済み」かどうかを判定
+  // dandoriDataのキーはmachine_id。machineListのmachine_idと照合
+  let hasInactiveMachine = false;
   let gridHTML = '';
-  sorted.forEach(function(m) {
+  machineList.forEach(function(m) {
     const isDone = shotUpdateDoneIds.has(m.machine_no);
-    const hidden = (suLineFilter !== t('allLine') && m.line_name !== suLineFilter) ? 'display:none;' : '';
-    // 未入力チェック: この機番に紐づく金型が全てisShotUnregisteredか
+    const hidden = (suLineFilter !== ALL_LINE && m.line_name !== suLineFilter) ? 'display:none;' : '';
     const moldsForMachine = state.molds.filter(function(mol) { return String(mol.machine_no) === String(m.machine_no); });
-    const isUnreg = moldsForMachine.length > 0 && moldsForMachine.every(function(mol) { return isShotUnregistered(mol); });
-    const border = isDone ? '0.5px solid var(--success-text)' : isUnreg ? '1px dashed var(--warning)' : '0.5px solid var(--border)';
-    const bg = isDone ? 'var(--success-bg)' : 'var(--bg2)';
-    const tc = isDone ? 'var(--success-text)' : isUnreg ? 'var(--text4)' : 'var(--text)';
-    const sub = isDone
-      ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">\u6e08\u2713</div>'
-      : isUnreg
-        ? '<div style="font-size:8px;color:var(--warning-text);margin-top:3px">' + t('shotUnregistered') + '</div>'
-        : '<div style="width:5px;height:5px;border-radius:50%;background:var(--border2);margin:3px auto 0"></div>';
-    gridHTML += '<div class="su-machine-btn" data-mno="' + m.machine_no + '" data-line="' + (m.line_name || '') + '"'
-      + ' style="' + hidden + 'padding:9px 4px;border:' + border + ';border-radius:8px;text-align:center;background:' + bg + ';cursor:pointer">'
-      + '<div style="font-size:14px;font-weight:500;color:' + tc + '">#' + m.machine_no + '</div>'
-      + sub + '</div>';
+
+    // 段取り未設定判定: dandoriDataにmachine_idが存在しないまたはmold_idがnull
+    const isInactive = m.machine_id
+      ? (!dandoriData.hasOwnProperty(m.machine_id) || dandoriData[m.machine_id] == null)
+      : moldsForMachine.length === 0;
+
+    if (isInactive) hasInactiveMachine = true;
+
+    // 未入力チェック（段取り設定済みで金型あるがshot未入力）
+    const isUnreg = !isInactive && moldsForMachine.length > 0 && moldsForMachine.every(function(mol) { return isShotUnregistered(mol); });
+
+    if (isInactive) {
+      // 未設定・停止中の機番 — 選択不可スタイル
+      gridHTML += '<div class="su-machine-disabled" data-line="' + (m.line_name || '') + '"'
+        + ' style="' + hidden + 'padding:9px 4px;border:1.5px dashed var(--border);border-radius:8px;text-align:center;background:var(--bg3);opacity:0.5;cursor:not-allowed;">'
+        + '<div style="font-size:14px;font-weight:500;color:var(--text4)">#' + m.machine_no + '</div>'
+        + '<div style="font-size:8px;color:var(--text4);margin-top:3px">未設定</div>'
+        + '</div>';
+    } else {
+      const border = isDone ? '0.5px solid var(--success-text)' : isUnreg ? '1px dashed var(--warning)' : '0.5px solid var(--border)';
+      const bg = isDone ? 'var(--success-bg)' : 'var(--bg2)';
+      const tc = isDone ? 'var(--success-text)' : isUnreg ? 'var(--text4)' : 'var(--text)';
+      const sub = isDone
+        ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">済✓</div>'
+        : isUnreg
+          ? '<div style="font-size:8px;color:var(--warning-text);margin-top:3px">未入力</div>'
+          : '<div style="width:5px;height:5px;border-radius:50%;background:var(--border2);margin:3px auto 0"></div>';
+      gridHTML += '<div class="su-machine-btn" data-mno="' + m.machine_no + '" data-line="' + (m.line_name || '') + '"'
+        + ' style="' + hidden + 'padding:9px 4px;border:' + border + ';border-radius:8px;text-align:center;background:' + bg + ';cursor:pointer">'
+        + '<div style="font-size:14px;font-weight:500;color:' + tc + '">#' + m.machine_no + '</div>'
+        + sub + '</div>';
+    }
   });
 
+  // 注意書きバナー（未設定機番が存在する場合のみ表示）
+  const noticeBanner = hasInactiveMachine
+    ? '<div style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--warning-bg);border-bottom:0.5px solid var(--border)">'
+      + '<div style="width:5px;height:5px;border-radius:50%;background:var(--warning);flex-shrink:0"></div>'
+      + '<span style="font-size:11px;color:var(--warning-text)">段取り設定済みの機番のみ更新できます</span>'
+      + '</div>'
+    : '';
+
   el.innerHTML = '<div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">'
-    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">\u30b7\u30e7\u30c3\u30c8\u6570\u66f4\u65b0</div>'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">ショット数更新</div>'
     + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
     + '<div style="display:flex;gap:3px;background:var(--bg3);border-radius:6px;padding:3px" id="su-line-seg">' + lineTabHTML + '</div>'
-    + '<span style="margin-left:auto;font-size:12px;color:var(--text3)">' + doneCount + ' / ' + totalMachines + ' \u5b8c\u4e86</span>'
+    + '<span style="margin-left:auto;font-size:12px;color:var(--text3)">' + doneCount + ' / ' + totalMachines + ' 完了</span>'
     + '</div></div>'
+    + noticeBanner
     + '<div style="height:3px;background:var(--border)"><div style="height:100%;width:' + pct + '%;background:var(--info-text);transition:width 0.3s"></div></div>'
     + '<div id="su-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;padding:10px 12px">' + gridHTML + '</div>'
-    + '<div style="padding:4px 12px 12px;display:flex;gap:10px;justify-content:center">'
-    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--success-text)"></div><span style="font-size:10px;color:var(--text3)">\u66f4\u65b0\u6e08</span></div>'
-    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:5px;height:5px;border-radius:50%;background:var(--border2)"></div><span style="font-size:10px;color:var(--text3)">\u672a\u5165\u529b</span></div>'
+    + '<div style="padding:4px 12px 12px;display:flex;gap:12px;justify-content:center">'
+    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:7px;height:7px;border-radius:50%;background:var(--success-text)"></div><span style="font-size:10px;color:var(--text3)">更新済</span></div>'
+    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:5px;height:5px;border-radius:50%;background:var(--border2)"></div><span style="font-size:10px;color:var(--text3)">未入力</span></div>'
+    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border:1.5px dashed var(--border);border-radius:2px"></div><span style="font-size:10px;color:var(--text3)">段取り未設定</span></div>'
     + '</div>';
 
   // addEventListener でクリックイベントを登録
@@ -4390,9 +4427,10 @@ function renderShotUpdateGrid(el) {
         window.suLineFilterVal = l;
         btns.forEach(function(b) { b.classList.remove('active'); });
         btns[i].classList.add('active');
-        grid.querySelectorAll('.su-machine-btn').forEach(function(item) {
+        if (!grid) return;
+        grid.querySelectorAll('.su-machine-btn, .su-machine-disabled').forEach(function(item) {
           var itemLine = item.getAttribute('data-line');
-          item.style.display = (l === '\u5168\u3066' || itemLine === l) ? '' : 'none';
+          item.style.display = (l === ALL_LINE || itemLine === l) ? '' : 'none';
         });
       });
     });
@@ -4401,13 +4439,14 @@ function renderShotUpdateGrid(el) {
 
 
 function setSuLineFilter(line, btn) {
-  window.suLineFilterVal = line || t('allLine');
+  const ALL_LINE = t('allLine');
+  window.suLineFilterVal = line || ALL_LINE;
   document.querySelectorAll('#su-line-seg .seg-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const grid = document.getElementById('su-grid');
   if (!grid) return;
-  grid.querySelectorAll('[data-line]').forEach(el => {
-    el.style.display = (line === t('allLine') || el.dataset.line === line) ? '' : 'none';
+  grid.querySelectorAll('.su-machine-btn, .su-machine-disabled').forEach(el => {
+    el.style.display = (line === ALL_LINE || el.dataset.line === line) ? '' : 'none';
   });
 }
 
