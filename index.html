@@ -1520,6 +1520,7 @@ function doLogin() {
   state.currentShift = selectedShift;
   localStorage.setItem('currentUser', JSON.stringify(user));
   localStorage.setItem('currentShift', selectedShift);
+  localStorage.setItem('lastSection', 'dashboard');
   initMainPage();
 }
 
