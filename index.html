@@ -757,7 +757,7 @@ const T = {
     worker:'作業者', confirmTitle:'登録内容を確認', back:'戻る', register:'登録する',
     maintType:'メンテ種別', resetStatus:'カウンター', withReset:'リセットあり', noReset:'リセットなし',
     shotCount:'実施shot数', shift:'直', detail:'詳細', simple:'簡易',
-    dandoriOnly:'段替え号機のみ', operating:'稼働中', prevConfig:'前回構成を自動引継済み',
+    dandoriOnly:'段取り未設定', operating:'段取り設定中', men:'面', prevConfig:'前回構成を自動引継済み',
     saveConfig:'の設定を保存', stopMachine:'停止中', dandori:'段替え', fixed:'固定',
     oh:'OH', prevShot:'前回', limit:'上限', cycleTime:'サイクル',
     weeklyComplete:'今週完了', monthlyComplete:'今月完了', prevWeek:'先週比',
@@ -948,7 +948,7 @@ const T = {
     worker:'Công nhân', confirmTitle:'Xác nhận nội dung', back:'Quay lại', register:'Đăng ký',
     maintType:'Loại BT', resetStatus:'Bộ đếm', withReset:'Có reset', noReset:'Không reset',
     shotCount:'Số shot thực hiện', shift:'Ca', detail:'Chi tiết', simple:'Đơn giản',
-    dandoriOnly:'Chỉ máy đổi khuôn', operating:'Đang chạy', prevConfig:'Đã kế thừa cấu hình hôm qua',
+    dandoriOnly:'Chưa cài đặt', operating:'Đang cài đặt', men:'khuôn', prevConfig:'Đã kế thừa cấu hình hôm qua',
     saveConfig:'Lưu cài đặt', stopMachine:'Dừng máy', dandori:'Đổi khuôn', fixed:'Cố định',
     oh:'OH', prevShot:'Lần trước', limit:'Giới hạn', cycleTime:'Chu kỳ',
     weeklyComplete:'Hoàn thành tuần', monthlyComplete:'Hoàn thành tháng', prevWeek:'So tuần trước',
@@ -1138,7 +1138,7 @@ const T = {
     worker:'Worker', confirmTitle:'Confirm details', back:'Back', register:'Register',
     maintType:'Maint. type', resetStatus:'Counter', withReset:'Reset', noReset:'Keep',
     shotCount:'Shot count', shift:'Shift', detail:'Detail', simple:'Simple',
-    dandoriOnly:'Changeover only', operating:'Operating', prevConfig:'Previous config auto-loaded',
+    dandoriOnly:'Not set', operating:'Set up', men:'mold(s)', prevConfig:'Previous config auto-loaded',
     saveConfig:'Save config', stopMachine:'Stopped', dandori:'Changeover', fixed:'Fixed',
     oh:'OH', prevShot:'Previous', limit:'Limit', cycleTime:'Cycle',
     weeklyComplete:'Weekly done', monthlyComplete:'Monthly done', prevWeek:'vs last week',
@@ -1925,8 +1925,8 @@ function renderListBody() {
   // 段取り未設定が全台の場合は「稼働中」セクションを作らず全台を通常表示
   const hasDandori = active.length > 0;
   document.getElementById('list-count').textContent = hasDandori
-    ? `${sorted.length}${t('tai')} (${t('operating')||'稼働中'} ${active.length}${t('tai')})`
-    : `${sorted.length}${t('tai')}`;
+    ? `${sorted.length}${t('men')||'面'} (${t('operating')||'段取り設定中'} ${active.length}${t('men')||'面'})`
+    : `${sorted.length}${t('men')||'面'}`;
   if (!sorted.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
 
   // PC テーブル
@@ -1962,9 +1962,9 @@ function renderListBody() {
   const tableHTML = `<div class="table-wrap"><table>
     <tr><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>${t('modelNo')}</th><th>${t('type')}</th><th>${t('line')}</th><th>${t('progress')}</th><th>${t('remainShot')}</th><th>${t('remainTime')}</th><th>%</th><th style="color:var(--info-text)">${t('totalShotLabel2')||'累計'}shot</th><th>${t('status')}</th><th></th></tr>
     ${hasDandori ? `
-      ${active.length>0?`<tr><td colspan="13" style="background:var(--bg3);font-size:10px;font-weight:500;color:var(--info-text);padding:5px 8px">● ${t('normal')} ${active.length}${t('tai')}</td></tr>`:''}
+      ${active.length>0?`<tr><td colspan="13" style="background:var(--bg3);font-size:10px;font-weight:500;color:var(--info-text);padding:5px 8px">● ${t('operating')||'段取り設定中'} ${active.length}${t('men')||'面'}</td></tr>`:''}
       ${active.map(m=>makeRow(m,false)).join('')}
-      ${inactive.length>0?`<tr><td colspan="13" style="background:var(--bg3);font-size:10px;color:var(--text4);padding:5px 8px">${t('dandoriOnly')||'段取り未設定'} ${inactive.length}${t('tai')}</td></tr>`:''}
+      ${inactive.length>0?`<tr><td colspan="13" style="background:var(--bg3);font-size:10px;color:var(--text4);padding:5px 8px">${t('dandoriOnly')||'段取り未設定'} ${inactive.length}${t('men')||'面'}</td></tr>`:''}
       ${inactive.map(m=>makeRow(m,true)).join('')}
     ` : sorted.map(m=>makeRow(m,false)).join('')}
   </table></div>`;
@@ -2004,9 +2004,9 @@ function renderListBody() {
 
   const cardsHTML = `<div class="mold-cards">
     ${hasDandori ? `
-      ${active.length>0?`<div style="font-size:10px;font-weight:500;color:var(--info-text);padding:4px 2px 6px;display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:var(--success)"></div>${t('normal')} ${active.length}${t('tai')}</div>`:''}
+      ${active.length>0?`<div style="font-size:10px;font-weight:500;color:var(--info-text);padding:4px 2px 6px;display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:var(--success)"></div>${t('operating')||'段取り設定中'} ${active.length}${t('men')||'面'}</div>`:''}
       ${active.map(m=>makeCard(m,false)).join('')}
-      ${inactive.length>0?`<div class="section-sep" style="font-size:10px;color:var(--text4);padding:8px 2px 4px;margin-top:4px;border-top:1px solid var(--border)">${t('dandoriOnly')||'段取り未設定'} ${inactive.length}${t('tai')}</div>`:''}
+      ${inactive.length>0?`<div class="section-sep" style="font-size:10px;color:var(--text4);padding:8px 2px 4px;margin-top:4px;border-top:1px solid var(--border)">${t('dandoriOnly')||'段取り未設定'} ${inactive.length}${t('men')||'面'}</div>`:''}
       ${inactive.map(m=>makeCard(m,true)).join('')}
     ` : sorted.map(m=>makeCard(m,false)).join('')}
   </div>`;
