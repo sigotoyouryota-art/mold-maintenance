@@ -4898,7 +4898,7 @@ async function renderSchedule(el) {
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--danger-border)"></div><span style="font-size:10px;color:var(--text3)">${t('lv3')}</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--warning)"></div><span style="font-size:10px;color:var(--text3)">${t('lv2')}</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--success)"></div><span style="font-size:10px;color:var(--text3)">${t('lv1')}</span></div>
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:#7c3aed"></div><span style="font-size:10px;color:var(--text3)">${t('lvCross')}</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;border:1.5px dashed var(--text4)"></div><span style="font-size:10px;color:var(--text3)">${t('lvCross')}</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:10px;background:#38bdf8"></div><span style="font-size:10px;color:var(--text3)">now</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:10px;background:var(--overdue-border)"></div><span style="font-size:10px;color:var(--text3)">deadline</span></div>
     </div>
@@ -5236,11 +5236,11 @@ function renderScheduleBody() {
         const isWarn = s.status === 'warning';
         const isCross = s.crossShift;
         const isDeadlineOver = s.deadlineOver && !s.isContinuation;
-        const borderColor = isCross ? '#7c3aed' : isOverdueCard ? 'var(--overdue-border)' : isMaint ? 'var(--danger-border)' : isWarn ? 'var(--warning)' : 'var(--success)';
+        const borderColor = isOverdueCard ? 'var(--overdue-border)' : isMaint ? 'var(--danger-border)' : isWarn ? 'var(--warning)' : 'var(--success)';
         const bgBottom = isOverdueCard ? 'var(--overdue-bg)' : isMaint ? 'var(--danger-row-bg)' : isWarn ? 'var(--warning-bg)' : 'var(--success-bg)';
         const trackBg = isOverdueCard ? 'var(--overdue-bar-bg)' : isMaint ? 'var(--danger-bar-bg)' : isWarn ? 'var(--warning-bg)' : 'var(--success-bg)';
-        const shadowColor = isCross ? 'rgba(124,58,237,0.15)' : isOverdueCard ? 'rgba(220,38,38,0.20)' : isMaint ? 'rgba(234,88,12,0.16)' : 'rgba(0,0,0,0.06)';
-        const timeColor = isCross ? '#c4b5fd' : isOverdueCard ? 'var(--overdue-text)' : isMaint ? 'var(--maint-text)' : isWarn ? 'var(--warning-text)' : 'var(--success-text)';
+        const shadowColor = isOverdueCard ? 'rgba(220,38,38,0.20)' : isMaint ? 'rgba(234,88,12,0.16)' : 'rgba(0,0,0,0.06)';
+        const timeColor = isOverdueCard ? 'var(--overdue-text)' : isMaint ? 'var(--maint-text)' : isWarn ? 'var(--warning-text)' : 'var(--success-text)';
         // 2回目以降は固定値、1回目は実データから計算
         const pct = s.lap > 1 ? 0 : Math.min(130, calcEstimatedProgress(s.mold));
         const circumference = 182;
@@ -5255,12 +5255,12 @@ function renderScheduleBody() {
         const timeStr = fmtHM(s.schedStart)+'〜'+fmtHM(s.schedEnd);
         // バッジ（2回目以降・直またぎ・緊急）
         const lapBadge = s.lap>1 ? `<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px">${s.lap}${t('times')||'回目'}</div>` : '';
-        const crossBadge = isCross ? `<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px">${t('lvCross')}</div>` : '';
+        const crossBadge = isCross ? `<div style="background:var(--bg3);color:var(--text3);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;border:1px dashed var(--text4);display:inline-block;margin-right:4px">${t('lvCross')}</div>` : '';
         const topBadges = lapBadge+crossBadge;
         const urgentRow = isOverdueCard ? `<div style="padding:0 14px 6px;background:var(--bg2);display:flex;align-items:center;gap:4px"><div style="width:4px;height:4px;border-radius:50%;background:#ef4444"></div><span style="font-size:10px;color:#ff6b6b">${t('urgentMsg')}</span></div>` : '';
         const doverBadge = isDeadlineOver ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#fef2f2;color:#991b1b;border:0.5px solid #fca5a5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>DEADLINE OVER</span>` : '';
         const cardOpacity = isDeadlineOver ? 'opacity:0.6;' : '';
-        const cardBorderStyle = isDeadlineOver ? 'border-style:dashed;' : '';
+        const cardBorderStyle = isDeadlineOver ? 'border-style:dashed;' : isCross ? 'border-style:dashed;' : '';
         let c = '<div style="border-radius:12px;overflow:hidden;border:2px solid '+borderColor+';'+cardBorderStyle+'box-shadow:0 4px 20px '+shadowColor+';margin-bottom:10px;cursor:pointer;'+cardOpacity+'" onclick="openMaintenanceFromAlert(\''+s.mold.id+'\')">';
         if (topBadges || doverBadge) c += '<div style="padding:6px 14px 0;background:var(--bg2)">'+(topBadges||'')+doverBadge+'</div>';
         c += '<div style="padding:11px 14px;background:var(--bg2);display:flex;align-items:center;justify-content:space-between">';
@@ -5344,7 +5344,7 @@ function renderScheduleBody() {
       const status = s.status;
       const isOverdue = status==='overdue';
       const isCross = s.crossShift;
-      const color = isCross ? '#c4b5fd' : statusColor(status);
+      const color = statusColor(status);
       // 2回目以降は固定値、1回目は実データから計算
       const rem = isOverdue ? 0 : s.lap > 1 ? s.lapRemShot : calcEstimatedRemaining(s.mold);
       const remMin = isOverdue ? 0 : s.lap > 1 ? s.lapRemMin : calcEstimatedRemainingMin(s.mold);
@@ -5364,13 +5364,13 @@ function renderScheduleBody() {
       const timeTag = barRight>=65
         ? `<div style="position:absolute;right:${(100-maintOffset+1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${timeTagText}</div>`
         : `<div style="position:absolute;left:${(barRight+1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${timeTagText}</div>`;
-      const barBg = isCross?'rgba(124,58,237,0.15)':isOverdue?'var(--overdue-bg)':status==='danger'?'var(--danger-row-bg)':status==='warning'?'var(--warning-bg)':'var(--bg4)';
-      const maintBg = isCross?'#7c3aed':isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':status==='warning'?'var(--warning)':'var(--success)';
-      const barTextColor = (status==='warning'||status==='normal')&&!isCross?'#1c1917':'#fff';
+      const barBg = isOverdue?'var(--overdue-bg)':status==='danger'?'var(--danger-row-bg)':status==='warning'?'var(--warning-bg)':'var(--bg4)';
+      const maintBg = isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':status==='warning'?'var(--warning)':'var(--success)';
+      const barTextColor = (status==='warning'||status==='normal')?'#1c1917':'#fff';
       const crossSuffix = isCont
-        ? `　<span style="font-size:11px;color:#c4b5fd">（${s.fromShift||'前直'}から継続）</span>`
+        ? `　<span style="font-size:11px;color:var(--text3)">（${s.fromShift||'前直'}から継続）</span>`
         : (isCross && !isCont)
-          ? `　<span style="font-size:11px;color:#c4b5fd">→次の直へ継続</span>`
+          ? `　<span style="font-size:11px;color:var(--text3)">→次の直へ継続</span>`
           : '';
       const remDisplay = isOverdue
         ? `${t('overShot')||'超過'} ${fmtNum(overShot)}shot　<span style="font-size:13px;color:${color};font-weight:700">${t('overShot')||'超過'} ${overMin}${t('minuteUnit')}</span>${crossSuffix}`
@@ -5380,7 +5380,7 @@ function renderScheduleBody() {
 
       // バッジ
       const lapBadge = (s.lap>1 && !isCont)?`<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">${s.lap}${t('times')||'回目'}</div>`:'';
-      const crossBadge = isCont?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">直またぎ継続</div>`:isCross?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">${t('lvCross')}</div>`:'';
+      const crossBadge = isCont?`<div style="background:var(--bg3);color:var(--text3);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;border:1px dashed var(--text4);display:inline-block;margin-right:4px;margin-bottom:7px">直またぎ継続</div>`:isCross?`<div style="background:var(--bg3);color:var(--text3);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;border:1px dashed var(--text4);display:inline-block;margin-right:4px;margin-bottom:7px">${t('lvCross')}</div>`:'';
       const topBadges = lapBadge+crossBadge;
       const urgentMsgHtml = isOverdue ? `<div style="display:flex;align-items:center;gap:4px;margin-bottom:6px"><div style="width:5px;height:5px;border-radius:50%;background:var(--overdue-border);flex-shrink:0"></div><span style="font-size:10px;color:var(--overdue-text);white-space:nowrap">${t('urgentMsg')}</span></div>` : '';
 
@@ -5413,8 +5413,8 @@ function renderScheduleBody() {
       </div>`;
 
       const isTlDeadlineOver = s.deadlineOver && !s.isContinuation;
-      const borderColor = isCross?'#7c3aed':isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':'var(--danger-border)';
-      const borderStyle = isCont ? 'dashed' : isTlDeadlineOver ? 'dashed' : 'solid';
+      const borderColor = isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':status==='warning'?'var(--warning)':'var(--success)';
+      const borderStyle = isCont ? 'dashed' : isCross ? 'dashed' : isTlDeadlineOver ? 'dashed' : 'solid';
       const tlOpacity = isTlDeadlineOver ? 'opacity:0.65;' : '';
       // DEADLINE OVERの場合バーを濃いグレー固定で視認性確保
       const effectiveMaintBg = isTlDeadlineOver ? '#5f5e5a' : maintBg;
