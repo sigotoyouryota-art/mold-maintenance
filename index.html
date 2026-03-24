@@ -4712,81 +4712,40 @@ function setSchedView(view, el) {
 
 // ===== 3直分を1本の時間軸で計算して直ごとに分割 =====
 function buildAllShifts() {
-  const now = new Date();
-  const nowMs = now.getTime();
-  const today = new Date(now); today.setHours(0,0,0,0);
+  const now    = new Date();
+  const nowMs  = now.getTime();
+  const SHIFT_ORDER   = ['1S','2S','3S'];
+  const FALLBACK_CYCLE = 30;
 
-  // ===== 現在の直を特定 =====
-  // 段取り設定はstate.currentShift（ログイン時選択）で保存されるため統一して使用
-  const currentShift = state.currentShift;
-  const SHIFT_ORDER = ['1S','2S','3S'];
-  const curIdx = SHIFT_ORDER.indexOf(currentShift);
+  // ① 業務日基点：08:00起点の24時間
+  //   現在時刻が08:00未満 → 前暦日の08:00が業務日起点
+  const workdayBase = new Date(now);
+  if (now.getHours() < 8) workdayBase.setDate(workdayBase.getDate() - 1);
+  workdayBase.setHours(8, 0, 0, 0);
 
-  // ===== 3直分の時間帯を順番に生成 =====
-  function makeShiftRange(shiftName, baseDate) {
-    const [sh, eh] = SHIFT_HOURS[shiftName];
-    const start = new Date(baseDate);
-    start.setHours(sh, 0, 0, 0);
-    const end = new Date(start);
-    if (eh === 24) { end.setDate(end.getDate()+1); end.setHours(0,0,0,0); }
-    else end.setHours(eh, 0, 0, 0);
-    if (end <= start) end.setDate(end.getDate()+1);
+  // ② 3直+4直目の時間帯をオフセットで固定生成（日付分岐なし）
+  //   1S: base+0h〜base+8h
+  //   2S: base+8h〜base+16h
+  //   3S: base+16h〜base+24h（翌暦日00-08時）
+  //   4th: base+24h〜base+32h（直またぎ受け皿）
+  function makeShiftRangeByOffset(shiftName, offsetHours) {
+    const start = new Date(workdayBase.getTime() + offsetHours * 3600000);
+    const end   = new Date(start.getTime() + 8 * 3600000);
     return { shiftName, start, end };
   }
 
-  const shiftRanges = [];
-  for (let i = 0; i < 3; i++) {
-    const si = (curIdx + i) % 3;
-    const sName = SHIFT_ORDER[si];
-    // 3Sが現在でない場合、翌日ベースの計算が必要
-    const base = new Date(today);
-    if (i === 0) {
-      // 現在の直
-      const range = makeShiftRange(sName, base);
-      // 既に過ぎていたら翌日
-      if (range.end <= now) { base.setDate(base.getDate()+1); }
-      shiftRanges.push(makeShiftRange(sName, base));
-    } else {
-      // 前の直の終了日を基準に計算
-      const prev = shiftRanges[i-1];
-      const prevEndDate = new Date(prev.end); prevEndDate.setHours(0,0,0,0);
-      const range = makeShiftRange(sName, prevEndDate);
-      // 前の直の終了以降に開始していなければ翌日
-      if (range.start < prev.end) {
-        const nextDay = new Date(prevEndDate); nextDay.setDate(nextDay.getDate()+1);
-        shiftRanges.push(makeShiftRange(sName, nextDay));
-      } else {
-        shiftRanges.push(range);
-      }
-    }
-  }
-  // 4つ目の直を追加（直またぎ用の受け皿）
-  {
-    const prev = shiftRanges[2];
-    const si4 = (curIdx + 3) % 3;
-    const sName4 = SHIFT_ORDER[si4];
-    const prevEndDate = new Date(prev.end); prevEndDate.setHours(0,0,0,0);
-    const range4 = makeShiftRange(sName4, prevEndDate);
-    if (range4.start < prev.end) {
-      const nextDay = new Date(prevEndDate); nextDay.setDate(nextDay.getDate()+1);
-      shiftRanges.push(makeShiftRange(sName4, nextDay));
-    } else {
-      shiftRanges.push(range4);
-    }
-  }
+  const curIdx = SHIFT_ORDER.indexOf(state.currentShift);
+  const shiftRanges = [
+    makeShiftRangeByOffset(SHIFT_ORDER[(curIdx)   % 3], curIdx * 8),
+    makeShiftRangeByOffset(SHIFT_ORDER[(curIdx+1) % 3], (curIdx+1) * 8),
+    makeShiftRangeByOffset(SHIFT_ORDER[(curIdx+2) % 3], (curIdx+2) * 8),
+    makeShiftRangeByOffset(SHIFT_ORDER[(curIdx)   % 3], (curIdx+3) * 8),
+  ];
 
-  const totalStartMs = shiftRanges[0].start.getTime();
-  const totalEndMs   = shiftRanges[2].end.getTime();
+  const totalEndMs = shiftRanges[3].end.getTime(); // 4直目末尾まで
+  const cursorBase = Math.max(nowMs, shiftRanges[0].start.getTime());
 
-  // ===== ① 全金型の逐次展開（A案）=====
-  // 段取り設定で選択された金型のみをスケジュール対象にする
-  // cycle_time_sec フォールバック（⑦）
-  const FALLBACK_CYCLE = 30;
-  const baseMs = Math.max(nowMs, totalStartMs);
-
-  // ===== 段取りフィルタ =====
-  // dandoriData = { machine_id(machinesテーブル): mold_id }
-  // machine_no → machine.id のマッピングを構築
+  // ③ 段取りフィルタ
   const machineNoToId = {};
   (state.machines || []).forEach(mc => { machineNoToId[String(mc.machine_no)] = mc.id; });
 
@@ -4795,153 +4754,126 @@ function buildAllShifts() {
     if (!mcId) return false;
     return dandoriData[mcId] === mold.id;
   });
-  // 未入力金型を分離
+
   const unregisteredMolds = allDandoriMolds.filter(mold => isShotUnregistered(mold));
-  let entries = allDandoriMolds.filter(mold => !isShotUnregistered(mold)).map(mold => {
-    const cycSec = mold.cycle_time_sec || FALLBACK_CYCLE;
-    const status  = calcStatus(mold);
-    const dur     = (mold.simple_maint_time_min || 20) * 60000;
-    const remMin  = status === 'overdue' ? 0 : calcEstimatedRemainingMin(mold);
-    const overMin = status === 'overdue' ? calcEstimatedOverMin(mold) : 0;
-    const deadlineMs = nowMs + remMin * 60000 - dur;
-    return { mold, status, dur, remMin, overMin, deadlineMs, cycSec, lap: 1, prevEndMs: null };
+
+  // ④ deadlineMsの計算
+  //   deadline = nowMs + 残りショット × cycSec × 1000
+  //   メンテ中はショット加算なし → 所要時間を引かない
+  const STATUS_LEVEL = { overdue: 4, danger: 3, warning: 2, normal: 1 };
+
+  const entries = allDandoriMolds
+    .filter(mold => !isShotUnregistered(mold))
+    .map(mold => {
+      const cycSec       = mold.cycle_time_sec > 0 ? mold.cycle_time_sec : FALLBACK_CYCLE;
+      const status       = calcStatus(mold);
+      const dur          = (mold.simple_maint_time_min || 20) * 60000;
+      const remShot      = calcEstimatedRemaining(mold);
+      const overShot     = calcOverShot(mold);
+      const deadlineMs   = status === 'overdue' ? nowMs : nowMs + remShot * cycSec * 1000;
+      const overElapsedMs = status === 'overdue' ? overShot * cycSec * 1000 : 0;
+      return { mold, status, dur, deadlineMs, overElapsedMs, cycSec, lap: 1, deadlineOver: false };
+    })
+    .filter(e => e.status === 'overdue' || e.deadlineMs < totalEndMs);
+
+  // ⑤ 優先順位ソート
+  //   Lv4>Lv3>Lv2>Lv1 / 同Lv内は超過経過時間長い順（非overdueはdeadline早い順）
+  entries.sort((a, b) => {
+    const la = STATUS_LEVEL[a.status];
+    const lb = STATUS_LEVEL[b.status];
+    if (la !== lb) return lb - la;
+    if (a.status === 'overdue') return b.overElapsedMs - a.overElapsedMs;
+    return a.deadlineMs - b.deadlineMs;
   });
 
-  // ===== ② overdue と非overdueを分離してソート =====
-  // overdue → 超過時間が長い順（⑥）
-  const overdueEntries = entries
-    .filter(e => e.status === 'overdue')
-    .sort((a,b) => b.overMin - a.overMin);
+  // ⑥ 前向き貪欲法：1本の時間軸に配置
+  //   startMs = max(cursor, deadline) → できる限り引っ張る
+  //   startMs > deadline → DEADLINE OVER フラグ
+  let cursor = cursorBase;
+  const placed = [];
+  const MAX_ENTRIES = 300;
 
-  // 非overdue → deadline早い順、同着なら所要時間が短い順（④⑤）
-  let nonOverdueEntries = entries
-    .filter(e => e.status !== 'overdue')
-    .filter(e => e.deadlineMs < totalEndMs) // 3直以内にdeadlineが来るもの
-    .sort((a,b) => a.deadlineMs !== b.deadlineMs ? a.deadlineMs - b.deadlineMs : a.dur - b.dur);
-
-  // ===== ③ 1本の時間軸で逐次配置（重複なし） =====
-  // cursor = 次の作業を置ける最早時刻
-  let cursor = baseMs;
-  const placed = []; // 配置済みリスト
-
-  // Step1: overdueを先頭に配置
-  for (const e of overdueEntries) {
-    const start = cursor;
-    const end   = start + e.dur;
-    placed.push({ ...e, startMs: start, endMs: end });
-    cursor = end;
-  }
-  const overdueEndMs = cursor;
-
-  // Step2: 非overdueを後ろから逆算して配置
-  // まずdeadline順リストの各エントリにスロット番号を付けて逆算
-  if (nonOverdueEntries.length > 0) {
-    const slots = new Array(nonOverdueEntries.length);
-    // 最後から逆算
-    for (let i = nonOverdueEntries.length - 1; i >= 0; i--) {
-      const e = nonOverdueEntries[i];
-      if (i === nonOverdueEntries.length - 1) {
-        // 最後：deadlineか総終了の早い方に合わせる
-        const latestStart = Math.min(e.deadlineMs, totalEndMs - e.dur);
-        slots[i] = Math.max(overdueEndMs, latestStart);
-      } else {
-        // 次の開始から所要時間分さかのぼる
-        const nextStart = slots[i+1];
-        const idealStart = Math.min(e.deadlineMs, nextStart - e.dur);
-        slots[i] = Math.max(overdueEndMs, idealStart);
-      }
-    }
-    // 前から確認して重複があればcursorを押し出す
-    let nc = overdueEndMs;
-    for (let i = 0; i < nonOverdueEntries.length; i++) {
-      const start = Math.max(nc, slots[i]);
-      const end   = start + nonOverdueEntries[i].dur;
-      placed.push({ ...nonOverdueEntries[i], startMs: start, endMs: end });
-      nc = end;
-    }
+  for (const e of entries) {
+    const startMs = Math.max(cursor, e.deadlineMs);
+    const endMs   = startMs + e.dur;
+    if (startMs >= totalEndMs) continue;
+    placed.push({ ...e, startMs, endMs, deadlineOver: startMs > e.deadlineMs });
+    cursor = endMs;
   }
 
-  // ===== ④ 複数回メンテ：逐次展開（②A案） =====
-  // 配置済みエントリの完了時刻から次のdeadlineを計算して追加
-  // 24時間以内に収まる限り繰り返す
+  // ⑦ 複数回メンテの展開
+  //   次のdeadline = endMs + interval × cycSec × 1000
   let expandIdx = 0;
-  const MAX_ENTRIES = 200; // 安全上限
   while (expandIdx < placed.length && placed.length < MAX_ENTRIES) {
-    const e = placed[expandIdx];
-    expandIdx++;
-    const cycSec = e.mold.cycle_time_sec || FALLBACK_CYCLE;
+    const e        = placed[expandIdx++];
     const interval = e.mold.maintenance_interval || 5000;
-    const intervalMs = interval * cycSec * 1000;
-    // 2回目のdeadline = 前回schedEnd + メンテ間隔ms - 所要時間ms
-    const nextDeadlineMs = e.endMs + intervalMs - e.dur;
-    if (nextDeadlineMs >= totalEndMs) continue; // 3直以内に収まらない
-    const nextLap = e.lap + 1;
-    // この金型の次回分を追加（statusはnormalとして扱う：既にメンテ済み想定）
-    const nextEntry = {
-      mold: e.mold,
-      status: 'normal',
-      dur: e.dur,
-      remMin: 0,
-      overMin: 0,
-      deadlineMs: nextDeadlineMs,
+    const cycSec   = e.mold.cycle_time_sec > 0 ? e.mold.cycle_time_sec : FALLBACK_CYCLE;
+    const nextDeadline = e.endMs + interval * cycSec * 1000;
+    if (nextDeadline >= totalEndMs) continue;
+
+    const nextStart = Math.max(cursor, nextDeadline);
+    const nextEnd   = nextStart + e.dur;
+    if (nextStart >= totalEndMs) continue;
+
+    placed.push({
+      mold:         e.mold,
+      status:       'normal',
+      dur:          e.dur,
+      deadlineMs:   nextDeadline,
+      overElapsedMs: 0,
       cycSec,
-      lap: nextLap,
-      prevEndMs: e.endMs,
-    };
-    // 配置：前の配置の最後より後ろで、かつdeadlineに間に合う位置
-    const lastEnd = placed[placed.length-1].endMs;
-    const latestStart = Math.min(nextDeadlineMs, totalEndMs - nextEntry.dur);
-    const start = Math.max(lastEnd, latestStart);
-    const end   = start + nextEntry.dur;
-    if (start >= totalEndMs) continue;
-    placed.push({ ...nextEntry, startMs: start, endMs: end });
+      lap:          e.lap + 1,
+      deadlineOver: nextStart > nextDeadline,
+      startMs:      nextStart,
+      endMs:        nextEnd,
+    });
+    cursor = nextEnd;
   }
 
-  // ===== ⑤ 直またぎ処理・直への振り分け =====
-  const result = []; // { shiftName, shiftStart, shiftEnd, scheduled[] }
-  shiftRanges.forEach(sr => {
-    result.push({ shiftName: sr.shiftName, shiftStart: sr.start, shiftEnd: sr.end, scheduled: [] });
-  });
+  // ⑧ 直への振り分け・直またぎ処理
+  const result = shiftRanges.map(sr => ({
+    shiftName:  sr.shiftName,
+    shiftStart: sr.start,
+    shiftEnd:   sr.end,
+    scheduled:  [],
+  }));
 
   for (const e of placed) {
-    // どの直に属するか判定
-    let assigned = false;
     for (let ri = 0; ri < shiftRanges.length; ri++) {
-      const sr = shiftRanges[ri];
+      const sr        = shiftRanges[ri];
       const srStartMs = sr.start.getTime();
       const srEndMs   = sr.end.getTime();
 
+      if (e.startMs < srStartMs || e.startMs >= srEndMs) continue;
+
       // 直内に完全に収まる
-      if (e.startMs >= srStartMs && e.endMs <= srEndMs) {
-        result[ri].scheduled.push(buildEntry(e, sr));
-        assigned = true;
+      if (e.endMs <= srEndMs) {
+        result[ri].scheduled.push(_buildEntry(e, sr, false));
         break;
       }
 
-      // 直またぎになる場合
-      if (e.startMs >= srStartMs && e.startMs < srEndMs && e.endMs > srEndMs) {
-        // 次の直の頭に収まりdeadlineに余裕あり？
-        const nextSr = shiftRanges[ri+1];
-        if (nextSr) {
-          const nextEnd = nextSr.start.getTime() + e.dur;
-          if (nextEnd <= e.deadlineMs && nextEnd <= nextSr.end.getTime()) {
-            // 次の直の頭に回す（この直ではスキップ）
-            break;
-          }
+      // 直またぎ発生 → 次直の先頭に移動できるか確認
+      const nextSr = shiftRanges[ri + 1];
+      if (nextSr) {
+        const movedEnd = nextSr.start.getTime() + e.dur;
+        if (movedEnd <= e.deadlineMs && movedEnd <= nextSr.end.getTime()) {
+          // 次直先頭に移動（startMs/endMsを更新してループ継続）
+          e.startMs = nextSr.start.getTime();
+          e.endMs   = movedEnd;
+          break; // ri+1 で再評価される
         }
-        // 回せない → 直またぎ: この直にクランプ版を入れる（crossShift=true）
-        result[ri].scheduled.push(buildEntry(e, sr, true));
-        // 次の直にも続きエントリを追加
-        if (nextSr) {
-          const contEntry = { ...e, startMs: nextSr.start.getTime() };
-          const contBuilt = buildEntry(contEntry, nextSr, true);
-          contBuilt.isContinuation = true;
-          contBuilt.fromShift = sr.shiftName;
-          result[ri+1].scheduled.unshift(contBuilt);
-        }
-        assigned = true;
-        break;
       }
+
+      // 次直に回せない → 直またぎ許容
+      result[ri].scheduled.push(_buildEntry(e, sr, true));
+      if (nextSr) {
+        const contEntry = { ...e, startMs: nextSr.start.getTime() };
+        const contBuilt = _buildEntry(contEntry, nextSr, true);
+        contBuilt.isContinuation = true;
+        contBuilt.fromShift = sr.shiftName;
+        result[ri + 1].scheduled.unshift(contBuilt);
+      }
+      break;
     }
   }
 
@@ -4949,41 +4881,38 @@ function buildAllShifts() {
   return result;
 }
 
-function buildEntry(e, sr, crossShift=false) {
-  const isLap = e.lap > 1;
+function _buildEntry(e, sr, crossShift) {
+  const isLap    = e.lap > 1;
   const interval = e.mold.maintenance_interval || 5000;
-  const cycSec = e.mold.cycle_time_sec > 0 ? e.mold.cycle_time_sec : 30;
+  const cycSec   = e.mold.cycle_time_sec > 0 ? e.mold.cycle_time_sec : 30;
   return {
-    mold: e.mold,
-    status: e.status,
-    dur: e.dur / 60000,
-    remMin: e.remMin,
-    schedStart: new Date(Math.max(e.startMs, sr.start.getTime())),
-    schedEnd:   new Date(e.endMs),
+    mold:         e.mold,
+    status:       e.status,
+    dur:          e.dur / 60000,
+    deadlineMs:   e.deadlineMs,
+    deadlineOver: e.deadlineOver || false,
+    schedStart:   new Date(Math.max(e.startMs, sr.start.getTime())),
+    schedEnd:     new Date(e.endMs),
     crossShift,
-    lap: e.lap,
-    // 2回目以降：メンテ完了直後想定の固定値
-    lapRemShot: isLap ? interval : null,
-    lapRemMin:  isLap ? Math.round(interval * cycSec / 60) : null,
-    lapPct:     isLap ? 0 : null,
+    lap:          e.lap,
+    lapRemShot:   isLap ? interval : null,
+    lapRemMin:    isLap ? Math.round(interval * cycSec / 60) : null,
+    lapPct:       isLap ? 0 : null,
   };
 }
 
-// 後方互換：個別直のbuildScheduleも残す
 function buildSchedule(shift) {
   const allData = buildAllShifts();
   const found = allData.find(d => d.shiftName === shift);
   if (found) return { scheduled: found.scheduled, shiftStart: found.shiftStart, shiftEnd: found.shiftEnd };
-  // fallback
   const now = new Date();
-  const [sh,eh] = SHIFT_HOURS[shift];
-  const shiftStart = new Date(now); shiftStart.setHours(sh,0,0,0);
-  const shiftEnd = new Date(shiftStart);
-  if (eh===24){shiftEnd.setDate(shiftEnd.getDate()+1);shiftEnd.setHours(0,0,0,0);}
-  else shiftEnd.setHours(eh,0,0,0);
+  const [sh, eh] = SHIFT_HOURS[shift];
+  const shiftStart = new Date(now); shiftStart.setHours(sh, 0, 0, 0);
+  const shiftEnd   = new Date(shiftStart);
+  if (eh === 24) { shiftEnd.setDate(shiftEnd.getDate() + 1); shiftEnd.setHours(0, 0, 0, 0); }
+  else shiftEnd.setHours(eh, 0, 0, 0);
   return { scheduled: [], shiftStart, shiftEnd };
 }
-
 function fmtHM(date) {
   return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
 }
@@ -5007,23 +4936,43 @@ function renderScheduleBody() {
     ${t('maintDone2')}
   </div>`;
 
+  // DEADLINE OVER バナー
+  const deadlineOverCount = allData.reduce((n,d)=>n+d.scheduled.filter(s=>s.deadlineOver&&!s.isContinuation).length,0);
+  const deadlineOverBanner = deadlineOverCount > 0 ? `<div style="border-radius:12px;overflow:hidden;border:2px solid #dc2626;margin-bottom:14px">
+    <div style="background:#dc2626;padding:10px 16px;display:flex;align-items:center;gap:10px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div style="font-size:14px;font-weight:600;color:#fff;flex:1">メンテ作業者の追加が必要です</div>
+      <div style="font-size:12px;color:#fca5a5;font-weight:500;white-space:nowrap">${deadlineOverCount}件 処理不可</div>
+    </div>
+    <div style="background:#fef2f2;padding:8px 16px;display:flex;align-items:center;gap:6px">
+      <span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#fef2f2;color:#991b1b;border:0.5px solid #fca5a5;white-space:nowrap;flex-shrink:0">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        DEADLINE OVER
+      </span>
+      <div style="font-size:12px;color:#991b1b">の金型を確認してください。1人では全てのメンテナンスをデッドライン内に完了できません。</div>
+    </div>
+  </div>` : '';
+
   const SHIFT_LABELS = {'1S':'1S（08:00〜16:00）','2S':'2S（16:00〜24:00）','3S':'3S（00:00〜08:00）'};
   const now = new Date();
   const h = now.getHours();
   const curShiftName = h>=8&&h<16?'1S':h>=16?'2S':'3S';
 
   // ===== シフトヘッダー生成 =====
-  function makeShiftHeader(shiftData) {
+  function makeShiftHeader(shiftData, shiftIndex) {
     const { shiftName, shiftStart } = shiftData;
     const isCurrent = shiftName === curShiftName && shiftStart.getDate() === now.getDate();
-    // 翌日判定：shiftStartの日付がtodayより後
     const shiftDay = new Date(shiftStart); shiftDay.setHours(0,0,0,0);
-    const isNextDay = shiftDay.getTime() > today.getTime();
-    const badge = isCurrent
-      ? `<div style="font-size:10px;background:var(--info-bg);color:var(--info-text);padding:2px 8px;border-radius:4px;margin-left:auto">${t('shift')}</div>`
-      : isNextDay
-        ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">+1d</div>`
-        : '';
+    const dayDiff = Math.round((shiftDay.getTime() - today.getTime()) / 86400000);
+    // 4直目（index=3）は直またぎ継続のみの受け皿として特別表示
+    const is4th = shiftIndex === 3;
+    const badge = is4th
+      ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">+${dayDiff}d　直またぎ継続のみ</div>`
+      : isCurrent
+        ? `<div style="font-size:10px;background:var(--info-bg);color:var(--info-text);padding:2px 8px;border-radius:4px;margin-left:auto">${t('shift')}</div>`
+        : dayDiff > 0
+          ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">+${dayDiff}d</div>`
+          : '';
     return `<div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px">
       <div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>
       <span style="font-size:11px;font-weight:600;color:var(--info-text)">${SHIFT_LABELS[shiftName]}</span>
@@ -5035,15 +4984,16 @@ function renderScheduleBody() {
   if (scheduleView === 'card') {
     let html = '';
     let globalRank = 0;
-    allData.forEach(shiftData => {
+    allData.forEach((shiftData, shiftIndex) => {
       if (!shiftData.scheduled.length) return;
-      html += makeShiftHeader(shiftData);
+      html += makeShiftHeader(shiftData, shiftIndex);
       html += shiftData.scheduled.map(s => {
         globalRank++;
         const isOverdueCard = s.status === 'overdue';
         const isMaint = s.status === 'danger';
         const isWarn = s.status === 'warning';
         const isCross = s.crossShift;
+        const isDeadlineOver = s.deadlineOver && !s.isContinuation;
         const borderColor = isCross ? '#7c3aed' : isOverdueCard ? 'var(--overdue-border)' : isMaint ? 'var(--danger-border)' : isWarn ? 'var(--warning)' : 'var(--success)';
         const bgBottom = isOverdueCard ? 'var(--overdue-bg)' : isMaint ? 'var(--danger-row-bg)' : isWarn ? 'var(--warning-bg)' : 'var(--success-bg)';
         const trackBg = isOverdueCard ? 'var(--overdue-bar-bg)' : isMaint ? 'var(--danger-bar-bg)' : isWarn ? 'var(--warning-bg)' : 'var(--success-bg)';
@@ -5066,14 +5016,18 @@ function renderScheduleBody() {
         const crossBadge = isCross ? `<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px">${t('lvCross')}</div>` : '';
         const topBadges = lapBadge+crossBadge;
         const urgentRow = isOverdueCard ? `<div style="padding:0 14px 6px;background:var(--bg2);display:flex;align-items:center;gap:4px"><div style="width:4px;height:4px;border-radius:50%;background:#ef4444"></div><span style="font-size:10px;color:#ff6b6b">${t('urgentMsg')}</span></div>` : '';
-        let c = '<div style="border-radius:12px;overflow:hidden;border:2px solid '+borderColor+';box-shadow:0 4px 20px '+shadowColor+';margin-bottom:10px;cursor:pointer" onclick="openMaintenanceFromAlert(\''+s.mold.id+'\')">';
-        if (topBadges) c += '<div style="padding:6px 14px 0;background:var(--bg2)">'+topBadges+'</div>';
+        const doverBadge = isDeadlineOver ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#fef2f2;color:#991b1b;border:0.5px solid #fca5a5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>DEADLINE OVER</span>` : '';
+        const cardOpacity = isDeadlineOver ? 'opacity:0.6;' : '';
+        const cardBorderStyle = isDeadlineOver ? 'border-style:dashed;' : '';
+        let c = '<div style="border-radius:12px;overflow:hidden;border:2px solid '+borderColor+';'+cardBorderStyle+'box-shadow:0 4px 20px '+shadowColor+';margin-bottom:10px;cursor:pointer;'+cardOpacity+'" onclick="openMaintenanceFromAlert(\''+s.mold.id+'\')">';
+        if (topBadges || doverBadge) c += '<div style="padding:6px 14px 0;background:var(--bg2)">'+(topBadges||'')+doverBadge+'</div>';
         c += '<div style="padding:11px 14px;background:var(--bg2);display:flex;align-items:center;justify-content:space-between">';
         c += '<div style="display:flex;align-items:center;gap:8px">';
         c += '<div style="width:26px;height:26px;border-radius:50%;background:'+borderColor+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">'+globalRank+'</div>';
         c += '<div style="font-size:15px;font-weight:800;color:var(--text)">#'+(s.mold.machine_no||'?')+'　'+s.mold.part_name+'</div>';
         c += '<span style="font-size:10px;color:var(--text4)">'+(s.mold.line_name||'')+'</span>';
         c += '</div>'+statusBadge(s.status)+'</div>';
+        if (isDeadlineOver) c += '<div style="padding:3px 14px 5px;background:var(--bg2);font-size:10px;color:var(--text4)">着手可能 '+fmtHM(s.schedStart)+'　/　デッドライン '+fmtHM(new Date(s.deadlineMs))+'</div>';
         c += urgentRow;
         c += '<div style="display:flex;align-items:center;background:'+bgBottom+';border-top:1.5px solid '+borderColor+'30">';
         c += '<div style="padding:13px 14px;flex-shrink:0"><div style="position:relative;width:70px;height:70px">';
@@ -5085,7 +5039,9 @@ function renderScheduleBody() {
         c += '<div style="flex:1;padding:13px 8px;display:flex;flex-direction:column;justify-content:space-between;gap:6px">';
         c += '<div><div style="font-size:21px;font-weight:900;color:'+borderColor+';line-height:1">'+shotNum+'<span style="font-size:12px;font-weight:600;color:'+timeColor+'"> '+shotSuffix+'</span></div>';
         c += '<div style="font-size:14px;font-weight:700;color:'+timeColor+';margin-top:3px">'+timeLabel+'</div></div>';
-        c += '<div style="background:'+trackBg+';border:1px solid '+borderColor+'50;border-radius:5px;padding:4px 8px;display:flex;align-items:center;justify-content:center">';
+        const timeChipBg = isDeadlineOver ? 'var(--bg3)' : trackBg;
+        const timeChipBorder = isDeadlineOver ? 'var(--border)' : borderColor+'50';
+        c += '<div style="background:'+timeChipBg+';border:1px solid '+timeChipBorder+';border-radius:5px;padding:4px 8px;display:flex;align-items:center;justify-content:center">';
         c += '<span style="font-size:12px;font-weight:700;color:'+timeColor+'">'+timeStr+'</span></div></div>';
         c += '<div style="padding:13px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-left:1.5px solid '+borderColor+'40;flex-shrink:0">';
         c += '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="'+borderColor+'" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
@@ -5113,21 +5069,21 @@ function renderScheduleBody() {
         </div>`).join('')}
       </div>`;
     }
-    el.innerHTML = hint + html;
+    el.innerHTML = deadlineOverBanner + hint + html;
     return;
   }
 
   // ===== タイムラインビュー =====
   let html = '';
   let globalRank = 0;
-  allData.forEach(shiftData => {
+  allData.forEach((shiftData, shiftIndex) => {
     if (!shiftData.scheduled.length) return;
     const { shiftStart, shiftEnd, scheduled } = shiftData;
     const shiftDur = (shiftEnd - shiftStart) / 60000;
     const isCurShift = shiftData.shiftName === curShiftName && shiftStart.getDate() === now.getDate();
     const nowOffset = isCurShift ? Math.max(0,Math.min(100,(now-shiftStart)/60000/shiftDur*100)) : -1;
 
-    html += makeShiftHeader(shiftData);
+    html += makeShiftHeader(shiftData, shiftIndex);
 
     // 時間軸（上）
     const axisInner = [0,2,4,6,8].map(i=>{
@@ -5212,12 +5168,32 @@ function renderScheduleBody() {
         <div style="font-size:12px;font-weight:700;color:${color}">${remDisplay}</div>
       </div>`;
 
+      const isTlDeadlineOver = s.deadlineOver && !s.isContinuation;
       const borderColor = isCross?'#7c3aed':isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':'var(--danger-border)';
-      const borderStyle = isCont ? 'dashed' : 'solid';
-      const wrapStyle = `border:2px ${borderStyle} ${borderColor};border-radius:10px;padding:${topBadges?'7px':'10px'} 12px 10px;margin-bottom:10px;background:var(--bg2);cursor:pointer`;
+      const borderStyle = isCont ? 'dashed' : isTlDeadlineOver ? 'dashed' : 'solid';
+      const tlOpacity = isTlDeadlineOver ? 'opacity:0.65;' : '';
+      // DEADLINE OVERの場合バーを濃いグレー固定で視認性確保
+      const effectiveMaintBg = isTlDeadlineOver ? '#5f5e5a' : maintBg;
+      const effectiveBarBg   = isTlDeadlineOver ? 'var(--bg3)' : barBg;
+      const doverTlBanner = isTlDeadlineOver ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#fef2f2;color:#991b1b;border:0.5px solid #fca5a5;white-space:nowrap"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>DEADLINE OVER</span>
+        <span style="font-size:11px;color:var(--text4)">着手可能 ${fmtHM(s.schedStart)}　/　デッドライン ${fmtHM(new Date(s.deadlineMs))}</span>
+      </div>` : '';
+      // DEADLINE OVERのトラックHTML（バー色をグレー固定）
+      const trackHTMLFinal = isTlDeadlineOver ? `<div style="flex:1;min-width:0">
+        <div style="height:32px;border-radius:5px;background:${effectiveBarBg};position:relative;overflow:hidden;margin-bottom:5px">
+          ${gridLines}
+          ${nowOffset>=0?`<div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:2px;background:#ef4444;opacity:0.9;z-index:5"></div>`:''}
+          <div style="position:absolute;left:${maintOffset}%;top:3px;bottom:3px;width:${maintWidth}%;background:${effectiveMaintBg};border-radius:3px;z-index:3"></div>
+          ${timeTag}
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--text4)">${remDisplay}</div>
+      </div>` : trackHTML;
+      const wrapStyle = `border:2px ${borderStyle} ${borderColor};border-radius:10px;padding:${topBadges||doverTlBanner?'7px':'10px'} 12px 10px;margin-bottom:10px;background:var(--bg2);cursor:pointer;${tlOpacity}`;
       html += `<div style="${wrapStyle}" onclick="openMaintenanceFromAlert('${s.mold.id}')">
+        ${doverTlBanner}
         ${topBadges?`<div style="margin-bottom:2px">${topBadges}</div>`:''}
-        <div style="display:flex;align-items:flex-start;gap:8px">${metaHTML}${trackHTML}</div>
+        <div style="display:flex;align-items:flex-start;gap:8px">${metaHTML}${trackHTMLFinal}</div>
       </div>`;
     });
 
@@ -5245,7 +5221,7 @@ function renderScheduleBody() {
     </div>`;
   }
 
-  el.innerHTML = hint + html;
+  el.innerHTML = deadlineOverBanner + hint + html;
 }
 
 
