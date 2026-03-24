@@ -4655,7 +4655,7 @@ async function renderSchedule(el) {
   <div style="position:sticky;top:0;z-index:10;background:var(--bg3)">
     <div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="font-size:13px;font-weight:600;color:var(--text)">${t('scheduleTitle')}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${t('scheduleTitle')} <span style="font-size:9px;color:#22c55e;background:#22c55e20;padding:1px 5px;border-radius:3px;margin-left:4px">v3</span></div>
         <div style="font-size:10px;color:var(--text3)">${t('shift')}: ${SHIFT_LABELS[curShift]}</div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
@@ -4803,17 +4803,31 @@ function buildAllShifts() {
   const FALLBACK_CYCLE = 30;
   const baseMs = Math.max(nowMs, totalStartMs);
 
-  // 段取り設定で各機械に割り当てられている金型のみをスケジュール対象にする
+  // ===== 段取りフィルタ（v3修正） =====
   // dandoriData = { machine_id(machinesテーブル): mold_id }
-  // machine_no → machine_id のマッピングを作成し、金型のmachine_noから段取り選択を判定
+  // machine_no → machine.id のマッピングを構築
   const machineNoToId = {};
   (state.machines || []).forEach(mc => { machineNoToId[String(mc.machine_no)] = mc.id; });
 
+  // デバッグ: dandoriDataの中身を出力
+  console.log('[Schedule v3] dandoriData:', JSON.stringify(dandoriData));
+  console.log('[Schedule v3] machineNoToId:', JSON.stringify(machineNoToId));
+  console.log('[Schedule v3] state.molds count:', state.molds.length);
+
   const allDandoriMolds = state.molds.filter(mold => {
     const mcId = mold.machine_id || machineNoToId[String(mold.machine_no)];
-    if (!mcId) return false;
-    return dandoriData[mcId] === mold.id;
+    const selectedMoldId = mcId ? dandoriData[mcId] : undefined;
+    const pass = selectedMoldId === mold.id;
+    // デバッグ: 除外された金型をログ出力
+    if (!pass) {
+      console.log('[Schedule v3] EXCLUDED:', mold.part_name, '(#'+mold.machine_no+')', 
+        'mold.id='+mold.id, 'mold.machine_id='+mold.machine_id, 
+        'mcId='+mcId, 'dandoriData[mcId]='+selectedMoldId);
+    }
+    return pass;
   });
+
+  console.log('[Schedule v3] allDandoriMolds after filter:', allDandoriMolds.map(m => m.part_name + '(#'+m.machine_no+')'));
   // 未入力金型を分離
   const unregisteredMolds = allDandoriMolds.filter(mold => isShotUnregistered(mold));
   let entries = allDandoriMolds.filter(mold => !isShotUnregistered(mold)).map(mold => {
