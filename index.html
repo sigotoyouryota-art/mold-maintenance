@@ -4072,6 +4072,8 @@ function setListSort(mode) {
 // 画面を1秒ごとに更新
 
 let realtimeTimer = null;
+let pollingTimer = null;
+const POLLING_INTERVAL = 30000; // 30秒ごとにサーバーからデータ再取得
 
 // ショット未入力判定
 function isShotUnregistered(mold) {
@@ -4161,12 +4163,40 @@ function startRealtimeUpdate() {
   stopRealtimeUpdate();
   realtimeTimer = setInterval(() => {
     updateRealtimeDisplay();
-  }, 3000); // 3秒ごとに更新
+  }, 3000); // 3秒ごとに表示更新
+  startPolling();
 }
 
 function stopRealtimeUpdate() {
   if (realtimeTimer) { clearInterval(realtimeTimer); realtimeTimer = null; }
+  stopPolling();
 }
+
+// ===== 30秒ポーリング（他端末の更新を同期） =====
+function startPolling() {
+  stopPolling();
+  pollingTimer = setInterval(async () => {
+    try {
+      await loadMolds();
+      updateRealtimeDisplay();
+    } catch(e) { console.warn('Polling error:', e); }
+  }, POLLING_INTERVAL);
+}
+
+function stopPolling() {
+  if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+}
+
+// バックグラウンド復帰時に即座にデータ再取得
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && state.currentUser) {
+    try {
+      await loadMolds();
+      updateRealtimeDisplay();
+      startPolling(); // タイマーをリセットして再開
+    } catch(e) { console.warn('Visibility reload error:', e); }
+  }
+});
 
 function updateRealtimeDisplay() {
   if (!state.molds.length) return;
