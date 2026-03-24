@@ -51,9 +51,9 @@
   --danger-bg: rgba(239,68,68,0.18);
   --danger-text: #ff6b6b;
   /* 警告 */
-  --warning: #f59e0b;
-  --warning-bg: rgba(245,158,11,0.15);
-  --warning-text: #eab308;
+  --warning: #eab308;
+  --warning-bg: rgba(234,179,8,0.12);
+  --warning-text: #facc15;
   /* 成功 */
   --success: #22c55e;
   --success-bg: rgba(34,197,94,0.15);
@@ -83,27 +83,27 @@
   --logo-orange: #f59e0b;
   --accent2: #fef3c7;
   /* 異常（超過）: 赤系 */
-  --overdue-text: #dc2626;
-  --overdue-bg: #fee2e2;
+  --overdue-text: #991b1b;
+  --overdue-bg: #fecaca;
   --overdue-bar-bg: #f87171;
   --overdue-border: #dc2626;
   /* 要メンテ: オレンジ系 */
-  --maint-text: #ea580c;
-  --danger-row-bg: #ffedd5;
+  --maint-text: #9a3412;
+  --danger-row-bg: #fed7aa;
   --danger-bar-bg: #f97316;
   --danger-border: #ea580c;
   /* 汎用危険 */
   --danger: #dc2626;
-  --danger-bg: #fee2e2;
+  --danger-bg: #fecaca;
   --danger-text: #dc2626;
   /* 警告 */
-  --warning: #d97706;
-  --warning-bg: #fef3c7;
-  --warning-text: #ca8a04;
+  --warning: #ca8a04;
+  --warning-bg: #fde68a;
+  --warning-text: #854d0e;
   /* 成功 */
   --success: #16a34a;
-  --success-bg: #dcfce7;
-  --success-text: #16a34a;
+  --success-bg: #bbf7d0;
+  --success-text: #166534;
   /* 情報 */
   --info-bg: #eff6ff;
   --info-text: #1d4ed8;
@@ -1628,10 +1628,10 @@ function statusMainColor(s) {
   return 'var(--success-text)';
 }
 function statusBadge(s) {
-  if (s==='overdue') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(239,68,68,0.2);color:#ff6b6b;font-weight:700">${t('lv4')}</span>`;
-  if (s==='danger') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(249,115,22,0.2);color:#fb923c;font-weight:700">${t('lv3')}</span>`;
-  if (s==='warning') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(234,179,8,0.15);color:#eab308;font-weight:700">${t('lv2')}</span>`;
-  return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(34,197,94,0.15);color:#4ade80;font-weight:700">${t('lv1')}</span>`;
+  if (s==='overdue') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:var(--overdue-bg);color:var(--overdue-border);font-weight:700">${t('lv4')}</span>`;
+  if (s==='danger') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:var(--danger-row-bg);color:var(--danger-border);font-weight:700">${t('lv3')}</span>`;
+  if (s==='warning') return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:var(--warning-bg);color:var(--warning);font-weight:700">${t('lv2')}</span>`;
+  return `<span style="font-size:9px;padding:2px 7px;border-radius:3px;background:var(--success-bg);color:var(--success);font-weight:700">${t('lv1')}</span>`;
 }
 function typeColor(cat) {
   const colors = {'WJS':'#1e3358:#7db8f7','パイプ':'#1a3828:#5ed18a','樹脂水路':'#1e2a3a:#93c5fd','ゴム':'#3a2010:#fb923c','VST':'#2e1e4a:#c490f5','その他':'var(--border):var(--text3)'};
@@ -4692,12 +4692,13 @@ async function renderSchedule(el) {
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:0.5px solid var(--border);flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#ef4444"></div><span style="font-size:10px;color:var(--text3)">${t('lv4')}</span></div>
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;color:var(--text3)">${t('lv3')}</span></div>
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#eab308"></div><span style="font-size:10px;color:var(--text3)">${t('lv2')}</span></div>
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div><span style="font-size:10px;color:var(--text3)">${t('lv1')}</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--overdue-border)"></div><span style="font-size:10px;color:var(--text3)">${t('lv4')}</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--danger-border)"></div><span style="font-size:10px;color:var(--text3)">${t('lv3')}</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--warning)"></div><span style="font-size:10px;color:var(--text3)">${t('lv2')}</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:var(--success)"></div><span style="font-size:10px;color:var(--text3)">${t('lv1')}</span></div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:#7c3aed"></div><span style="font-size:10px;color:var(--text3)">${t('lvCross')}</span></div>
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:10px;background:#ef4444"></div><span style="font-size:10px;color:var(--text3)">now</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:10px;background:#38bdf8"></div><span style="font-size:10px;color:var(--text3)">now</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:2px;height:10px;background:var(--overdue-border)"></div><span style="font-size:10px;color:var(--text3)">deadline</span></div>
     </div>
   </div>
   <div id="sched-body" style="padding:10px 14px"><div class="loading-overlay"><div class="spinner"></div></div></div>`;
@@ -5162,7 +5163,7 @@ function renderScheduleBody() {
         ? `<div style="position:absolute;right:${(100-maintOffset+1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${timeTagText}</div>`
         : `<div style="position:absolute;left:${(barRight+1).toFixed(1)}%;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:${color};white-space:nowrap;z-index:4">${timeTagText}</div>`;
       const barBg = isCross?'rgba(124,58,237,0.15)':isOverdue?'var(--overdue-bg)':status==='danger'?'var(--danger-row-bg)':status==='warning'?'var(--warning-bg)':'var(--bg4)';
-      const maintBg = isCross?'#7c3aed':isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':status==='warning'?'var(--warning-text)':'var(--success-text)';
+      const maintBg = isCross?'#7c3aed':isOverdue?'var(--overdue-border)':status==='danger'?'var(--danger-border)':status==='warning'?'var(--warning)':'var(--success)';
       const barTextColor = (status==='warning'||status==='normal')&&!isCross?'#1c1917':'#fff';
       const crossSuffix = isCont
         ? `　<span style="font-size:11px;color:#c4b5fd">（${s.fromShift||'前直'}から継続）</span>`
@@ -5179,7 +5180,7 @@ function renderScheduleBody() {
       const lapBadge = (s.lap>1 && !isCont)?`<div style="background:var(--accent2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">${s.lap}${t('times')||'回目'}</div>`:'';
       const crossBadge = isCont?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">直またぎ継続</div>`:isCross?`<div style="background:#4c1d95;color:#c4b5fd;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-right:4px;margin-bottom:7px">${t('lvCross')}</div>`:'';
       const topBadges = lapBadge+crossBadge;
-      const urgentMsgHtml = isOverdue ? `<div style="display:flex;align-items:center;gap:4px;padding-left:0;margin-top:3px"><div style="width:5px;height:5px;border-radius:50%;background:#ef4444;flex-shrink:0"></div><span style="font-size:10px;color:#ff6b6b;white-space:nowrap">${t('urgentMsg')}</span></div>` : '';
+      const urgentMsgHtml = isOverdue ? `<div style="display:flex;align-items:center;gap:4px;margin-bottom:6px"><div style="width:5px;height:5px;border-radius:50%;background:var(--overdue-border);flex-shrink:0"></div><span style="font-size:10px;color:var(--overdue-text);white-space:nowrap">${t('urgentMsg')}</span></div>` : '';
 
       const metaTimeText = (isCross && s.schedStart.getTime() === shiftStart.getTime())
         ? `〜${fmtHM(s.schedEnd)}`
@@ -5187,24 +5188,26 @@ function renderScheduleBody() {
       const metaDurText = (isCross && s.schedStart.getTime() === shiftStart.getTime())
         ? `残${Math.round((s.schedEnd - s.schedStart)/60000)}${t('minuteUnit')||'分'}`
         : `${s.dur}${t('minuteUnit')||'分'}`;
-      const metaHTML = `<div style="width:116px;flex-shrink:0">
-        <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
+      const headerHTML = `${urgentMsgHtml}<div style="display:flex;align-items:center;gap:5px;margin-bottom:8px">
           <div style="width:22px;height:22px;border-radius:50%;background:${maintBg};color:${barTextColor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--bg3);flex-shrink:0">${globalRank}</div>
-          <div style="font-size:14px;font-weight:700;color:var(--text)">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
           ${statusBadge(s.status)}
-        </div>
-        <div style="padding-left:26px;font-size:11px;font-weight:600;color:${color}">${metaTimeText}</div>
-        <div style="padding-left:26px;margin-top:3px"><span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent2);padding:1px 7px;border-radius:3px;border:0.5px solid var(--accent)60">⏱ ${metaDurText}</span></div>
-        ${urgentMsgHtml}
+          <div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#${s.mold.machine_no||'?'}　${s.mold.part_name}</div>
+        </div>`;
+      const metaHTML = `<div style="width:116px;flex-shrink:0">
+        <div style="font-size:11px;font-weight:600;color:${color}">${metaTimeText}</div>
+        <div style="margin-top:3px"><span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent2);padding:1px 7px;border-radius:3px;border:0.5px solid var(--accent)60">⏱ ${metaDurText}</span></div>
       </div>`;
+      const dlOffset = s.deadlineMs ? Math.max(0,Math.min(100,(s.deadlineMs-shiftStart)/60000/shiftDur*100)) : -1;
+      const deadlineLineHtml = dlOffset>=0&&dlOffset<=100 ? `<div style="position:absolute;left:${dlOffset}%;top:-2px;bottom:-2px;width:2px;background:var(--overdue-border);border-radius:1px;z-index:4"></div>` : '';
       const trackHTML = `<div style="flex:1;min-width:0">
         <div style="height:32px;border-radius:5px;background:${barBg};position:relative;overflow:hidden;margin-bottom:5px">
           ${gridLines}
-          ${nowOffset>=0?`<div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:2px;background:#ef4444;opacity:0.9;z-index:5"></div>`:''}
+          ${nowOffset>=0?`<div style="position:absolute;left:${nowOffset}%;top:-2px;bottom:-2px;width:2px;background:#38bdf8;border-radius:1px;z-index:6"></div>`:''}
+          ${deadlineLineHtml}
           <div style="position:absolute;left:${maintOffset}%;top:3px;bottom:3px;width:${maintWidth}%;background:${maintBg};border-radius:3px;z-index:3"></div>
           ${timeTag}
         </div>
-        <div style="font-size:12px;font-weight:700;color:${color}">${remDisplay}</div>
+        <div style="font-size:12px;font-weight:700;color:${color};margin-top:8px">${remDisplay}</div>
       </div>`;
 
       const isTlDeadlineOver = s.deadlineOver && !s.isContinuation;
@@ -5222,7 +5225,8 @@ function renderScheduleBody() {
       const trackHTMLFinal = isTlDeadlineOver ? `<div style="flex:1;min-width:0">
         <div style="height:32px;border-radius:5px;background:${effectiveBarBg};position:relative;overflow:hidden;margin-bottom:5px">
           ${gridLines}
-          ${nowOffset>=0?`<div style="position:absolute;left:${nowOffset}%;top:0;bottom:0;width:2px;background:#ef4444;opacity:0.9;z-index:5"></div>`:''}
+          ${nowOffset>=0?`<div style="position:absolute;left:${nowOffset}%;top:-2px;bottom:-2px;width:2px;background:#38bdf8;border-radius:1px;z-index:6"></div>`:''}
+          ${deadlineLineHtml}
           <div style="position:absolute;left:${maintOffset}%;top:3px;bottom:3px;width:${maintWidth}%;background:${effectiveMaintBg};border-radius:3px;z-index:3"></div>
           ${timeTag}
         </div>
@@ -5232,6 +5236,7 @@ function renderScheduleBody() {
       html += `<div style="${wrapStyle}" onclick="openMaintenanceFromAlert('${s.mold.id}')">
         ${doverTlBanner}
         ${topBadges?`<div style="margin-bottom:2px">${topBadges}</div>`:''}
+        ${headerHTML}
         <div style="display:flex;align-items:flex-start;gap:8px">${metaHTML}${trackHTMLFinal}</div>
       </div>`;
     });
