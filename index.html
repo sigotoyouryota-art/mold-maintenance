@@ -800,7 +800,8 @@ const T = {
     lv4:'Lv.4 緊急', lv3:'Lv.3 警戒', lv2:'Lv.2 準備', lv1:'Lv.1 予定', lvCross:'直またぎ', urgentMsg:'即メンテナンスを実施してください',
     simpleMaintTime:'簡易メンテ所要時間(分)', ohMaintTime:'OHメンテ所要時間(分)',
     shotUpdate:'ショット更新', maintDone2:'メンテ完了',
-    lineAlertStatus:'ライン別アラート状況', top5Title:'進捗率が高い金型 TOP5',
+    lineAlertStatus:'ライン別アラート状況', top5Title:'緊急度 Top5',
+    todayMaintDone:'本日メンテ完了', maintAchieveRate:'メンテ達成率', maintAchieveDesc:'設定shot以内にメンテ完了した割合', maintAchieved:'達成', maintExceeded:'超過', recentMaint:'直近メンテ実績', last30days:'直近30日',
     noAlert:'アラートはありません ✓',
     navDashboard:'ダッシュボード', navList:'一覧', navAlert:'アラート',
     navHistory:'メンテ履歴', navDandori:'段取り設定', navMaster:'マスタ設定',
@@ -989,7 +990,8 @@ const T = {
     lv4:'Lv.4 Khẩn cấp', lv3:'Lv.3 Cảnh giác', lv2:'Lv.2 Chuẩn bị', lv1:'Lv.1 Dự kiến', lvCross:'Chuyển ca', urgentMsg:'Hãy thực hiện bảo trì ngay',
     simpleMaintTime:'Thời gian BT đơn giản(phút)', ohMaintTime:'Thời gian BT tổng hợp(phút)',
     shotUpdate:'Cập nhật shot', maintDone2:'Hoàn thành BT',
-    lineAlertStatus:'Cảnh báo theo dây', top5Title:'Top 5 khuôn gần BT nhất',
+    lineAlertStatus:'Cảnh báo theo dây', top5Title:'Top 5 khẩn cấp',
+    todayMaintDone:'BT hoàn thành hôm nay', maintAchieveRate:'Tỷ lệ BT đạt', maintAchieveDesc:'Tỷ lệ BT trong shot đã cài đặt', maintAchieved:'Đạt', maintExceeded:'Vượt', recentMaint:'BT gần đây', last30days:'30 ngày gần đây',
     noAlert:'Không có cảnh báo ✓',
     navDashboard:'Tổng quan', navList:'Danh sách', navAlert:'Cảnh báo',
     navHistory:'Lịch sử BT', navDandori:'Cài đặt đổi khuôn', navMaster:'Cài đặt master',
@@ -1178,7 +1180,8 @@ const T = {
     lv4:'Lv.4 Critical', lv3:'Lv.3 Alert', lv2:'Lv.2 Prepare', lv1:'Lv.1 Planned', lvCross:'Cross-shift', urgentMsg:'Perform maintenance immediately',
     simpleMaintTime:'Simple maint. time(min)', ohMaintTime:'OH maint. time(min)',
     shotUpdate:'Update shot', maintDone2:'Complete maint.',
-    lineAlertStatus:'Alert by line', top5Title:'Top 5 molds near maint.',
+    lineAlertStatus:'Alert by line', top5Title:'Urgency Top 5',
+    todayMaintDone:'Maint. done today', maintAchieveRate:'Maint. achievement', maintAchieveDesc:'Maint. done within set shots', maintAchieved:'Achieved', maintExceeded:'Exceeded', recentMaint:'Recent maint.', last30days:'Last 30 days',
     noAlert:'No alerts ✓',
     navDashboard:'Dashboard', navList:'List', navAlert:'Alert',
     navHistory:'Maint. history', navDandori:'Setup config', navMaster:'Master settings',
@@ -1669,52 +1672,170 @@ function fmtNum(n) { return Number(n).toLocaleString(); }
 async function renderDashboard(el) {
   // 段取り設定を取得してactiveMoldIdsを更新
   if (activeMoldIds.size === 0) await loadDandoriForList();
-  const danger = state.molds.filter(m=>['danger','overdue'].includes(calcStatus(m))).length;
+  const overdue = state.molds.filter(m=>calcStatus(m)==='overdue').length;
+  const danger = state.molds.filter(m=>calcStatus(m)==='danger').length;
+  const dangerTotal = overdue + danger;
   const warning = state.molds.filter(m=>calcStatus(m)==='warning').length;
   const normal = state.molds.filter(m=>calcStatus(m)==='normal').length;
-  // 成形中（段取り設定済み）金型数
   const activeCount = activeMoldIds && activeMoldIds.size > 0 ? activeMoldIds.size : state.molds.length;
+
+  // 本日メンテ完了件数を取得
+  const today = new Date().toISOString().split('T')[0];
+  let todayMaintCount = 0;
+  try {
+    const todayLogs = await sb('maintenance_logs','GET',null,
+      `?performed_at=gte.${today}&select=id`);
+    todayMaintCount = (todayLogs||[]).length;
+  } catch(e) { /* エラー時は0表示 */ }
+
+  // メンテ達成率（直近30日）
+  let achieveRate = 0, achieveCount = 0, exceedCount = 0;
+  try {
+    const d30 = new Date();
+    d30.setDate(d30.getDate() - 30);
+    const d30Str = d30.toISOString().split('T')[0];
+    const recentLogs = await sb('maintenance_logs','GET',null,
+      `?performed_at=gte.${d30Str}&select=maint_shot_at_maintenance,mold_id,molds(maintenance_interval)`);
+    if (recentLogs && recentLogs.length > 0) {
+      recentLogs.forEach(log => {
+        const interval = log.molds?.maintenance_interval || 0;
+        const shotAtMaint = log.maint_shot_at_maintenance || 0;
+        if (interval > 0) {
+          if (shotAtMaint <= interval) achieveCount++;
+          else exceedCount++;
+        }
+      });
+      const total = achieveCount + exceedCount;
+      achieveRate = total > 0 ? Math.round(achieveCount / total * 100) : 0;
+    }
+  } catch(e) { /* エラー時は0表示 */ }
+
+  // 直近メンテ実績（最新5件）
+  let recentMaintHTML = '';
+  try {
+    const recentLogs2 = await sb('maintenance_logs','GET',null,
+      `?order=performed_at.desc&limit=5&select=id,maintenance_type,performed_at,molds(part_no,part_name),machines(machine_no),users(name)`);
+    if (recentLogs2 && recentLogs2.length > 0) {
+      recentMaintHTML = recentLogs2.map(log => {
+        const dt = new Date(log.performed_at);
+        const timeStr = dt.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+        const dateStr = dt.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
+        const isToday = dt.toISOString().split('T')[0] === today;
+        const displayTime = isToday ? timeStr : dateStr + ' ' + timeStr;
+        const userName = log.users?.name || '-';
+        const initial = userName.charAt(0);
+        const machineNo = log.machines?.machine_no || '?';
+        const partName = log.molds?.part_name || '-';
+        const maintType = log.maintenance_type === 'OH' ? 'OH' + (t('maintDone2')||'メンテ') : (t('simple')||'簡易') + (t('maintDone2')||'メンテ');
+        const colors = ['#1e3a5f:#60a5fa','#1a332a:#22c55e','#2a1f3d:#a78bfa','#3a2010:#fb923c','#2a1525:#f472b6'];
+        const ci = userName.charCodeAt(0) % colors.length;
+        const [abg,afg] = colors[ci].split(':');
+        return `<div style="padding:8px 10px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:50%;background:${abg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:${afg};flex-shrink:0">${initial}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;color:var(--text);font-weight:500">#${machineNo} ${partName}</div>
+            <div style="font-size:10px;color:var(--text3)">${maintType}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px;color:var(--text2)">${displayTime}</div>
+            <div style="font-size:10px;color:var(--text3)">${userName}</div>
+          </div>
+        </div>`;
+      }).join('');
+    } else {
+      recentMaintHTML = `<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">${t('noData')}</div>`;
+    }
+  } catch(e) {
+    recentMaintHTML = `<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">${t('noData')}</div>`;
+  }
+
+  // 達成率の円グラフSVG
+  const circumference = 2 * Math.PI * 22; // r=22
+  const achieveLen = circumference * achieveRate / 100;
+  const achieveColor = achieveRate >= 80 ? 'var(--success)' : achieveRate >= 50 ? 'var(--warning)' : 'var(--danger)';
+
   el.innerHTML = `
-  <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-label">${t('totalMolds')}</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${state.molds.length}</span></div><div class="kpi-sub" style="color:var(--text3)">${t('dandoriOnly')||'段取り設定済み'}</div></div>
-    <div class="kpi-card"><div class="kpi-label">${t('needMaint')}</div><div class="kpi-value" style="color:var(--danger)">${danger}</div></div>
-    <div class="kpi-card"><div class="kpi-label">${t('caution')}</div><div class="kpi-value" style="color:var(--warning)">${warning}</div></div>
-    <div class="kpi-card"><div class="kpi-label">${t('normal')}</div><div class="kpi-value" style="color:var(--success)">${normal}</div></div>
-  </div>
-  <div style="padding:10px 16px">
-    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">${t('lineAlertStatus')}</div>
-    ${renderLineAlertBars()}
-    <div style="font-size:13px;font-weight:600;color:var(--text);margin:16px 0 10px">${t('top5Title')}</div>
+  <div style="padding:10px 16px 80px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="kpi-card"><div class="kpi-label">${t('totalMolds')}</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${state.molds.length}</span></div><div class="kpi-sub" style="color:var(--text3)">${t('dandoriOnly')||'段取り設定済み'}</div></div>
+      <div class="kpi-card"><div class="kpi-label">${t('todayMaintDone')}</div><div class="kpi-value" style="color:var(--info-text)">${todayMaintCount}<span style="font-size:12px;color:var(--text3)"> ${t('readMoreUnit')||'件'}</span></div><div class="kpi-sub" style="color:var(--text3)">${state.currentShift}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="kpi-card" style="text-align:center"><div class="kpi-label" style="color:var(--danger)">${t('needMaint')}</div><div class="kpi-value" style="color:var(--danger)">${dangerTotal}</div></div>
+      <div class="kpi-card" style="text-align:center"><div class="kpi-label" style="color:var(--warning)">${t('caution')}</div><div class="kpi-value" style="color:var(--warning)">${warning}</div></div>
+      <div class="kpi-card" style="text-align:center"><div class="kpi-label" style="color:var(--success)">${t('normal')}</div><div class="kpi-value" style="color:var(--success)">${normal}</div></div>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:12px;border:0.5px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:12px;color:var(--text3)">${t('maintAchieveRate')}</div>
+        <div style="font-size:10px;color:var(--text4)">${t('last30days')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="position:relative;width:52px;height:52px;flex-shrink:0">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="22" fill="none" stroke="var(--bg)" stroke-width="5"/>
+            <circle cx="26" cy="26" r="22" fill="none" stroke="${achieveColor}" stroke-width="5" stroke-dasharray="${achieveLen} ${circumference}" stroke-dashoffset="${circumference/4}" stroke-linecap="round" transform="rotate(-90 26 26)"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:${achieveColor}">${achieveRate}%</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px">${t('maintAchieveDesc')}</div>
+          <div style="display:flex;gap:12px">
+            <span style="font-size:11px;color:var(--success)">${t('maintAchieved')} ${achieveCount}</span>
+            <span style="font-size:11px;color:var(--danger)">${t('maintExceeded')} ${exceedCount}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">${t('top5Title')}</div>
     ${renderTop5()}
+
+    <div style="font-size:12px;font-weight:600;color:var(--text);margin:12px 0 8px">${t('lineAlertStatus')}</div>
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:12px;border:0.5px solid var(--border)">
+      ${renderLineAlertBars()}
+    </div>
+
+    <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">${t('recentMaint')}</div>
+    <div style="background:var(--bg2);border-radius:8px;overflow:hidden;border:0.5px solid var(--border)">
+      ${recentMaintHTML}
+    </div>
   </div>`;
 }
 
 function renderLineAlertBars() {
-  return state.lines.map(line => {
+  const bars = state.lines.map(line => {
     const lineMolds = state.molds.filter(m=>m.line_name===line.name);
+    const o = lineMolds.filter(m=>calcStatus(m)==='overdue').length;
     const d = lineMolds.filter(m=>calcStatus(m)==='danger').length;
     const w = lineMolds.filter(m=>calcStatus(m)==='warning').length;
     const total = lineMolds.length;
     if (!total) return '';
-    const dPct = d/total*100, wPct = w/total*100;
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="width:60px;font-size:12px;font-weight:500;color:var(--text);flex-shrink:0">${line.name}</div>
-      <div style="flex:1;height:18px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex">
-        ${d>0?`<div style="width:${dPct}%;background:var(--danger);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff">${d}</div>`:''}
+    const dTotal = o + d;
+    const dPct = dTotal/total*100, wPct = w/total*100;
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <div style="width:30px;font-size:12px;font-weight:500;color:var(--text);flex-shrink:0">${line.name}</div>
+      <div style="flex:1;height:16px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex">
+        ${dTotal>0?`<div style="width:${dPct}%;background:var(--danger);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff">${dTotal}</div>`:''}
         ${w>0?`<div style="width:${wPct}%;background:var(--warning);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#1c1917">${w}</div>`:''}
       </div>
-      <div style="font-size:11px;color:var(--text3);width:30px;text-align:right">${d+w}${t('readMoreUnit')||'件'}</div>
+      <div style="font-size:11px;color:var(--text3);width:28px;text-align:right">${dTotal+w}${t('readMoreUnit')||'件'}</div>
     </div>`;
   }).join('');
+  return bars || `<div style="text-align:center;padding:10px;color:var(--text3);font-size:11px">${t('noAlert')}</div>`;
 }
 
 function renderTop5() {
   const top5 = [...state.molds].sort((a,b)=>calcEstimatedProgress(b)-calcEstimatedProgress(a)).slice(0,5);
-  return top5.map(m=>{
+  return `<div style="background:var(--bg2);border-radius:8px;overflow:hidden;margin-bottom:12px;border:0.5px solid var(--border)">` +
+  top5.map(m=>{
     const pct = calcEstimatedProgress(m);
     const status = calcStatus(m);
-    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;background:var(--bg2);border-radius:6px;padding:8px 10px;border-left:3px solid ${statusColor(status)}">
-      <div style="flex:1;min-width:0">
+    const isOverdue = status === 'overdue';
+    const rowBg = isOverdue ? 'background:var(--overdue-bg)' : '';
+    return `<div style="padding:8px 10px;border-left:3px solid ${statusColor(status)};border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;border-radius:0;${rowBg}">
+      <div style="min-width:0">
         <div style="font-size:12px;font-weight:600;color:var(--text)">#${m.machine_no||'?'}　${m.part_name}</div>
         <div style="font-size:10px;color:var(--text3)">${m.part_no} / ${m.category_name||'-'} / ${m.line_name||'-'}</div>
       </div>
@@ -1723,7 +1844,7 @@ function renderTop5() {
         <div style="font-size:11px;color:${statusColor(status)};margin-top:3px">${pct}%</div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + `</div>`;
 }
 
 // ===== 一覧 =====
@@ -4195,6 +4316,11 @@ function startPolling() {
     try {
       await loadMolds();
       updateRealtimeDisplay();
+      // ダッシュボード表示中ならポーリング時に再描画
+      if (state.currentSection === 'dashboard') {
+        const content = document.getElementById('main-content');
+        if (content) renderDashboard(content);
+      }
     } catch(e) { console.warn('Polling error:', e); }
   }, POLLING_INTERVAL);
 }
@@ -4209,6 +4335,10 @@ document.addEventListener('visibilitychange', async () => {
     try {
       await loadMolds();
       updateRealtimeDisplay();
+      if (state.currentSection === 'dashboard') {
+        const content = document.getElementById('main-content');
+        if (content) renderDashboard(content);
+      }
       startPolling(); // タイマーをリセットして再開
     } catch(e) { console.warn('Visibility reload error:', e); }
   }
@@ -4223,6 +4353,11 @@ async function manualRefresh() {
   try {
     await loadMolds();
     updateRealtimeDisplay();
+    // ダッシュボード表示中なら再描画
+    if (state.currentSection === 'dashboard') {
+      const content = document.getElementById('main-content');
+      if (content) renderDashboard(content);
+    }
     startPolling();
     showToast(t('dataFetched') || 'データを取得しました', 'success');
   } catch(e) {
@@ -4299,9 +4434,14 @@ function updateRealtimeDisplay() {
   }
 
   if (section === 'dashboard') {
-    // ダッシュボードのKPI・TOP5を再描画
-    const content = document.getElementById('main-content');
-    if (content) renderDashboard(content);
+    // KPI数値のみ軽量更新（API呼び出しなし、DOM要素がある場合のみ）
+    const kpiValues = document.querySelectorAll('.kpi-value');
+    const top5Container = document.querySelector('[data-dash-top5]');
+    if (kpiValues.length > 0 || top5Container) {
+      // KPIとTOP5の数値は state.molds ベースで再計算されるので
+      // ポーリングで state.molds が更新された後にのみ全体再描画
+      // 3秒タイマーでの再描画は行わない（API負荷防止）
+    }
     return;
   }
 
