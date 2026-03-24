@@ -736,7 +736,7 @@ const state = {
   dandoriDandoriOnly: false,
   listViewMode: 'detail',
   alertViewMode: 'detail',
-  listSortMode: 'maint_asc',
+  listSortMode: 'machine_asc',
 };
 
 // ===== 多言語 =====
@@ -1705,7 +1705,7 @@ async function renderDashboard(el) {
   let recentMaintHTML = '';
   try {
     const recentLogs2 = await sb('maintenance_logs','GET',null,
-      `?order=performed_at.desc&limit=5&select=id,maintenance_type,performed_at,molds(part_no,part_name),machines(machine_no),users(name)`);
+      `?order=performed_at.desc&limit=5&select=id,mold_id,maintenance_type,performed_at,molds(part_no,part_name),machines(machine_no),users(name)`);
     if (recentLogs2 && recentLogs2.length > 0) {
       recentMaintHTML = recentLogs2.map(log => {
         const dt = new Date(log.performed_at);
@@ -1715,7 +1715,13 @@ async function renderDashboard(el) {
         const displayTime = isToday ? timeStr : dateStr + ' ' + timeStr;
         const userName = log.users?.name || '-';
         const initial = userName.charAt(0);
-        const machineNo = log.machines?.machine_no || '?';
+        // machine_noはmachinesリレーション → 取れなければstate.moldsからmold_id経由で取得
+        let machineNo = log.machines?.machine_no || '';
+        if (!machineNo && log.mold_id) {
+          const moldData = state.molds.find(m => m.id === log.mold_id);
+          if (moldData) machineNo = moldData.machine_no || '';
+        }
+        machineNo = machineNo || '-';
         const partName = log.molds?.part_name || '-';
         const maintType = log.maintenance_type === 'OH' ? 'OH' + (t('maintDone2')||'メンテ') : (t('simple')||'簡易') + (t('maintDone2')||'メンテ');
         const colors = ['#1e3a5f:#60a5fa','#1a332a:#22c55e','#2a1f3d:#a78bfa','#3a2010:#fb923c','#2a1525:#f472b6'];
@@ -1748,7 +1754,7 @@ async function renderDashboard(el) {
   el.innerHTML = `
   <div style="padding:10px 16px 80px">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="kpi-card"><div class="kpi-label">${t('totalMolds')}</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${state.molds.length}</span></div><div class="kpi-sub" style="color:var(--text3)">${t('dandoriOnly')||'段取り設定済み'}</div></div>
+      <div class="kpi-card"><div class="kpi-label">${t('totalMolds')}</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${activeMoldIds.size > 0 ? activeMoldIds.size : state.molds.length}</span></div></div>
       <div class="kpi-card"><div class="kpi-label">${t('todayMaintDone')}</div><div class="kpi-value" style="color:var(--info-text)">${todayMaintCount}<span style="font-size:12px;color:var(--text3)"> ${t('readMoreUnit')||'件'}</span></div><div class="kpi-sub" style="color:var(--text3)">${state.currentShift}</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
@@ -1805,13 +1811,13 @@ function renderLineAlertBars() {
     if (!total) return '';
     const dTotal = o + d;
     const dPct = dTotal/total*100, wPct = w/total*100;
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-      <div style="width:30px;font-size:12px;font-weight:500;color:var(--text);flex-shrink:0">${line.name}</div>
-      <div style="flex:1;height:16px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex">
-        ${dTotal>0?`<div style="width:${dPct}%;background:var(--danger);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff">${dTotal}</div>`:''}
-        ${w>0?`<div style="width:${wPct}%;background:var(--warning);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#1c1917">${w}</div>`:''}
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:nowrap">
+      <div style="width:50px;font-size:11px;font-weight:500;color:var(--text);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${line.name}</div>
+      <div style="flex:1;min-width:0;height:16px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex">
+        ${dTotal>0?`<div style="width:${dPct}%;min-width:18px;background:var(--danger);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff">${dTotal}</div>`:''}
+        ${w>0?`<div style="width:${wPct}%;min-width:18px;background:var(--warning);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#1c1917">${w}</div>`:''}
       </div>
-      <div style="font-size:11px;color:var(--text3);width:28px;text-align:right">${dTotal+w}${t('readMoreUnit')||'件'}</div>
+      <div style="font-size:10px;color:var(--text3);flex-shrink:0;white-space:nowrap">${dTotal+w}${t('readMoreUnit')||'件'}</div>
     </div>`;
   }).join('');
   return bars || `<div style="text-align:center;padding:10px;color:var(--text3);font-size:11px">${t('noAlert')}</div>`;
@@ -1855,10 +1861,10 @@ async function renderList(el) {
         <button class="seg-btn" onclick="setListViewMode('simple',this)" style="padding:3px 8px;font-size:10px">${t('simple')}</button>
       </div>
       <select onchange="setListSort(this.value)" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:5px;padding:4px 8px;font-size:11px;color:var(--text2);cursor:pointer">
-        <option value="maint_asc">▼ ${t('sortMaintAsc')}</option>
-        <option value="maint_desc">▼ ${t('sortMaintDesc')}</option>
         <option value="machine_asc">▼ ${t('sortMachineAsc')}</option>
         <option value="machine_desc">▼ ${t('sortMachineDesc')}</option>
+        <option value="maint_asc">▼ ${t('sortMaintAsc')}</option>
+        <option value="maint_desc">▼ ${t('sortMaintDesc')}</option>
       </select>
     </div>
   </div>
