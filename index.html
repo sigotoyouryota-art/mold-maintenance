@@ -4671,18 +4671,15 @@ async function renderSchedule(el) {
 
 async function loadDandoriForSchedule() {
   try {
-    // 現在時刻から直を自動判定（buildAllShiftsのdetectCurrentShiftと同じロジック）
-    const h = new Date().getHours();
-    const actualShift = h >= 8 && h < 16 ? '1S' : h >= 16 ? '2S' : '3S';
     const today = new Date().toISOString().split('T')[0];
     let settings = await sb('dandori_settings','GET',null,
-      `?setting_date=eq.${today}&shift=eq.${actualShift}&select=machine_id,mold_id`);
+      `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     if (!settings || settings.length === 0) {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const weekAgoStr = weekAgo.toISOString().split('T')[0];
       settings = await sb('dandori_settings','GET',null,
-        `?setting_date=gte.${weekAgoStr}&shift=eq.${actualShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
+        `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
     }
     dandoriData = {};
     (settings||[]).forEach(s => { if (s.mold_id) dandoriData[s.machine_id] = s.mold_id; });
@@ -4720,13 +4717,8 @@ function buildAllShifts() {
   const today = new Date(now); today.setHours(0,0,0,0);
 
   // ===== 現在の直を特定 =====
-  function detectCurrentShift() {
-    const h = now.getHours();
-    if (h >= 8  && h < 16) return '1S';
-    if (h >= 16)           return '2S';
-    return '3S';
-  }
-  const currentShift = detectCurrentShift();
+  // 段取り設定はstate.currentShift（ログイン時選択）で保存されるため統一して使用
+  const currentShift = state.currentShift;
   const SHIFT_ORDER = ['1S','2S','3S'];
   const curIdx = SHIFT_ORDER.indexOf(currentShift);
 
