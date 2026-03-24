@@ -1543,9 +1543,10 @@ async function initMainPage() {
     if (navMaster) navMaster.style.display = 'flex';
     if (navReport) navReport.style.display = 'flex';
     if (navBackup) navBackup.style.display = 'flex';
-    const navAnalysis = document.getElementById('nav-analysis');
-    if (navAnalysis) navAnalysis.style.display = 'flex';
   }
+  // 分析は全ユーザーに表示
+  const navAnalysis = document.getElementById('nav-analysis');
+  if (navAnalysis) navAnalysis.style.display = 'flex';
 
   const loading = document.getElementById('main-loading');
   if (loading) loading.style.display = 'flex';
@@ -1606,17 +1607,7 @@ function showSection(section) {
     history: renderHistory,
     schedule: renderSchedule,
     shotUpdate: renderShotUpdate,
-    analysis: (el) => {
-      if (state.currentUser?.role !== 'admin') {
-        el.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text3)">
-          <div style="font-size:40px;margin-bottom:12px">🔒</div>
-          <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px">${t('adminOnly')}</div>
-          <div style="font-size:12px">${t('adminOnlyDesc')}</div>
-        </div>`;
-        return;
-      }
-      renderAnalysis(el);
-    },
+    analysis: renderAnalysis,
     dandori: renderDandori,
     master: renderMaster,
     settings: renderSettings,
