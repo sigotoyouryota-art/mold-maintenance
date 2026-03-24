@@ -1786,6 +1786,8 @@ async function initMainPage() {
 
   try {
     await Promise.all([loadMolds(), loadLines(), loadCategories(), loadMachines()]);
+    // 段取りデータを起動時にロード（ショット加算判定に必要）
+    await loadDandoriForSchedule();
   } catch(e) {
     showToast(t('loadError'), 'error');
     console.error('initMainPage error:', e);
@@ -4475,6 +4477,10 @@ function calcEstimatedShot(mold) {
   const lastUpdated = mold.maint_shot_updated_at || mold.last_shot_updated_at || mold.updated_at;
   const cycleTime = mold.cycle_time_sec || 30;
   if (!lastUpdated) return baseShot;
+  // 段取り未設定の金型はショット加算しない（baseShotのまま返す）
+  if (Object.keys(dandoriData).length > 0 && !Object.values(dandoriData).includes(mold.id)) {
+    return baseShot;
+  }
   const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
   if (elapsedSec < 0 || elapsedSec > 86400 * 30) return baseShot; // 異常値ガード
   const additionalShots = Math.floor(Math.max(0, elapsedSec) / cycleTime);
@@ -4487,6 +4493,10 @@ function calcEstimatedTotalShot(mold) {
   const lastUpdated = mold.last_shot_updated_at || mold.updated_at;
   const cycleTime = mold.cycle_time_sec || 30;
   if (!lastUpdated) return baseShot;
+  // 段取り未設定の金型はショット加算しない（baseShotのまま返す）
+  if (Object.keys(dandoriData).length > 0 && !Object.values(dandoriData).includes(mold.id)) {
+    return baseShot;
+  }
   const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
   if (elapsedSec < 0 || elapsedSec > 86400 * 30) return baseShot; // 異常値ガード
   const additionalShots = Math.floor(Math.max(0, elapsedSec) / cycleTime);
@@ -4568,7 +4578,7 @@ async function pollOnce() {
   if (isPolling) return; // 前回が完了していなければスキップ
   isPolling = true;
   try {
-    await loadMolds();
+    await Promise.all([loadMolds(), loadDandoriForSchedule()]);
     updateRealtimeDisplay();
     if (state.currentSection === 'dashboard') {
       const content = document.getElementById('main-content');
