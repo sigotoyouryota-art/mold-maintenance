@@ -2247,7 +2247,7 @@ function renderDandoriMachines() {
   el.innerHTML = machines.map(machine => {
     const machineMolds = state.molds.filter(m=>m.machine_no===machine.machine_no);
     const selectedMoldId = dandoriData[machine.id];
-    return `<div style="border:0.5px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
+    return `<div class="dandori-card" style="border:0.5px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
       <div style="display:flex;align-items:stretch">
         <div style="width:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg4);border-right:0.5px solid var(--border);padding:10px;flex-shrink:0">
           <div style="font-size:18px;font-weight:600;color:var(--text)">#${machine.machine_no}</div>
@@ -4804,13 +4804,12 @@ function buildAllShifts() {
   const baseMs = Math.max(nowMs, totalStartMs);
 
   // 段取り設定で各機械に割り当てられている金型のみをスケジュール対象にする
-  // dandoriData = { machine_id(machinesテーブル): mold_id } 
+  // dandoriData = { machine_id(machinesテーブル): mold_id }
   // machine_no → machine_id のマッピングを作成し、金型のmachine_noから段取り選択を判定
   const machineNoToId = {};
   (state.machines || []).forEach(mc => { machineNoToId[String(mc.machine_no)] = mc.id; });
 
   const allDandoriMolds = state.molds.filter(mold => {
-    // 金型のmachine_noからmachinesテーブルのIDを引き、その機械の段取りで選択されている金型IDと一致するか確認
     const mcId = mold.machine_id || machineNoToId[String(mold.machine_no)];
     if (!mcId) return false;
     return dandoriData[mcId] === mold.id;
