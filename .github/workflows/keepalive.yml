@@ -1,0 +1,26 @@
+# Supabase Free プランの自動pause防止
+# 毎日 UTC 0:00（日本時間 9:00）にDBへpingを送る
+name: Supabase Keepalive
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 毎日UTC 0:00に実行
+  workflow_dispatch:       # 手動実行もできるようにする
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/lines?limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}")
+          echo "Response: $response"
+          if [ "$response" = "200" ]; then
+            echo "✅ Supabase is alive"
+          else
+            echo "⚠️ Supabase returned $response"
+            exit 1
+          fi
