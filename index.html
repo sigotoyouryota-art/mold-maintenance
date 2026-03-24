@@ -757,7 +757,7 @@ const T = {
     worker:'作業者', confirmTitle:'登録内容を確認', back:'戻る', register:'登録する',
     maintType:'メンテ種別', resetStatus:'カウンター', withReset:'リセットあり', noReset:'リセットなし',
     shotCount:'実施shot数', shift:'直', detail:'詳細', simple:'簡易',
-    dandoriOnly:'段替え号機のみ', prevConfig:'前回構成を自動引継済み',
+    dandoriOnly:'段替え号機のみ', operating:'稼働中', prevConfig:'前回構成を自動引継済み',
     saveConfig:'の設定を保存', stopMachine:'停止中', dandori:'段替え', fixed:'固定',
     oh:'OH', prevShot:'前回', limit:'上限', cycleTime:'サイクル',
     weeklyComplete:'今週完了', monthlyComplete:'今月完了', prevWeek:'先週比',
@@ -948,7 +948,7 @@ const T = {
     worker:'Công nhân', confirmTitle:'Xác nhận nội dung', back:'Quay lại', register:'Đăng ký',
     maintType:'Loại BT', resetStatus:'Bộ đếm', withReset:'Có reset', noReset:'Không reset',
     shotCount:'Số shot thực hiện', shift:'Ca', detail:'Chi tiết', simple:'Đơn giản',
-    dandoriOnly:'Chỉ máy đổi khuôn', prevConfig:'Đã kế thừa cấu hình hôm qua',
+    dandoriOnly:'Chỉ máy đổi khuôn', operating:'Đang chạy', prevConfig:'Đã kế thừa cấu hình hôm qua',
     saveConfig:'Lưu cài đặt', stopMachine:'Dừng máy', dandori:'Đổi khuôn', fixed:'Cố định',
     oh:'OH', prevShot:'Lần trước', limit:'Giới hạn', cycleTime:'Chu kỳ',
     weeklyComplete:'Hoàn thành tuần', monthlyComplete:'Hoàn thành tháng', prevWeek:'So tuần trước',
@@ -1138,7 +1138,7 @@ const T = {
     worker:'Worker', confirmTitle:'Confirm details', back:'Back', register:'Register',
     maintType:'Maint. type', resetStatus:'Counter', withReset:'Reset', noReset:'Keep',
     shotCount:'Shot count', shift:'Shift', detail:'Detail', simple:'Simple',
-    dandoriOnly:'Changeover only', prevConfig:'Previous config auto-loaded',
+    dandoriOnly:'Changeover only', operating:'Operating', prevConfig:'Previous config auto-loaded',
     saveConfig:'Save config', stopMachine:'Stopped', dandori:'Changeover', fixed:'Fixed',
     oh:'OH', prevShot:'Previous', limit:'Limit', cycleTime:'Cycle',
     weeklyComplete:'Weekly done', monthlyComplete:'Monthly done', prevWeek:'vs last week',
@@ -1925,7 +1925,7 @@ function renderListBody() {
   // 段取り未設定が全台の場合は「稼働中」セクションを作らず全台を通常表示
   const hasDandori = active.length > 0;
   document.getElementById('list-count').textContent = hasDandori
-    ? `${sorted.length}${t('tai')} (${t('normal')} ${active.length}${t('tai')})`
+    ? `${sorted.length}${t('tai')} (${t('operating')||'稼働中'} ${active.length}${t('tai')})`
     : `${sorted.length}${t('tai')}`;
   if (!sorted.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
 
@@ -1993,8 +1993,8 @@ function renderListBody() {
         ${unregistered
           ? `<span style="color:var(--text4)">0 / ${fmtNum(m.maintenance_interval)}shot</span>`
           : isOverdue
-            ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span><span style="color:var(--text3)">累計${fmtNum(calcEstimatedTotalShot(m))}</span>`
-            : `<span style="color:${color}">${t('remainLabel')} ${fmtNum(rem)}shot</span><span style="color:${color}">${fmtTime(remMin)}</span><span style="color:${color}">${pct}%</span>`
+            ? `<span style="color:var(--danger-text);font-weight:700">${fmtNum(overShot)}shot超過</span><span style="color:var(--info-text)">${t('totalShotLabel2')||'累計'} ${fmtNum(calcEstimatedTotalShot(m))}</span>`
+            : `<span style="color:${color}">${t('remainLabel')} ${fmtNum(rem)}shot</span><span style="color:${color}">${fmtTime(remMin)}</span><span style="color:${color}">${pct}%</span><span style="color:var(--info-text)">${t('totalShotLabel2')||'累計'} ${fmtNum(calcEstimatedTotalShot(m))}</span>`
         }
       </div>
       ${unregistered?`<div style="display:flex;align-items:center;gap:5px;background:var(--warning-bg);border-radius:5px;padding:5px 8px;margin-top:6px;font-size:10px;color:var(--warning-text)"><div style="width:5px;height:5px;border-radius:50%;background:var(--warning-text);flex-shrink:0"></div>${t('shotUnregisteredMsg')}</div>`
