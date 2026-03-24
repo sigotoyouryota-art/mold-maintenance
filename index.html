@@ -533,6 +533,14 @@ select.form-control { cursor: pointer; }
       <button onclick="showSection('settings')" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text2);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="設定">⚙</button>
     </div>
   </div>
+  <!-- バージョン更新バナー -->
+  <div id="update-banner" style="display:none;background:#1d4ed8;padding:8px 12px;align-items:center;justify-content:space-between;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span style="font-size:11px;color:#fff;font-weight:500" id="update-banner-text"></span>
+    </div>
+    <div onclick="forceReload()" style="background:#fff;color:#1d4ed8;font-size:10px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer;flex-shrink:0" id="update-banner-btn"></div>
+  </div>
   <div class="pc-layout">
     <div class="sidebar" id="sidebar">
       <div class="sidebar-item active" onclick="showSection('dashboard')" id="nav-dashboard"><svg style="width:18px;height:18px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span id="nav-label-dashboard">ダッシュボード</span></div>
@@ -896,6 +904,10 @@ const T = {
     updateCheckBtn:'更新確認',
     checkingText:'確認中...',
     updateNow:'今すぐ更新しますか？',
+    updateAvailable:'新バージョン',
+    updateAvailableMsg:'があります',
+    updateBtn:'更新',
+    dataFetched:'データを取得しました',
     appVersionLabel:'アプリバージョン',
     copyBtn:'コピー',
     inputHere:'入力 ›',
@@ -1081,6 +1093,10 @@ const T = {
     updateCheckBtn:'Kiểm tra cập nhật',
     checkingText:'Đang kiểm tra...',
     updateNow:'Cập nhật ngay?',
+    updateAvailable:'Phiên bản mới',
+    updateAvailableMsg:'có sẵn',
+    updateBtn:'Cập nhật',
+    dataFetched:'Đã tải dữ liệu',
     appVersionLabel:'Phiên bản ứng dụng',
     copyBtn:'Sao chép',
     inputHere:'Nhập ›',
@@ -1266,6 +1282,10 @@ const T = {
     updateCheckBtn:'Check update',
     checkingText:'Checking...',
     updateNow:'Update now?',
+    updateAvailable:'New version',
+    updateAvailableMsg:'is available',
+    updateBtn:'Update',
+    dataFetched:'Data fetched',
     appVersionLabel:'App version',
     copyBtn:'Copy',
     inputHere:'Input ›',
@@ -4204,7 +4224,7 @@ async function manualRefresh() {
     await loadMolds();
     updateRealtimeDisplay();
     startPolling();
-    showToast(t('shotUpdated') || 'データを更新しました', 'success');
+    showToast(t('dataFetched') || 'データを取得しました', 'success');
   } catch(e) {
     showToast(t('loadError') || '更新に失敗しました', 'error');
   } finally {
@@ -5752,17 +5772,20 @@ setTimeout(async () => {
     const match = html.match(/name="app-version" content="([^"]+)"/);
     const latest = match ? match[1] : null;
     if (latest && latest !== CURRENT_VERSION) {
-      // 新バージョン通知をトーストで表示
-      const toast = document.getElementById('toast');
-      if (toast) {
-        toast.innerHTML = `v${latest} ${t('updateNow')} <span onclick="forceReload()" style="text-decoration:underline;cursor:pointer;font-weight:600;margin-left:8px">${t('updateCheckBtn')}</span>`;
-        toast.className = 'show';
-        // 10秒間表示
-        setTimeout(() => { if(toast) toast.className = ''; }, 10000);
-      }
+      showUpdateBanner(latest);
     }
   } catch(e) { /* バックグラウンド確認失敗は無視 */ }
 }, 5000);
+
+function showUpdateBanner(version) {
+  const banner = document.getElementById('update-banner');
+  const text = document.getElementById('update-banner-text');
+  const btn = document.getElementById('update-banner-btn');
+  if (!banner) return;
+  text.textContent = `${t('updateAvailable')} v${version} ${t('updateAvailableMsg')}`;
+  btn.textContent = t('updateBtn') || '更新';
+  banner.style.display = 'flex';
+}
 
 // shift-btnにイベントリスナーを設定
 document.querySelectorAll('.shift-btn[data-shift]').forEach(btn => {
