@@ -2161,8 +2161,8 @@ function renderListBody() {
   // 稼働中（段取り設定済み）と未設定に分ける
   const active = sorted.filter(m=>activeMoldIds.has(m.id));
   const inactive = sorted.filter(m=>!activeMoldIds.has(m.id));
-  // 段取り未設定が全台の場合は「稼働中」セクションを作らず全台を通常表示
-  const hasDandori = active.length > 0;
+  // 段取り設定がどこかのラインに1面でもあれば、全ラインで段取り分類表示する
+  const hasDandori = activeMoldIds.size > 0;
   document.getElementById('list-count').textContent = hasDandori
     ? `${sorted.length}${t('men')||'面'} (${t('operating')||'段取り設定中'} ${active.length}${t('men')||'面'})`
     : `${sorted.length}${t('men')||'面'}`;
