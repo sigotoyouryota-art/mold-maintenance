@@ -2115,7 +2115,7 @@ async function loadDandoriForList() {
     // まず当日分を取得、なければ直近の設定を使用
     const today = new Date().toISOString().split('T')[0];
     let settings = await sb('dandori_settings','GET',null,
-      `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=mold_id`);
+      `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     
     if (!settings || settings.length === 0) {
       // 当日分がなければ直近7日間の設定を取得
@@ -2123,10 +2123,19 @@ async function loadDandoriForList() {
       weekAgo.setDate(weekAgo.getDate() - 7);
       const weekAgoStr = weekAgo.toISOString().split('T')[0];
       settings = await sb('dandori_settings','GET',null,
-        `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=mold_id&order=setting_date.desc&limit=100`);
+        `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
     }
     
-    activeMoldIds = new Set((settings||[]).map(s=>s.mold_id));
+    // 結果はsetting_date降順のため、同一machine_idは最初（最新）のmold_idのみ採用
+    const seen = {};
+    const moldIds = [];
+    (settings||[]).forEach(s => {
+      if (s.mold_id && !seen[s.machine_id]) {
+        seen[s.machine_id] = true;
+        moldIds.push(s.mold_id);
+      }
+    });
+    activeMoldIds = new Set(moldIds);
   } catch(e) {
     activeMoldIds = new Set();
   }
@@ -5194,7 +5203,8 @@ async function loadDandoriForSchedule() {
         `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
     }
     dandoriData = {};
-    (settings||[]).forEach(s => { if (s.mold_id) dandoriData[s.machine_id] = s.mold_id; });
+    // 結果はsetting_date降順のため、同一machine_idは最初（最新）のみ採用
+    (settings||[]).forEach(s => { if (s.mold_id && !dandoriData.hasOwnProperty(s.machine_id)) dandoriData[s.machine_id] = s.mold_id; });
   } catch(e) {
     console.error('loadDandoriForSchedule error:', e);
   }
@@ -5282,7 +5292,7 @@ function buildAllShifts() {
       const dur          = (mold.simple_maint_time_min || 20) * 60000;
       const remShot      = calcEstimatedRemaining(mold);
       const overShot     = calcOverShot(mold);
-      const deadlineMs   = status === 'overdue' ? nowMs : nowMs + remShot * cycSec * 1000;
+      const deadlineMs   = status === 'overdue' ? nowMs - overShot * cycSec * 1000 : nowMs + remShot * cycSec * 1000;
       const overElapsedMs = status === 'overdue' ? overShot * cycSec * 1000 : 0;
       return { mold, status, dur, deadlineMs, overElapsedMs, cycSec, lap: 1, deadlineOver: false };
     })
@@ -5309,7 +5319,7 @@ function buildAllShifts() {
     const startMs = Math.max(cursor, e.deadlineMs);
     const endMs   = startMs + e.dur;
     if (startMs >= totalEndMs) continue;
-    placed.push({ ...e, startMs, endMs, deadlineOver: startMs > e.deadlineMs });
+    placed.push({ ...e, startMs, endMs, deadlineOver: (e.status !== 'overdue') && (startMs > e.deadlineMs) });
     cursor = endMs;
   }
 
@@ -5369,10 +5379,11 @@ function buildAllShifts() {
       if (nextSr) {
         const movedEnd = nextSr.start.getTime() + e.dur;
         if (movedEnd <= e.deadlineMs && movedEnd <= nextSr.end.getTime()) {
-          // 次直先頭に移動（startMs/endMsを更新してループ継続）
+          // 次直先頭に移動 → 次直に直接配置（crossShift なし）
           e.startMs = nextSr.start.getTime();
           e.endMs   = movedEnd;
-          break; // ri+1 で再評価される
+          result[ri + 1].scheduled.push(_buildEntry(e, nextSr, false));
+          break;
         }
       }
 
