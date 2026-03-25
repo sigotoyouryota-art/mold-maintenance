@@ -5611,7 +5611,7 @@ function renderScheduleBody() {
       const anchor = i===0?'left:0;transform:none':i===8?'right:0;transform:none;left:auto':`left:${pct}%;transform:translateX(-50%)`;
       return `<div style="position:absolute;${anchor};font-size:10px;color:var(--text4);white-space:nowrap">${String(h2).padStart(2,'0')}:00</div>`;
     }).join('');
-    html += `<div style="padding-left:124px;margin-bottom:6px"><div style="position:relative;height:16px">${axisInner}</div></div>`;
+    html += `<div style="padding-left:138px;padding-right:14px;margin-bottom:6px"><div style="position:relative;height:16px">${axisInner}</div></div>`;
 
     const gridLines = [1,2,3,4,5,6,7].map(i=>`<div style="position:absolute;left:${(i/8)*100}%;top:0;bottom:0;width:1px;background:var(--border);opacity:0.4"></div>`).join('');
 
@@ -5721,7 +5721,7 @@ function renderScheduleBody() {
     });
 
     // 時間軸（下）
-    html += `<div style="padding-left:124px;margin-top:4px;padding-bottom:10px;border-bottom:0.5px solid var(--border)"><div style="position:relative;height:16px">${axisInner}</div></div>`;
+    html += `<div style="padding-left:138px;padding-right:14px;margin-top:4px;padding-bottom:10px;border-bottom:0.5px solid var(--border)"><div style="position:relative;height:16px">${axisInner}</div></div>`;
   });
 
   // 未入力金型の表示
