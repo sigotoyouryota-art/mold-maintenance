@@ -1898,12 +1898,14 @@ function fmtNum(n) { return Number(n).toLocaleString(); }
 async function renderDashboard(el) {
   // 段取り設定を取得してactiveMoldIdsを更新
   if (activeMoldIds.size === 0) await loadDandoriForList();
-  const overdue = state.molds.filter(m=>calcStatus(m)==='overdue').length;
-  const danger = state.molds.filter(m=>calcStatus(m)==='danger').length;
+  // 段取り設定済みの金型のみを対象とする
+  const dashMolds = activeMoldIds.size > 0 ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds;
+  const overdue = dashMolds.filter(m=>calcStatus(m)==='overdue').length;
+  const danger = dashMolds.filter(m=>calcStatus(m)==='danger').length;
   const dangerTotal = overdue + danger;
-  const warning = state.molds.filter(m=>calcStatus(m)==='warning').length;
-  const normal = state.molds.filter(m=>calcStatus(m)==='normal').length;
-  const activeCount = activeMoldIds && activeMoldIds.size > 0 ? activeMoldIds.size : state.molds.length;
+  const warning = dashMolds.filter(m=>calcStatus(m)==='warning').length;
+  const normal = dashMolds.filter(m=>calcStatus(m)==='normal').length;
+  const activeCount = dashMolds.length;
 
   // 本日メンテ完了件数を取得
   const today = new Date().toISOString().split('T')[0];
@@ -1989,7 +1991,7 @@ async function renderDashboard(el) {
   el.innerHTML = `
   <div style="padding:10px 16px 80px">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="kpi-card"><div class="kpi-label">${t('totalMolds')}</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${activeMoldIds.size > 0 ? activeMoldIds.size : state.molds.length}</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">${t('totalMolds')}</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${state.molds.length}</span></div></div>
       <div class="kpi-card"><div class="kpi-label">${t('todayMaintDone')}</div><div class="kpi-value" style="color:var(--info-text)">${todayMaintCount}<span style="font-size:12px;color:var(--text3)"> ${t('readMoreUnit')||'件'}</span></div><div class="kpi-sub" style="color:var(--text3)">${state.currentShift}</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
@@ -2038,7 +2040,7 @@ async function renderDashboard(el) {
 
 function renderLineAlertBars() {
   const bars = state.lines.map(line => {
-    const lineMolds = state.molds.filter(m=>m.line_name===line.name);
+    const lineMolds = (activeMoldIds.size > 0 ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds).filter(m=>m.line_name===line.name);
     const o = lineMolds.filter(m=>calcStatus(m)==='overdue').length;
     const d = lineMolds.filter(m=>calcStatus(m)==='danger').length;
     const w = lineMolds.filter(m=>calcStatus(m)==='warning').length;
@@ -2059,7 +2061,8 @@ function renderLineAlertBars() {
 }
 
 function renderTop5() {
-  const top5 = [...state.molds].sort((a,b)=>calcEstimatedProgress(b)-calcEstimatedProgress(a)).slice(0,5);
+  const top5src = activeMoldIds.size > 0 ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds;
+  const top5 = [...top5src].sort((a,b)=>calcEstimatedProgress(b)-calcEstimatedProgress(a)).slice(0,5);
   return `<div style="background:var(--bg2);border-radius:8px;overflow:hidden;margin-bottom:12px;border:0.5px solid var(--border)">` +
   top5.map(m=>{
     const pct = calcEstimatedProgress(m);
@@ -4670,10 +4673,11 @@ async function manualRefresh() {
 function updateRealtimeDisplay() {
   if (!state.molds.length) return;
 
-  // アラートバッジ更新
-  const overdueCount = state.molds.filter(m => calcStatus(m) === 'overdue').length;
-  const dangerCount = state.molds.filter(m => calcStatus(m) === 'danger').length;
-  const warnCount = state.molds.filter(m => calcStatus(m) === 'warning').length;
+  // アラートバッジ更新（段取り設定済みの金型のみ対象）
+  const rtMolds = activeMoldIds.size > 0 ? state.molds.filter(m => activeMoldIds.has(m.id)) : state.molds;
+  const overdueCount = rtMolds.filter(m => calcStatus(m) === 'overdue').length;
+  const dangerCount = rtMolds.filter(m => calcStatus(m) === 'danger').length;
+  const warnCount = rtMolds.filter(m => calcStatus(m) === 'warning').length;
   const totalAlert = overdueCount + dangerCount + warnCount;
   const badge = document.getElementById('alert-count-badge');
   if (badge) {
