@@ -1900,11 +1900,10 @@ async function renderDashboard(el) {
   if (activeMoldIds.size === 0) await loadDandoriForList();
   // 段取り設定済みの金型のみを対象とする
   const dashMolds = activeMoldIds.size > 0 ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds;
-  const overdue = dashMolds.filter(m=>calcStatus(m)==='overdue').length;
-  const danger = dashMolds.filter(m=>calcStatus(m)==='danger').length;
-  const dangerTotal = overdue + danger;
-  const warning = dashMolds.filter(m=>calcStatus(m)==='warning').length;
-  const normal = dashMolds.filter(m=>calcStatus(m)==='normal').length;
+  const lv4Count = dashMolds.filter(m=>calcStatus(m)==='overdue').length;
+  const lv3Count = dashMolds.filter(m=>calcStatus(m)==='danger').length;
+  const lv2Count = dashMolds.filter(m=>calcStatus(m)==='warning').length;
+  const lv1Count = dashMolds.filter(m=>calcStatus(m)==='normal').length;
   const activeCount = dashMolds.length;
 
   // 本日メンテ完了件数を取得
@@ -1994,10 +1993,11 @@ async function renderDashboard(el) {
       <div class="kpi-card"><div class="kpi-label">${t('totalMolds')}</div><div class="kpi-value">${activeCount}<span style="font-size:12px;color:var(--text3)"> / ${state.molds.length}</span></div></div>
       <div class="kpi-card"><div class="kpi-label">${t('todayMaintDone')}</div><div class="kpi-value" style="color:var(--info-text)">${todayMaintCount}<span style="font-size:12px;color:var(--text3)"> ${t('readMoreUnit')||'件'}</span></div><div class="kpi-sub" style="color:var(--text3)">${state.currentShift}</div></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-      <div class="kpi-card" style="text-align:center"><div class="kpi-label" style="color:var(--danger)">${t('needMaint')}</div><div class="kpi-value" style="color:var(--danger)">${dangerTotal}</div></div>
-      <div class="kpi-card" style="text-align:center"><div class="kpi-label" style="color:var(--warning)">${t('caution')}</div><div class="kpi-value" style="color:var(--warning)">${warning}</div></div>
-      <div class="kpi-card" style="text-align:center"><div class="kpi-label" style="color:var(--success)">${t('normal')}</div><div class="kpi-value" style="color:var(--success)">${normal}</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">
+      <div style="background:var(--bg2);border-radius:8px;padding:8px 6px;text-align:center;border:0.5px solid var(--border);position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--overdue-border)"></div><div style="margin-bottom:4px"><span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;background:var(--overdue-bg);color:var(--overdue-border)">${t('lv4')}</span></div><div style="font-size:22px;font-weight:700;color:var(--overdue-text)">${lv4Count}</div></div>
+      <div style="background:var(--bg2);border-radius:8px;padding:8px 6px;text-align:center;border:0.5px solid var(--border);position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--danger-border)"></div><div style="margin-bottom:4px"><span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;background:rgba(249,115,22,0.15);color:var(--danger-border)">${t('lv3')}</span></div><div style="font-size:22px;font-weight:700;color:var(--maint-text)">${lv3Count}</div></div>
+      <div style="background:var(--bg2);border-radius:8px;padding:8px 6px;text-align:center;border:0.5px solid var(--border);position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--warning)"></div><div style="margin-bottom:4px"><span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;background:var(--warning-bg);color:var(--warning)">${t('lv2')}</span></div><div style="font-size:22px;font-weight:700;color:var(--warning-text)">${lv2Count}</div></div>
+      <div style="background:var(--bg2);border-radius:8px;padding:8px 6px;text-align:center;border:0.5px solid var(--border);position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--success)"></div><div style="margin-bottom:4px"><span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;background:var(--success-bg);color:var(--success)">${t('lv1')}</span></div><div style="font-size:22px;font-weight:700;color:var(--success-text)">${lv1Count}</div></div>
     </div>
 
     <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:12px;border:0.5px solid var(--border)">
