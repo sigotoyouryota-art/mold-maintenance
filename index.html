@@ -2109,7 +2109,7 @@ async function loadDandoriForList() {
   try {
     // 最新の段取り設定を取得（日付に関係なく最新構成を引き継ぎ）
     // まず当日分を取得、なければ直近の設定を使用
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateStr();
     let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     
@@ -2117,7 +2117,7 @@ async function loadDandoriForList() {
       // 当日分がなければ直近7日間の設定を取得
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekAgoStr = weekAgo.toISOString().split('T')[0];
+      const weekAgoStr = getLocalDateStr(weekAgo);
       settings = await sb('dandori_settings','GET',null,
         `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
     }
@@ -2575,12 +2575,21 @@ function setDandoriFilter(line, el) {
   renderDandoriMachines();
 }
 
+// ローカル日付をYYYY-MM-DD形式で取得（toISOStringはUTCのためJSTでずれる問題を回避）
+function getLocalDateStr(date) {
+  if (!date) date = new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
 let dandoriData = {};
 
 async function loadDandori() {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now()-86400000).toISOString().split('T')[0];
+    const today = getLocalDateStr();
+    const yd = new Date(); yd.setDate(yd.getDate()-1);
+    const yesterday = getLocalDateStr(yd);
 
     // 今日の段取り設定を取得
     let todaySettings = await sb('dandori_settings','GET',null,`?setting_date=eq.${today}&shift=eq.${state.currentShift}`);
@@ -2655,13 +2664,13 @@ function selectDandoriMold(machineId, moldId, el) {
 
 async function saveDandori() {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateStr();
     const lineMachines = state.machines.filter(m=>{
       const line = state.lines.find(l=>l.id===m.line_id);
       return line?.name === state.dandoriFilter;
     });
 
-    // 全機械分のデータを1つの配列にまとめる
+    // 金型が設定されている機械のレコード（upsert用）
     const records = lineMachines
       .filter(machine => dandoriData[machine.id]) // mold_idがあるもののみ
       .map(machine => ({
@@ -2671,6 +2680,11 @@ async function saveDandori() {
         shift: state.currentShift,
         set_by: state.currentUser.id
       }));
+
+    // 停止中（null）に設定された機械のID一覧（既存レコードを削除する必要がある）
+    const nullMachineIds = lineMachines
+      .filter(machine => dandoriData.hasOwnProperty(machine.id) && dandoriData[machine.id] === null)
+      .map(machine => machine.id);
 
     if (records.length > 0) {
       // 1回のPOSTで一括upsert（同じ日・機械・直があれば更新、なければ新規）
@@ -2692,7 +2706,26 @@ async function saveDandori() {
       }
     }
 
+    // 停止中に変更された機械の既存レコードを削除
+    if (nullMachineIds.length > 0) {
+      const delIds = nullMachineIds.map(id=>`"${id}"`).join(',');
+      const delUrl = `${SUPABASE_URL}/rest/v1/dandori_settings?setting_date=eq.${today}&shift=eq.${state.currentShift}&machine_id=in.(${delIds})`;
+      const delRes = await fetch(delUrl, {
+        method: 'DELETE',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+        },
+      });
+      if (!delRes.ok) {
+        console.error('dandori delete error:', await delRes.text());
+      }
+    }
+
     showToast(`${t('dandoriSaveOk')} (${records.length})`, 'success');
+
+    // 保存後にDBから再読み込みして最新状態に同期
+    await loadDandori();
   } catch(e) {
     console.error('saveDandori error:', e);
     showToast(t('loadError') + ': ' + e.message, 'error');
@@ -5188,13 +5221,13 @@ async function renderSchedule(el) {
 
 async function loadDandoriForSchedule() {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateStr();
     let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     if (!settings || settings.length === 0) {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekAgoStr = weekAgo.toISOString().split('T')[0];
+      const weekAgoStr = getLocalDateStr(weekAgo);
       settings = await sb('dandori_settings','GET',null,
         `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
     }
