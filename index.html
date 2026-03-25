@@ -5341,29 +5341,15 @@ function buildAllShifts() {
     return a.deadlineMs - b.deadlineMs;
   });
 
-  // ⑥ 前向き貪欲法（後方逆算付き）：1本の時間軸に配置
-  //   基本は startMs = max(cursor, deadline) でできる限り引っ張るが、
-  //   後続エントリのdeadlineを圧迫する場合は引っ張りを制限して安全方向に倒す
-
-  // ⑥-a 後方逆算：各エントリの「最遅開始可能時刻」を求める
-  //   後ろから逆算し、後続が全てdeadlineに間に合うための開始時刻上限を計算
-  const latestStart = new Array(entries.length);
-  let backCursor = totalEndMs;
-  for (let i = entries.length - 1; i >= 0; i--) {
-    // このエントリの最遅開始 = min(自分のdeadline, 後続の最遅開始 - 自分の所要時間)
-    latestStart[i] = Math.min(entries[i].deadlineMs, backCursor - entries[i].dur);
-    backCursor = Math.min(backCursor, latestStart[i]);
-  }
-
-  // ⑥-b 前向き配置（latestStartで引っ張り上限を制限）
+  // ⑥ 前向き貪欲法：1本の時間軸に配置
+  //   startMs = max(cursor, deadline) → できる限り引っ張る
+  //   startMs > deadline → DEADLINE OVER フラグ
   let cursor = cursorBase;
   const placed = [];
   const MAX_ENTRIES = 300;
 
-  for (let i = 0; i < entries.length; i++) {
-    const e = entries[i];
-    // 引っ張り目標 = latestStart[i]（deadlineMs以下、かつ後続が間に合う上限）
-    const startMs = Math.max(cursor, latestStart[i]);
+  for (const e of entries) {
+    const startMs = Math.max(cursor, e.deadlineMs);
     const endMs   = startMs + e.dur;
     if (startMs >= totalEndMs) continue;
     placed.push({ ...e, startMs, endMs, deadlineOver: (e.status !== 'overdue') && (startMs > e.deadlineMs) });
@@ -5400,12 +5386,19 @@ function buildAllShifts() {
   }
 
   // ⑧ 直への振り分け・直またぎ処理
+  //   直またぎ回避の優先順位：
+  //     1. 同じ直の中で前倒しして収める（直またぎ不要）
+  //     2. 次直の先頭に移動（直またぎ不要）
+  //     3. やむを得ず直またぎ許容（deadlineが絡む場合のみ）
   const result = shiftRanges.map(sr => ({
     shiftName:  sr.shiftName,
     shiftStart: sr.start,
     shiftEnd:   sr.end,
     scheduled:  [],
   }));
+
+  // 各直の最終endMsを追跡（前倒し時の重複防止）
+  const lastEndInShift = shiftRanges.map(sr => sr.start.getTime());
 
   for (const e of placed) {
     for (let ri = 0; ri < shiftRanges.length; ri++) {
@@ -5418,10 +5411,24 @@ function buildAllShifts() {
       // 直内に完全に収まる
       if (e.endMs <= srEndMs) {
         result[ri].scheduled.push(_buildEntry(e, sr, false));
+        lastEndInShift[ri] = Math.max(lastEndInShift[ri], e.endMs);
         break;
       }
 
-      // 直またぎ発生 → 次直の先頭に移動できるか確認
+      // --- 直またぎ発生 ---
+
+      // 回避策1: 同じ直の中で前倒しして収める
+      //   直末 - 所要時間 の位置に前倒しできるか確認
+      const pullbackStart = srEndMs - e.dur;
+      if (pullbackStart >= lastEndInShift[ri]) {
+        e.startMs = pullbackStart;
+        e.endMs   = srEndMs;
+        result[ri].scheduled.push(_buildEntry(e, sr, false));
+        lastEndInShift[ri] = srEndMs;
+        break;
+      }
+
+      // 回避策2: 次直の先頭に移動できるか確認
       const nextSr = shiftRanges[ri + 1];
       if (nextSr) {
         const movedEnd = nextSr.start.getTime() + e.dur;
@@ -5430,18 +5437,21 @@ function buildAllShifts() {
           e.startMs = nextSr.start.getTime();
           e.endMs   = movedEnd;
           result[ri + 1].scheduled.push(_buildEntry(e, nextSr, false));
+          lastEndInShift[ri + 1] = Math.max(lastEndInShift[ri + 1], movedEnd);
           break;
         }
       }
 
-      // 次直に回せない → 直またぎ許容
+      // 回避不可 → 直またぎ許容
       result[ri].scheduled.push(_buildEntry(e, sr, true));
+      lastEndInShift[ri] = srEndMs;
       if (nextSr) {
         const contEntry = { ...e, startMs: nextSr.start.getTime() };
         const contBuilt = _buildEntry(contEntry, nextSr, true);
         contBuilt.isContinuation = true;
         contBuilt.fromShift = sr.shiftName;
         result[ri + 1].scheduled.unshift(contBuilt);
+        lastEndInShift[ri + 1] = Math.max(lastEndInShift[ri + 1], nextSr.start.getTime() + (e.endMs - srEndMs));
       }
       break;
     }
