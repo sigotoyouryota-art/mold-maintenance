@@ -2091,10 +2091,6 @@ async function renderList(el) {
   <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px 4px;flex-wrap:wrap;gap:6px">
     <div style="font-size:11px;color:var(--text3)" id="list-count"></div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-      <div class="seg-wrap" style="margin:0">
-        <button class="seg-btn active" onclick="setListViewMode('detail',this)" style="padding:3px 8px;font-size:10px">${t('detail')}</button>
-        <button class="seg-btn" onclick="setListViewMode('simple',this)" style="padding:3px 8px;font-size:10px">${t('simple')}</button>
-      </div>
       <select onchange="setListSort(this.value)" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:5px;padding:4px 8px;font-size:11px;color:var(--text2);cursor:pointer">
         <option value="machine_asc">▼ ${t('sortMachineAsc')}</option>
         <option value="machine_desc">▼ ${t('sortMachineDesc')}</option>
