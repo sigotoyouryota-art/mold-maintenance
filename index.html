@@ -5341,15 +5341,29 @@ function buildAllShifts() {
     return a.deadlineMs - b.deadlineMs;
   });
 
-  // ⑥ 前向き貪欲法：1本の時間軸に配置
-  //   startMs = max(cursor, deadline) → できる限り引っ張る
-  //   startMs > deadline → DEADLINE OVER フラグ
+  // ⑥ 前向き貪欲法（後方逆算付き）：1本の時間軸に配置
+  //   基本は startMs = max(cursor, deadline) でできる限り引っ張るが、
+  //   後続エントリのdeadlineを圧迫する場合は引っ張りを制限して安全方向に倒す
+
+  // ⑥-a 後方逆算：各エントリの「最遅開始可能時刻」を求める
+  //   後ろから逆算し、後続が全てdeadlineに間に合うための開始時刻上限を計算
+  const latestStart = new Array(entries.length);
+  let backCursor = totalEndMs;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    // このエントリの最遅開始 = min(自分のdeadline, 後続の最遅開始 - 自分の所要時間)
+    latestStart[i] = Math.min(entries[i].deadlineMs, backCursor - entries[i].dur);
+    backCursor = Math.min(backCursor, latestStart[i]);
+  }
+
+  // ⑥-b 前向き配置（latestStartで引っ張り上限を制限）
   let cursor = cursorBase;
   const placed = [];
   const MAX_ENTRIES = 300;
 
-  for (const e of entries) {
-    const startMs = Math.max(cursor, e.deadlineMs);
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    // 引っ張り目標 = latestStart[i]（deadlineMs以下、かつ後続が間に合う上限）
+    const startMs = Math.max(cursor, latestStart[i]);
     const endMs   = startMs + e.dur;
     if (startMs >= totalEndMs) continue;
     placed.push({ ...e, startMs, endMs, deadlineOver: (e.status !== 'overdue') && (startMs > e.deadlineMs) });
