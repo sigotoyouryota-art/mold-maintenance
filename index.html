@@ -2761,6 +2761,7 @@ async function saveDandori() {
     await loadDandori();
     // スケジュール・一覧用のグローバル変数も同期
     await loadDandoriForSchedule();
+    await loadDandoriForList();
   } catch(e) {
     console.error('saveDandori error:', e);
     showToast(t('loadError') + ': ' + e.message, 'error');
