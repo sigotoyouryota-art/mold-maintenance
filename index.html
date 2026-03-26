@@ -2825,7 +2825,7 @@ function renderMasterMolds(el) {
       <td>${m.cycle_time_sec}秒</td>
       <td style="color:var(--accent);font-weight:500">${m.simple_maint_time_min||20}${t('minuteUnit')||'分'}</td>
       <td style="color:var(--text3)">${m.oh_maint_time_min||60}${t('minuteUnit')||'分'}</td>
-      <td style="font-size:10px;color:var(--text3)">${t('needMaint')}${m.alert_min_danger||120}${t('minuteUnit')||'分'}<br>${t('caution')}${m.alert_min_warning||480}${t('minuteUnit')||'分'}</td>
+      <td style="font-size:10px;color:var(--text3)">${t('needMaint')}${m.alert_min_danger||60}${t('minuteUnit')||'分'}<br>${t('caution')}${m.alert_min_warning||120}${t('minuteUnit')||'分'}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-secondary btn-sm" onclick="editMold('${m.id}')">編集</button>
         <button class="btn btn-danger btn-sm" onclick="deleteMold('${m.id}')">${t('delete')}</button>
@@ -2986,8 +2986,8 @@ function renderMasterAlerts(el) {
       <td>${esc(m.part_name)}</td>
       <td>${typeBadge(m.category_name)}</td>
       <td>${fmtNum(m.maintenance_interval)} shot</td>
-      <td style="color:var(--danger);font-weight:600">${fmtNum(m.alert_min_danger||120)}</td>
-      <td style="color:var(--warning);font-weight:600">${fmtNum(m.alert_min_warning||480)}</td>
+      <td style="color:var(--danger);font-weight:600">${fmtNum(m.alert_min_danger||60)}</td>
+      <td style="color:var(--warning);font-weight:600">${fmtNum(m.alert_min_warning||120)}</td>
       <td><button class="btn btn-secondary btn-sm" onclick="editAlertSettings('${m.id}')">編集</button></td>
     </tr>`).join('')}
   </table></div>`;
@@ -3247,8 +3247,8 @@ async function openAddMoldModal() {
   document.getElementById('mold-f-model-no').value = '';
   document.getElementById('mold-f-interval').value = '5000';
   document.getElementById('mold-f-cycle').value = '30';
-  document.getElementById('mold-f-danger-min').value = '120';
-  document.getElementById('mold-f-warning-min').value = '480';
+  document.getElementById('mold-f-danger-min').value = '60';
+  document.getElementById('mold-f-warning-min').value = '120';
   document.getElementById('mold-f-simple-time').value = '20';
   document.getElementById('mold-f-oh-time').value = '60';
   document.getElementById('mold-edit-error').style.display = 'none';
@@ -3267,8 +3267,8 @@ async function editMold(id) {
   document.getElementById('mold-f-model-no').value = mold.model_no || '';
   document.getElementById('mold-f-interval').value = mold.maintenance_interval || 5000;
   document.getElementById('mold-f-cycle').value = mold.cycle_time_sec || 30;
-  document.getElementById('mold-f-danger-min').value = mold.alert_min_danger || 120;
-  document.getElementById('mold-f-warning-min').value = mold.alert_min_warning || 480;
+  document.getElementById('mold-f-danger-min').value = mold.alert_min_danger || 60;
+  document.getElementById('mold-f-warning-min').value = mold.alert_min_warning || 120;
   document.getElementById('mold-f-simple-time').value = mold.simple_maint_time_min || 20;
   document.getElementById('mold-f-oh-time').value = mold.oh_maint_time_min || 60;
   document.getElementById('mold-edit-error').style.display = 'none';
@@ -3316,8 +3316,8 @@ async function saveMold() {
       model_no: document.getElementById('mold-f-model-no').value.trim() || null,
       category_id: catId, machine_id: machId,
       maintenance_interval: interval, cycle_time_sec: cycle,
-      alert_min_danger: parseInt(document.getElementById('mold-f-danger-min').value)||120,
-      alert_min_warning: parseInt(document.getElementById('mold-f-warning-min').value)||480,
+      alert_min_danger: parseInt(document.getElementById('mold-f-danger-min').value)||60,
+      alert_min_warning: parseInt(document.getElementById('mold-f-warning-min').value)||120,
       simple_maint_time_min: parseInt(document.getElementById('mold-f-simple-time').value)||20,
       oh_maint_time_min: parseInt(document.getElementById('mold-f-oh-time').value)||60,
       is_active: true, updated_at: new Date().toISOString(),
@@ -3532,8 +3532,8 @@ async function editAlertSettings(id) {
   if (!mold) return;
   editingAlertMoldId = id;
   document.getElementById('alert-edit-mold-info').textContent = `${mold.part_no}　${mold.part_name}　${t('maintInterval')}: ${Number(mold.maintenance_interval).toLocaleString()}shot`;
-  document.getElementById('alert-f-danger-min').value = mold.alert_min_danger || 120;
-  document.getElementById('alert-f-warning-min').value = mold.alert_min_warning || 480;
+  document.getElementById('alert-f-danger-min').value = mold.alert_min_danger || 60;
+  document.getElementById('alert-f-warning-min').value = mold.alert_min_warning || 120;
   document.getElementById('alert-edit-error').style.display = 'none';
   openModal('modal-alert-edit');
 }
@@ -3542,8 +3542,8 @@ async function saveAlertSettings() {
   const errEl = document.getElementById('alert-edit-error');
   try {
     const data = {
-      alert_min_danger: parseInt(document.getElementById('alert-f-danger-min').value)||120,
-      alert_min_warning: parseInt(document.getElementById('alert-f-warning-min').value)||480,
+      alert_min_danger: parseInt(document.getElementById('alert-f-danger-min').value)||60,
+      alert_min_warning: parseInt(document.getElementById('alert-f-warning-min').value)||120,
       updated_at: new Date().toISOString(),
     };
     await sb('molds','PATCH',data,`?id=eq.${editingAlertMoldId}`);
@@ -3599,7 +3599,7 @@ async function exportMaster(type) {
     if (type === 'molds') {
       data = state.molds;
       headers = ['品番','品名','型番','分類','機番','ライン','メンテ間隔(shot)','サイクル(秒)','簡易メンテ(分)','OHメンテ(分)','要メンテ(分前)','注意(分前)'];
-      rows = data.map(m=>[m.part_no,m.part_name,m.model_no||'',m.category_name||'',m.machine_no||'',m.line_name||'',m.maintenance_interval,m.cycle_time_sec,m.simple_maint_time_min||20,m.oh_maint_time_min||60,m.alert_min_danger||120,m.alert_min_warning||480]);
+      rows = data.map(m=>[m.part_no,m.part_name,m.model_no||'',m.category_name||'',m.machine_no||'',m.line_name||'',m.maintenance_interval,m.cycle_time_sec,m.simple_maint_time_min||20,m.oh_maint_time_min||60,m.alert_min_danger||60,m.alert_min_warning||120]);
       filename = '金型マスタ.csv';
     } else if (type === 'machines') {
       data = state.machines.map(m => ({...m, line_name: state.lines.find(l=>l.id===m.line_id)?.name||''}));
@@ -3619,7 +3619,7 @@ async function exportMaster(type) {
     } else if (type === 'alerts') {
       data = state.molds;
       headers = ['品番','品名','分類','メンテ間隔(shot)','要メンテ(分前)','注意(分前)'];
-      rows = data.map(m=>[m.part_no,m.part_name,m.category_name||'',m.maintenance_interval,m.alert_min_danger||120,m.alert_min_warning||480]);
+      rows = data.map(m=>[m.part_no,m.part_name,m.category_name||'',m.maintenance_interval,m.alert_min_danger||60,m.alert_min_warning||120]);
       filename = 'アラート設定.csv';
     }
     const csv = [headers, ...rows].map((r)=>r.map((v,colIdx)=>{
@@ -3822,8 +3822,8 @@ async function importMoldRow(row) {
   const cycle = parseInt(row['サイクル(秒)']||row['サイクルタイム']||row['cycle_time_sec']||'30')||30;
   const simpleMaintMin = parseInt(row['簡易メンテ(分)']||row['simple_maint_time_min']||'20')||20;
   const ohMaintMin = parseInt(row['OHメンテ(分)']||row['oh_maint_time_min']||'60')||60;
-  const dangerMin = parseInt(row['要メンテ(分前)']||row['alert_min_danger']||'120')||120;
-  const warnMin = parseInt(row['注意(分前)']||row['alert_min_warning']||'480')||480;
+  const dangerMin = parseInt(row['要メンテ(分前)']||row['alert_min_danger']||'60')||60;
+  const warnMin = parseInt(row['注意(分前)']||row['alert_min_warning']||'120')||120;
 
   const data = {
     part_no: partNo,
@@ -6401,11 +6401,11 @@ if (state.currentUser) {
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label" data-t="needMaint">要メンテ（分前）</label>
-        <input type="number" class="form-control" id="mold-f-danger-min" placeholder="120" min="0">
+        <input type="number" class="form-control" id="mold-f-danger-min" placeholder="60" min="0">
       </div>
       <div class="form-group">
         <label class="form-label" data-t="caution">注意（分前）</label>
-        <input type="number" class="form-control" id="mold-f-warning-min" placeholder="480" min="0">
+        <input type="number" class="form-control" id="mold-f-warning-min" placeholder="120" min="0">
       </div>
     </div>
     <div id="mold-edit-error" style="font-size:11px;color:var(--danger-text);margin-bottom:8px;display:none"></div>
