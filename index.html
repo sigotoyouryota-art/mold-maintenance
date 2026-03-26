@@ -1897,9 +1897,9 @@ function fmtNum(n) { return Number(n).toLocaleString(); }
 // ===== ダッシュボード =====
 async function renderDashboard(el) {
   // 段取り設定を取得してactiveMoldIdsを更新
-  if (activeMoldIds.size === 0) await loadDandoriForList();
-  // 段取り設定済みの金型のみを対象とする
-  const dashMolds = activeMoldIds.size > 0 ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds;
+  if (!dandoriConfigured && activeMoldIds.size === 0) await loadDandoriForList();
+  // 段取り設定済みの金型のみを対象とする（未設定の場合は全金型を表示）
+  const dashMolds = dandoriConfigured ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds;
   const lv4Count = dashMolds.filter(m=>calcStatus(m)==='overdue').length;
   const lv3Count = dashMolds.filter(m=>calcStatus(m)==='danger').length;
   const lv2Count = dashMolds.filter(m=>calcStatus(m)==='warning').length;
@@ -2040,7 +2040,7 @@ async function renderDashboard(el) {
 
 function renderLineAlertBars() {
   const bars = state.lines.map(line => {
-    const lineMolds = (activeMoldIds.size > 0 ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds).filter(m=>m.line_name===line.name);
+    const lineMolds = (dandoriConfigured ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds).filter(m=>m.line_name===line.name);
     const o = lineMolds.filter(m=>calcStatus(m)==='overdue').length;
     const d = lineMolds.filter(m=>calcStatus(m)==='danger').length;
     const w = lineMolds.filter(m=>calcStatus(m)==='warning').length;
@@ -2061,7 +2061,7 @@ function renderLineAlertBars() {
 }
 
 function renderTop5() {
-  const top5src = activeMoldIds.size > 0 ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds;
+  const top5src = dandoriConfigured ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds;
   const top5 = [...top5src].sort((a,b)=>calcEstimatedProgress(b)-calcEstimatedProgress(a)).slice(0,5);
   return `<div style="background:var(--bg2);border-radius:8px;overflow:hidden;margin-bottom:12px;border:0.5px solid var(--border)">` +
   top5.map(m=>{
@@ -2110,19 +2110,22 @@ let activeMoldIds = new Set();
 
 async function loadDandoriForList() {
   try {
-    // 最新の段取り設定を取得（日付に関係なく最新構成を引き継ぎ）
-    // まず当日分を取得、なければ直近の設定を使用
     const today = getLocalDateStr();
     let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     
     if (!settings || settings.length === 0) {
-      // 当日分がなければ直近7日間の設定を取得
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const weekAgoStr = getLocalDateStr(weekAgo);
       settings = await sb('dandori_settings','GET',null,
         `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
+    }
+
+    // レコードが1件でもあれば段取り設定済み
+    if (settings && settings.length > 0) {
+      dandoriConfigured = true;
+      localStorage.setItem('dandoriConfigured_' + state.currentShift, 'true');
     }
     
     // 結果はsetting_date降順のため、同一machine_idは最初（最新）のmold_idのみ採用
@@ -2165,7 +2168,7 @@ function renderListBody() {
   const active = sorted.filter(m=>activeMoldIds.has(m.id));
   const inactive = sorted.filter(m=>!activeMoldIds.has(m.id));
   // 段取り設定がどこかのラインに1面でもあれば、全ラインで段取り分類表示する
-  const hasDandori = activeMoldIds.size > 0;
+  const hasDandori = dandoriConfigured;
   document.getElementById('list-count').textContent = hasDandori
     ? `${sorted.length}${t('men')||'面'} (${t('operating')||'段取り設定中'} ${active.length}${t('men')||'面'})`
     : `${sorted.length}${t('men')||'面'}`;
@@ -2258,7 +2261,10 @@ function renderListBody() {
 
 // ===== アラート =====
 function renderAlert(el) {
-  const alerts = state.molds.filter(m=>{const s=calcStatus(m);return s==='overdue'||s==='danger'||s==='warning';});
+  // 段取り設定済みの場合は対象金型のみフィルタ
+  const dandoriMoldSet = dandoriConfigured ? new Set(Object.values(dandoriData).filter(Boolean)) : null;
+  const baseMolds = dandoriMoldSet ? state.molds.filter(m => dandoriMoldSet.has(m.id)) : state.molds;
+  const alerts = baseMolds.filter(m=>{const s=calcStatus(m);return s==='overdue'||s==='danger'||s==='warning';});
   const lines = [null, ...state.lines];
   el.innerHTML = `
   <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">
@@ -2295,7 +2301,10 @@ function setAlertViewMode(mode, el) {
 }
 
 function renderAlertBody() {
-  let molds = state.molds.filter(m=>{const s=calcStatus(m);return s==='overdue'||s==='danger'||s==='warning';});
+  // 段取り設定済みの場合は対象金型のみフィルタ
+  const dandoriMoldSet = dandoriConfigured ? new Set(Object.values(dandoriData).filter(Boolean)) : null;
+  const baseMolds = dandoriMoldSet ? state.molds.filter(m => dandoriMoldSet.has(m.id)) : state.molds;
+  let molds = baseMolds.filter(m=>{const s=calcStatus(m);return s==='overdue'||s==='danger'||s==='warning';});
   if (state.alertFilter !== 'all') molds = molds.filter(m=>m.line_name===state.alertFilter);
   const el = document.getElementById('alert-body');
   if (!el) return;
@@ -2587,25 +2596,39 @@ function getLocalDateStr(date) {
   return `${y}-${m}-${d}`;
 }
 let dandoriData = {};
+let dandoriConfigured = false; // DBに段取り設定が1件でも存在すればtrue（全台停止と未設定を区別）
 
 async function loadDandori() {
   try {
     const today = getLocalDateStr();
-    const yd = new Date(); yd.setDate(yd.getDate()-1);
-    const yesterday = getLocalDateStr(yd);
 
     // 今日の段取り設定を取得
-    let todaySettings = await sb('dandori_settings','GET',null,`?setting_date=eq.${today}&shift=eq.${state.currentShift}`);
+    let settings = await sb('dandori_settings','GET',null,`?setting_date=eq.${today}&shift=eq.${state.currentShift}`);
 
-    // なければ昨日の引き継ぎ
-    if (!todaySettings.length) {
-      const ySettings = await sb('dandori_settings','GET',null,`?setting_date=eq.${yesterday}&shift=eq.${state.currentShift}`);
-      dandoriData = {};
-      ySettings.forEach(s => { dandoriData[s.machine_id] = s.mold_id; });
-    } else {
-      dandoriData = {};
-      todaySettings.forEach(s => { dandoriData[s.machine_id] = s.mold_id; });
+    // なければ直近7日間の設定をフォールバック
+    if (!settings || !settings.length) {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoStr = getLocalDateStr(weekAgo);
+      settings = await sb('dandori_settings','GET',null,
+        `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&order=setting_date.desc&limit=100`);
     }
+
+    // レコードが1件でもあれば段取り設定済み
+    if (settings && settings.length > 0) {
+      dandoriConfigured = true;
+      localStorage.setItem('dandoriConfigured_' + state.currentShift, 'true');
+    }
+
+    dandoriData = {};
+    // 同一machine_idは最新のみ採用、nullは含める（停止表示用）
+    const seen = {};
+    (settings||[]).forEach(s => {
+      if (!seen[s.machine_id]) {
+        seen[s.machine_id] = true;
+        dandoriData[s.machine_id] = s.mold_id; // nullも設定（停止状態の表現）
+      }
+    });
     renderDandoriMachines();
   } catch(e) {
     document.getElementById('dandori-body').innerHTML = `<div style="color:var(--danger-text)">${t('loadError')}</div>`;
@@ -2684,13 +2707,12 @@ async function saveDandori() {
         set_by: state.currentUser.id
       }));
 
-    // 停止中（null）に設定された機械のID一覧（既存レコードを削除する必要がある）
+    // 停止中（null）に設定された機械のID一覧
     const nullMachineIds = lineMachines
       .filter(machine => dandoriData.hasOwnProperty(machine.id) && dandoriData[machine.id] === null)
       .map(machine => machine.id);
 
     if (records.length > 0) {
-      // 1回のPOSTで一括upsert（同じ日・機械・直があれば更新、なければ新規）
       const url = `${SUPABASE_URL}/rest/v1/dandori_settings?on_conflict=setting_date,machine_id,shift`;
       const res = await fetch(url, {
         method: 'POST',
@@ -2709,10 +2731,10 @@ async function saveDandori() {
       }
     }
 
-    // 停止中に変更された機械の既存レコードを削除
+    // 停止中の機械：全日付のレコードを削除（フォールバックで復活させない）
     if (nullMachineIds.length > 0) {
       const delIds = nullMachineIds.map(id=>`"${id}"`).join(',');
-      const delUrl = `${SUPABASE_URL}/rest/v1/dandori_settings?setting_date=eq.${today}&shift=eq.${state.currentShift}&machine_id=in.(${delIds})`;
+      const delUrl = `${SUPABASE_URL}/rest/v1/dandori_settings?shift=eq.${state.currentShift}&machine_id=in.(${delIds})`;
       const delRes = await fetch(delUrl, {
         method: 'DELETE',
         headers: {
@@ -2725,10 +2747,16 @@ async function saveDandori() {
       }
     }
 
+    // 段取り設定済みフラグ（全台停止と未設定を区別）
+    dandoriConfigured = true;
+    localStorage.setItem('dandoriConfigured_' + state.currentShift, 'true');
+
     showToast(`${t('dandoriSaveOk')} (${records.length})`, 'success');
 
     // 保存後にDBから再読み込みして最新状態に同期
     await loadDandori();
+    // スケジュール・一覧用のグローバル変数も同期
+    await loadDandoriForSchedule();
   } catch(e) {
     console.error('saveDandori error:', e);
     showToast(t('loadError') + ': ' + e.message, 'error');
@@ -4519,7 +4547,7 @@ function calcEstimatedShot(mold) {
   const cycleTime = mold.cycle_time_sec || 30;
   if (!lastUpdated) return baseShot;
   // 段取り未設定の金型はショット加算しない（baseShotのまま返す）
-  if (Object.keys(dandoriData).length > 0 && !Object.values(dandoriData).includes(mold.id)) {
+  if (dandoriConfigured && !Object.values(dandoriData).includes(mold.id)) {
     return baseShot;
   }
   const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
@@ -4535,7 +4563,7 @@ function calcEstimatedTotalShot(mold) {
   const cycleTime = mold.cycle_time_sec || 30;
   if (!lastUpdated) return baseShot;
   // 段取り未設定の金型はショット加算しない（baseShotのまま返す）
-  if (Object.keys(dandoriData).length > 0 && !Object.values(dandoriData).includes(mold.id)) {
+  if (dandoriConfigured && !Object.values(dandoriData).includes(mold.id)) {
     return baseShot;
   }
   const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
@@ -4674,7 +4702,7 @@ function updateRealtimeDisplay() {
   if (!state.molds.length) return;
 
   // アラートバッジ更新（段取り設定済みの金型のみ対象）
-  const rtMolds = activeMoldIds.size > 0 ? state.molds.filter(m => activeMoldIds.has(m.id)) : state.molds;
+  const rtMolds = dandoriConfigured ? state.molds.filter(m => activeMoldIds.has(m.id)) : state.molds;
   const overdueCount = rtMolds.filter(m => calcStatus(m) === 'overdue').length;
   const dangerCount = rtMolds.filter(m => calcStatus(m) === 'danger').length;
   const warnCount = rtMolds.filter(m => calcStatus(m) === 'warning').length;
@@ -4716,8 +4744,10 @@ function updateRealtimeDisplay() {
       const badgeEl = card.querySelector('.rt-status-badge');
       if (badgeEl) badgeEl.innerHTML = statusBadge(status);
     });
-    // 件数バッジ更新
-    const alertMolds = state.molds.filter(m=>{const s=calcStatus(m);return s==='overdue'||s==='danger'||s==='warning';});
+    // 件数バッジ更新（段取り設定済みの金型のみ）
+    const alertDandoriSet = dandoriConfigured ? new Set(Object.values(dandoriData).filter(Boolean)) : null;
+    const alertBaseMolds = alertDandoriSet ? state.molds.filter(m => alertDandoriSet.has(m.id)) : state.molds;
+    const alertMolds = alertBaseMolds.filter(m=>{const s=calcStatus(m);return s==='overdue'||s==='danger'||s==='warning';});
     const filtered = state.alertFilter !== 'all'
       ? alertMolds.filter(m=>m.line_name===state.alertFilter)
       : alertMolds;
@@ -5225,6 +5255,11 @@ async function renderSchedule(el) {
 
 async function loadDandoriForSchedule() {
   try {
+    // localStorageからフラグ復元（ページリロード対策）
+    if (localStorage.getItem('dandoriConfigured_' + state.currentShift) === 'true') {
+      dandoriConfigured = true;
+    }
+
     const today = getLocalDateStr();
     let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
@@ -5235,8 +5270,15 @@ async function loadDandoriForSchedule() {
       settings = await sb('dandori_settings','GET',null,
         `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
     }
+
+    // レコードが1件でもあれば段取り設定済み
+    if (settings && settings.length > 0) {
+      dandoriConfigured = true;
+      localStorage.setItem('dandoriConfigured_' + state.currentShift, 'true');
+    }
+
     dandoriData = {};
-    // 結果はsetting_date降順のため、同一machine_idは最初（最新）のみ採用
+    // 結果はsetting_date降順のため、同一machine_idは最初（最新）のみ採用。mold_id=nullは除外
     (settings||[]).forEach(s => { if (s.mold_id && !dandoriData.hasOwnProperty(s.machine_id)) dandoriData[s.machine_id] = s.mold_id; });
   } catch(e) {
     console.error('loadDandoriForSchedule error:', e);
