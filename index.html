@@ -5224,12 +5224,14 @@ async function renderSchedule(el) {
   const h = now.getHours();
   const curShift = h>=8&&h<16?'1S':h>=16?'2S':'3S';
   const SHIFT_LABELS = {'1S':'1S（08:00〜16:00）','2S':'2S（16:00〜24:00）','3S':'3S（00:00〜08:00）'};
+  const WEEKDAYS_H = ['日','月','火','水','木','金','土'];
+  const headerDate = `${now.getMonth()+1}/${now.getDate()}(${WEEKDAYS_H[now.getDay()]})`;
   el.innerHTML = `
   <div style="position:sticky;top:0;z-index:10;background:var(--bg3)">
     <div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div style="font-size:13px;font-weight:600;color:var(--text)">${t('scheduleTitle')}</div>
-        <div style="font-size:10px;color:var(--text3)">${t('shift')}: ${SHIFT_LABELS[curShift]}</div>
+        <div style="font-size:10px;color:var(--text3)">${headerDate}　${SHIFT_LABELS[curShift]}</div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
         <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:3px" id="sched-view-seg">
@@ -5335,7 +5337,10 @@ function buildAllShifts() {
     return { shiftName, start, end };
   }
 
-  const curIdx = SHIFT_ORDER.indexOf(state.currentShift);
+  // カレント直は現在時刻から自動判定（ログイン時の選択直ではなく実時刻ベース）
+  const nowH = now.getHours();
+  const realtimeShift = nowH >= 8 && nowH < 16 ? '1S' : nowH >= 16 ? '2S' : '3S';
+  const curIdx = SHIFT_ORDER.indexOf(realtimeShift);
   const shiftRanges = [
     makeShiftRangeByOffset(SHIFT_ORDER[(curIdx)   % 3], curIdx * 8),
     makeShiftRangeByOffset(SHIFT_ORDER[(curIdx+1) % 3], (curIdx+1) * 8),
@@ -5597,25 +5602,26 @@ function renderScheduleBody() {
   const h = now.getHours();
   const curShiftName = h>=8&&h<16?'1S':h>=16?'2S':'3S';
 
+  const WEEKDAYS = ['日','月','火','水','木','金','土'];
+
   // ===== シフトヘッダー生成 =====
   function makeShiftHeader(shiftData, shiftIndex) {
     const { shiftName, shiftStart } = shiftData;
-    const isCurrent = shiftName === curShiftName && shiftStart.getDate() === now.getDate();
-    const shiftDay = new Date(shiftStart); shiftDay.setHours(0,0,0,0);
-    const dayDiff = Math.round((shiftDay.getTime() - today.getTime()) / 86400000);
+    // 業務日（08:00起点）を計算：shiftStartから8時間引いた時点の暦日
+    const bizDate = new Date(shiftStart.getTime() - 8 * 3600000);
+    const m = bizDate.getMonth() + 1;
+    const d = bizDate.getDate();
+    const w = WEEKDAYS[bizDate.getDay()];
+    const dateStr = `${m}/${d}(${w})`;
     // 4直目（index=3）は直またぎ継続のみの受け皿として特別表示
     const is4th = shiftIndex === 3;
-    const badge = is4th
-      ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">+${dayDiff}d　直またぎ継続のみ</div>`
-      : isCurrent
-        ? `<div style="font-size:10px;background:var(--info-bg);color:var(--info-text);padding:2px 8px;border-radius:4px;margin-left:auto">${t('shift')}</div>`
-        : dayDiff > 0
-          ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">+${dayDiff}d</div>`
-          : '';
+    const dateBadge = is4th
+      ? `<div style="font-size:10px;background:var(--bg2);color:var(--text4);padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);margin-left:auto">${dateStr}　直またぎ継続のみ</div>`
+      : `<div style="font-size:10px;color:var(--text3);margin-left:auto">${dateStr}</div>`;
     return `<div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px">
       <div style="width:3px;height:16px;background:var(--info-text);border-radius:2px"></div>
       <span style="font-size:11px;font-weight:600;color:var(--info-text)">${SHIFT_LABELS[shiftName]}</span>
-      ${badge}
+      ${dateBadge}
     </div>`;
   }
 
