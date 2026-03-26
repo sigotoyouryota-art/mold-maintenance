@@ -952,7 +952,7 @@ const T = {
     operationCol:'操作',
     selectPlaceholder:'選択してください',
     insufficientData:'データが不足しています',
-    schedNoMaint:'全直にメンテ予定はありません',
+    schedNoMaint:'メンテナンスの予定はありません',
     histDeleteConfirmMsg:'件のメンテ履歴を削除します。取り消せません。',
     histDeleted:'件の履歴を削除しました',
     histDeleteError:'削除エラー: ',
@@ -1142,7 +1142,7 @@ const T = {
     operationCol:'Thao tác',
     selectPlaceholder:'Chọn',
     insufficientData:'Dữ liệu chưa đủ',
-    schedNoMaint:'Không có lịch BT trong tất cả ca',
+    schedNoMaint:'Không có lịch bảo trì',
     histDeleteConfirmMsg:'bản ghi BT. Không thể hoàn tác.',
     histDeleted:'bản ghi đã xóa',
     histDeleteError:'Lỗi xóa: ',
@@ -1332,7 +1332,7 @@ const T = {
     operationCol:'Action',
     selectPlaceholder:'Select',
     insufficientData:'Insufficient data',
-    schedNoMaint:'No maint. scheduled for any shift',
+    schedNoMaint:'No maintenance scheduled',
     histDeleteConfirmMsg:'maint. records. Cannot be undone.',
     histDeleted:'history records deleted',
     histDeleteError:'Delete error: ',
@@ -5566,15 +5566,14 @@ function renderScheduleBody() {
   const totalCount = allData.reduce((n,d)=>n+d.scheduled.length,0);
   const today = new Date(); today.setHours(0,0,0,0);
 
-  if (!totalCount) {
-    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('schedNoMaint')}</div>`;
-    return;
+  if (!totalCount && (!allData.unregisteredMolds || !allData.unregisteredMolds.length)) {
+    // メンテ予定も未入力金型もない場合でも3直分のヘッダーは表示する
   }
 
-  const hint = `<div style="font-size:11px;color:var(--text3);padding:4px 0 10px;display:flex;align-items:center;gap:5px">
+  const hint = totalCount > 0 ? `<div style="font-size:11px;color:var(--text3);padding:4px 0 10px;display:flex;align-items:center;gap:5px">
     <div style="width:6px;height:6px;border-radius:50%;background:var(--accent)"></div>
     ${t('maintDone2')}
-  </div>`;
+  </div>` : '';
 
   // DEADLINE OVER バナー
   const deadlineOverCount = allData.reduce((n,d)=>n+d.scheduled.filter(s=>s.deadlineOver&&!s.isContinuation).length,0);
@@ -5625,8 +5624,13 @@ function renderScheduleBody() {
     let html = '';
     let globalRank = 0;
     allData.forEach((shiftData, shiftIndex) => {
-      if (!shiftData.scheduled.length) return;
+      // 4直目（受け皿）はエントリがある場合のみ表示
+      if (shiftIndex === 3 && !shiftData.scheduled.length) return;
       html += makeShiftHeader(shiftData, shiftIndex);
+      if (!shiftData.scheduled.length) {
+        html += `<div style="text-align:center;padding:20px;color:var(--text4);font-size:11px">${t('schedNoMaint')}</div>`;
+        return;
+      }
       html += shiftData.scheduled.map(s => {
         globalRank++;
         const isOverdueCard = s.status === 'overdue';
@@ -5717,7 +5721,8 @@ function renderScheduleBody() {
   let html = '';
   let globalRank = 0;
   allData.forEach((shiftData, shiftIndex) => {
-    if (!shiftData.scheduled.length) return;
+    // 4直目（受け皿）はエントリがある場合のみ表示
+    if (shiftIndex === 3 && !shiftData.scheduled.length) return;
     const { shiftStart, shiftEnd, scheduled } = shiftData;
     const shiftDur = (shiftEnd - shiftStart) / 60000;
     const isCurShift = shiftData.shiftName === curShiftName && shiftStart.getDate() === now.getDate();
@@ -5733,6 +5738,13 @@ function renderScheduleBody() {
       return `<div style="position:absolute;${anchor};font-size:10px;color:var(--text4);white-space:nowrap">${String(h2).padStart(2,'0')}:00</div>`;
     }).join('');
     html += `<div style="padding-left:138px;padding-right:14px;margin-bottom:6px"><div style="position:relative;height:16px">${axisInner}</div></div>`;
+
+    if (!scheduled.length) {
+      // エントリなし：空の時間軸のみ表示
+      html += `<div style="text-align:center;padding:16px;color:var(--text4);font-size:11px">${t('schedNoMaint')}</div>`;
+      html += `<div style="padding-left:138px;padding-right:14px;margin-top:4px;padding-bottom:10px;border-bottom:0.5px solid var(--border)"><div style="position:relative;height:16px">${axisInner}</div></div>`;
+      return;
+    }
 
     const gridLines = [1,2,3,4,5,6,7].map(i=>`<div style="position:absolute;left:${(i/8)*100}%;top:0;bottom:0;width:1px;background:var(--border);opacity:0.4"></div>`).join('');
 
