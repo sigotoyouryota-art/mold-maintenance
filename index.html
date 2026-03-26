@@ -811,7 +811,7 @@ const T = {
     history:'メンテ履歴', dandori:'段取り設定', master:'マスタ設定', logout:'ログアウト',
     settings:'設定',
     allLine:'全ライン', lineA:'Aライン', lineB:'Bライン', lineC:'Cライン',
-    totalMolds:'成形中金型数', needMaint:'要メンテ', caution:'注意', normal:'正常',
+    totalMolds:'段取り設定中金型', needMaint:'要メンテ', caution:'注意', normal:'正常',
     machineNo:'機番', partName:'品名', partNo:'品番', type:'分類', line:'ライン',
     progress:'進捗', remainShot:'残りshot', remainTime:'残り時間', pct:'%', status:'ステータス',
     shotInput:'ショット数入力', update:'ショットを更新する', cancel:'キャンセル',
@@ -1002,7 +1002,7 @@ const T = {
     history:'Lịch sử BT', dandori:'Cài đặt đổi khuôn', master:'Cài đặt master', logout:'Đăng xuất',
     settings:'Cài đặt',
     allLine:'Tất cả', lineA:'Dây A', lineB:'Dây B', lineC:'Dây C',
-    totalMolds:'Khuôn đang SX', needMaint:'Cần BT', caution:'Cảnh báo', normal:'Bình thường',
+    totalMolds:'Khuôn đang cài đặt', needMaint:'Cần BT', caution:'Cảnh báo', normal:'Bình thường',
     machineNo:'Máy', partName:'Tên', partNo:'Mã', type:'Loại', line:'Dây',
     progress:'Tiến độ', remainShot:'Shot còn lại', remainTime:'Thời gian', pct:'%', status:'Trạng thái',
     shotInput:'Nhập số shot', update:'Cập nhật shot', cancel:'Hủy',
@@ -1192,7 +1192,7 @@ const T = {
     history:'Maint. history', dandori:'Setup config', master:'Master settings', logout:'Logout',
     settings:'Settings',
     allLine:'All lines', lineA:'Line A', lineB:'Line B', lineC:'Line C',
-    totalMolds:'Active molds', needMaint:'Needs maint.', caution:'Warning', normal:'Normal',
+    totalMolds:'Dandori molds', needMaint:'Needs maint.', caution:'Warning', normal:'Normal',
     machineNo:'Machine', partName:'Name', partNo:'Part No.', type:'Type', line:'Line',
     progress:'Progress', remainShot:'Remaining', remainTime:'Time left', pct:'%', status:'Status',
     shotInput:'Shot count input', update:'Update shot', cancel:'Cancel',
@@ -1906,12 +1906,16 @@ async function renderDashboard(el) {
   const lv1Count = dashMolds.filter(m=>calcStatus(m)==='normal').length;
   const activeCount = dashMolds.length;
 
-  // 本日メンテ完了件数を取得
-  const today = new Date().toISOString().split('T')[0];
+  // 本日メンテ完了件数を取得（業務日08:00起点）
+  const workdayNow = new Date();
+  if (workdayNow.getHours() < 8) workdayNow.setDate(workdayNow.getDate() - 1);
+  workdayNow.setHours(8, 0, 0, 0);
+  const todayWorkdayStart = workdayNow.toISOString();
+  const todayLocalStr = getLocalDateStr(workdayNow); // 業務日のYYYY-MM-DD（isToday判定用）
   let todayMaintCount = 0;
   try {
     const todayLogs = await sb('maintenance_logs','GET',null,
-      `?performed_at=gte.${today}&select=id`);
+      `?performed_at=gte.${todayWorkdayStart}&select=id`);
     todayMaintCount = (todayLogs||[]).length;
   } catch(e) { /* エラー時は0表示 */ }
 
@@ -1920,7 +1924,7 @@ async function renderDashboard(el) {
   try {
     const d30 = new Date();
     d30.setDate(d30.getDate() - 30);
-    const d30Str = d30.toISOString().split('T')[0];
+    const d30Str = getLocalDateStr(d30);
     const recentLogs = await sb('maintenance_logs','GET',null,
       `?performed_at=gte.${d30Str}&select=maint_shot_at_maintenance,mold_id,molds(maintenance_interval)`);
     if (recentLogs && recentLogs.length > 0) {
@@ -1947,7 +1951,7 @@ async function renderDashboard(el) {
         const dt = new Date(log.performed_at);
         const timeStr = dt.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
         const dateStr = dt.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
-        const isToday = dt.toISOString().split('T')[0] === today;
+        const isToday = getLocalDateStr(dt) === todayLocalStr;
         const displayTime = isToday ? timeStr : dateStr + ' ' + timeStr;
         const userName = log.users?.name || '-';
         const initial = userName.charAt(0);
@@ -4780,7 +4784,7 @@ function updateRealtimeDisplay() {
 
   // 一覧テーブルのリアルタイム更新（DOM操作で高速更新）
   // 段取り未設定判定用: dandoriDataにmold.idが含まれているかチェック
-  const dandoriMoldIds = Object.keys(dandoriData).length > 0 ? new Set(Object.values(dandoriData)) : null;
+  const dandoriMoldIds = dandoriConfigured ? new Set(Object.values(dandoriData).filter(Boolean)) : null;
 
   state.molds.forEach(mold => {
     // 段取り未設定の金型はリアルタイム更新をスキップ（dim表示を維持）
