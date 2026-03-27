@@ -1861,6 +1861,11 @@ async function loadMachines() {
 
 // ===== セクション表示 =====
 function showSection(section) {
+  // 履歴画面から離脱するときに削除モードをリセット
+  if (section !== 'history') {
+    histEditMode = false;
+    histSelectedIds = new Set();
+  }
   state.currentSection = section;
   localStorage.setItem('lastSection', section);
   startRealtimeUpdate();
@@ -2640,6 +2645,7 @@ function getLocalDateStr(date) {
   return `${y}-${m}-${d}`;
 }
 let dandoriData = {};
+let dandoriMoldIdSet = new Set(); // dandoriDataのvalue(mold_id)のSetキャッシュ（O(1)検索用）
 let dandoriConfigured = false; // DBに段取り設定が1件でも存在すればtrue（全台停止と未設定を区別）
 
 async function loadDandori() {
@@ -2673,6 +2679,7 @@ async function loadDandori() {
         dandoriData[s.machine_id] = s.mold_id; // nullも設定（停止状態の表現）
       }
     });
+    dandoriMoldIdSet = new Set(Object.values(dandoriData).filter(Boolean));
     renderDandoriMachines();
   } catch(e) {
     document.getElementById('dandori-body').innerHTML = `<div style="color:var(--danger-text)">${t('loadError')}</div>`;
@@ -2725,6 +2732,7 @@ function renderDandoriMachines() {
 
 function selectDandoriMold(machineId, moldId, el) {
   dandoriData[machineId] = moldId;
+  dandoriMoldIdSet = new Set(Object.values(dandoriData).filter(Boolean));
   const card = el.closest('.dandori-card');
   card.querySelectorAll('.radio-option,.radio-none').forEach(r=>r.classList.remove('selected'));
   card.querySelectorAll('.radio-circle').forEach(c=>c.classList.remove('on'));
@@ -4590,7 +4598,7 @@ function calcEstimatedShot(mold) {
   const cycleTime = mold.cycle_time_sec || 30;
   if (!lastUpdated) return baseShot;
   // 段取り未設定の金型はショット加算しない（baseShotのまま返す）
-  if (dandoriConfigured && !Object.values(dandoriData).includes(mold.id)) {
+  if (dandoriConfigured && !dandoriMoldIdSet.has(mold.id)) {
     return baseShot;
   }
   const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
@@ -4606,7 +4614,7 @@ function calcEstimatedTotalShot(mold) {
   const cycleTime = mold.cycle_time_sec || 30;
   if (!lastUpdated) return baseShot;
   // 段取り未設定の金型はショット加算しない（baseShotのまま返す）
-  if (dandoriConfigured && !Object.values(dandoriData).includes(mold.id)) {
+  if (dandoriConfigured && !dandoriMoldIdSet.has(mold.id)) {
     return baseShot;
   }
   const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
@@ -4692,9 +4700,13 @@ async function pollOnce() {
   try {
     await Promise.all([loadMolds(), loadDandoriForSchedule()]);
     updateRealtimeDisplay();
+    const content = document.getElementById('main-content');
+    if (!content) return;
     if (state.currentSection === 'dashboard') {
-      const content = document.getElementById('main-content');
-      if (content) renderDashboard(content);
+      renderDashboard(content);
+    } else if (state.currentSection === 'schedule') {
+      const sbEl = document.getElementById('sched-body');
+      if (sbEl) renderScheduleBody();
     }
   } catch(e) { console.warn('Polling error:', e); }
   finally { isPolling = false; }
@@ -5077,8 +5089,8 @@ function renderShotUpdateInput(el) {
   const moldId = (currentMold && currentMold.id) || '';
   const moldName = currentMold ? (currentMold.part_name + (currentMold.part_no ? '\u3000' + currentMold.part_no : '') + (currentMold.model_no ? '\u3000\u578b' + currentMold.model_no : '')) : t('suMoldNone');
   const doneCount = shotUpdateDoneIds.size;
-  const machineNos = new Set(state.molds.map(function(m) { return m.machine_no; }));
-  const totalMachines = machineNos.size;
+  // グリッド画面と同じ machines ベースの分母を使う
+  const totalMachines = (state.machines || []).length || new Set(state.molds.map(function(m) { return m.machine_no; })).size;
   const displayVal = shotUpdateInputVal ? Number(shotUpdateInputVal).toLocaleString() : '\u2014';
   const inputColor = shotUpdateInputVal ? 'var(--text)' : 'var(--text4)';
   const btnOpacity = shotUpdateInputVal ? '1' : '0.5';
@@ -5159,6 +5171,7 @@ function suKeyPress(key) {
 }
 
 async function saveShotUpdate(moldId) {
+  if (!moldId) { showToast(t('loadError') || 'エラー: 金型IDが取得できません', 'error'); return; }
   if (!shotUpdateInputVal) return;
   const val = parseInt(shotUpdateInputVal);
   if (isNaN(val) || val < 0) return;
@@ -5450,6 +5463,8 @@ async function loadDandoriForSchedule() {
     dandoriData = {};
     // 結果はsetting_date降順のため、同一machine_idは最初（最新）のみ採用。mold_id=nullは除外
     (settings||[]).forEach(s => { if (s.mold_id && !dandoriData.hasOwnProperty(s.machine_id)) dandoriData[s.machine_id] = s.mold_id; });
+    // O(n²)を避けるためSetキャッシュを更新
+    dandoriMoldIdSet = new Set(Object.values(dandoriData));
   } catch(e) {
     console.error('loadDandoriForSchedule error:', e);
   }
