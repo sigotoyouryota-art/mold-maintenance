@@ -5151,13 +5151,25 @@ async function saveShotUpdate(moldId) {
   const val = parseInt(shotUpdateInputVal);
   if (isNaN(val) || val < 0) return;
   try {
+    const now = new Date().toISOString();
+    // 累計ショット数を計算（submitShotと同じロジック）
+    const mold = state.molds.find(m => m.id === moldId);
+    const oldMaintShot = mold ? (mold.maint_shot || 0) : 0;
+    const oldCurrentShot = mold ? (mold.current_shot || 0) : 0;
+    const diff = val - oldMaintShot;
+    const newCurrentShot = Math.max(0, oldCurrentShot + diff);
+
     await sb('molds', 'PATCH',
-      { maint_shot: val, maint_shot_updated_at: new Date().toISOString(), last_shot_updated_at: new Date().toISOString() },
+      { maint_shot: val, current_shot: newCurrentShot, maint_shot_updated_at: now, last_shot_updated_at: now, last_shot_updated_by: state.currentUser.id, updated_at: now },
       '?id=eq.' + moldId
     );
     // ローカルのmoldsも更新
-    const mold = state.molds.find(m => m.id === moldId);
-    if (mold) { mold.maint_shot = val; mold.maint_shot_updated_at = new Date().toISOString(); }
+    if (mold) {
+      mold.maint_shot = val;
+      mold.current_shot = newCurrentShot;
+      mold.maint_shot_updated_at = now;
+      mold.last_shot_updated_at = now;
+    }
     shotUpdateDoneIds.add(shotUpdateMachineId);
     showToast('#' + shotUpdateMachineId + ' ' + t('savedText') + '（' + val.toLocaleString() + ' shot）', 'success');
     backToSuGrid();
