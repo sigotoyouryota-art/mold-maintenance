@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MoldMainte</title>
-<meta name="app-version" content="1.5.1">
+<meta name="app-version" content="1.0.0">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -2892,7 +2892,6 @@ function renderMasterMolds(el) {
 }
 
 function renderMasterMachines(el) {
-  const machinesData = sortMasterData(state.machines, masterSortState[masterCurrentTab]?.key||'machine_no', masterSortState[masterCurrentTab]?.dir||'asc');
   el.innerHTML = `
   <div class="toolbar">
     <div></div>
@@ -2911,7 +2910,7 @@ function renderMasterMachines(el) {
       <th style="cursor:pointer;white-space:nowrap" onclick="setMasterSort('note')">${t('noteCol')}${masterSortState[masterCurrentTab]?.key==='note'?(masterSortState[masterCurrentTab]?.dir==='asc'?' ↑':' ↓'):' ↕'}</th>
       <th>${t('operationCol')}</th>
     </tr>
-    ${machinesData.map(m=>{
+    ${sortMasterData(state.machines, masterSortState[masterCurrentTab]?.key||'machine_no', masterSortState[masterCurrentTab]?.dir||'asc').map(m=>{
       const line = state.lines.find(l=>l.id===m.line_id);
       return `<tr>
         <td style="font-weight:600">#${esc(m.machine_no)}</td>
@@ -2924,20 +2923,7 @@ function renderMasterMachines(el) {
         </div></td>
       </tr>`;
     }).join('')}
-  </table></div>
-  <div class="mold-cards">${machinesData.map(m=>{
-    const line = state.lines.find(l=>l.id===m.line_id);
-    return `<div class="mold-card" style="border-left-color:var(--border)">
-      <div class="mold-card-top"><div>
-        <div class="mold-card-name">#${esc(m.machine_no)}</div>
-        <div class="mold-card-part">${esc(line?.name||'-')} / ${m.is_dandori?t('dandori'):t('fixed')}</div>
-      </div></div>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="editMachine('${m.id}')">編集</button>
-        <button class="btn btn-danger btn-sm" style="flex:1" onclick="deleteMachine('${m.id}')">${t('delete')}</button>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
+  </table></div>`;
 }
 
 function renderMasterLines(el) {
@@ -2967,16 +2953,7 @@ function renderMasterLines(el) {
       <td>${l.machine_count}${t('tai')}</td>
       <td><button class="btn btn-secondary btn-sm" onclick="editLine('${l.id}')">編集</button></td>
     </tr>`).join('')}
-  </table></div>
-  <div class="mold-cards">${sorted.map(l=>`<div class="mold-card" style="border-left-color:var(--border)">
-    <div class="mold-card-top"><div>
-      <div class="mold-card-name">${esc(l.name)}</div>
-      <div class="mold-card-part">${t('machineCountCol')}: ${l.machine_count}${t('tai')}</div>
-    </div></div>
-    <div style="display:flex;gap:6px;margin-top:6px">
-      <button class="btn btn-secondary btn-sm" style="flex:1" onclick="editLine('${l.id}')">編集</button>
-    </div>
-  </div>`).join('')}</div>`;
+  </table></div>`;
 }
 
 async function renderMasterUsers(el) {
@@ -3014,32 +2991,13 @@ function renderMasterUsersTable(el) {
           + '<button class="btn btn-danger btn-sm" data-uid="' + (u.id||'') + '" data-uname="' + esc(u.name||'').replace(/"/g,'') + '" onclick="(function(b){var uid=b.getAttribute(\'data-uid\');var nm=b.getAttribute(\'data-uname\')||\'?\';if(confirm(\'\u300c\'+nm+\'\u300d\u3092\u524a\u9664\u3057\u307e\u3059\u304b\uff1f\u3053\u306e\u64cd\u4f5c\u306f\u53d6\u308a\u6d88\u305b\u307e\u305b\u3093\u3002\')){deleteUser(uid);}})(this)">\u524a\u9664</button>'
           + '</div></td></tr>';
       }).join('');
-  var userCards = sorted.length === 0
-    ? '<div style="text-align:center;padding:20px;color:var(--text3)">ユーザーが登録されていません</div>'
-    : sorted.map(function(u) {
-        var ll = u.last_login_at || u.updated_at;
-        var ls = ll ? new Date(ll).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
-        var roleBadge = u.role==='admin' ? '<span class="badge badge-warning" style="margin-top:4px">管理者</span>' : '<span class="badge badge-gray" style="margin-top:4px">作業者</span>';
-        return '<div class="mold-card" style="border-left-color:var(--border)">'
-          + '<div class="mold-card-top"><div>'
-          + '<div class="mold-card-name">' + esc(u.name||'') + '</div>'
-          + '<div class="mold-card-part">' + roleBadge + '</div>'
-          + '<div style="font-size:10px;color:var(--text4);margin-top:4px">最終ログイン: ' + ls + '</div>'
-          + '</div></div>'
-          + '<div style="display:flex;gap:6px;margin-top:6px">'
-          + '<button class="btn btn-secondary btn-sm" style="flex:1" onclick="editUser(\'' + (u.id||'') + '\')">編集</button>'
-          + '<button class="btn btn-danger btn-sm" style="flex:1" onclick="if(confirm(\'' + esc(u.name||'').replace(/"/g,'').replace(/'/g,"\\'") + 'を削除しますか?この操作は取り消せません。\')) deleteUser(\'' + (u.id||'') + '\')">削除</button>'
-          + '</div>'
-          + '</div>';
-      }).join('');
   el.innerHTML = '<div class="toolbar"><div></div>'
     + '<div style="display:flex;gap:6px">'
     + '<button class="btn btn-secondary" onclick="exportMaster(\'users\')">' + t('exportCsv') + '</button>'
     + '<button class="btn btn-secondary" onclick="openImportModal(\'users\')">' + t('importCsv') + '</button>'
     + '<button class="btn btn-primary" onclick="openAddUserModal()">\uff0b \u30e6\u30fc\u30b6\u30fc\u8ffd\u52a0</button>'
     + '</div></div>'
-    + '<div class="table-wrap"><table>' + thead + tbody + '</table></div>'
-    + '<div class="mold-cards">' + userCards + '</div>';
+    + '<div class="table-wrap"><table>' + thead + tbody + '</table></div>';
   el.querySelectorAll('.su-th').forEach(function(th) {
     th.addEventListener('click', function() {
       masterCurrentTab = 'users';
@@ -6434,9 +6392,13 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.5.1';
+const CURRENT_VERSION = '1.0.0';
 
 async function checkForUpdate() {
+  if (window.location.protocol === 'file:') {
+    showToast('GitHub Pages上でのみ確認できます', 'error');
+    return;
+  }
   try {
     const btn = document.getElementById('update-check-btn');
     if (btn) { btn.textContent = t('checkingText'); btn.disabled = true; }
@@ -6537,6 +6499,7 @@ setLang(state.lang);
 
 // バックグラウンドでアップデート確認（起動5秒後）
 setTimeout(async () => {
+  if (window.location.protocol === 'file:') return;
   try {
     const res = await fetch(window.location.href.split('?')[0] + '?cache=' + Date.now(), {
       cache: 'no-store',
