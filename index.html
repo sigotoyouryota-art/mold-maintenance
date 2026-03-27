@@ -2843,7 +2843,6 @@ function renderMasterMolds(el) {
       <th style="cursor:pointer" onclick="setMasterSort('cycle_time_sec')">${t('cycleTime')}${masterSortKey==='cycle_time_sec'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
       <th style="cursor:pointer" onclick="setMasterSort('simple_maint_time_min')">${t('simpleTime')}${masterSortKey==='simple_maint_time_min'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
       <th style="cursor:pointer" onclick="setMasterSort('oh_maint_time_min')">${t('ohTime')}${masterSortKey==='oh_maint_time_min'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
-      <th style="cursor:pointer" onclick="setMasterSort('alert_min_danger')">${t('alertSettingCol')}${masterSortKey==='alert_min_danger'?(masterSortDir==='asc'?' ↑':' ↓'):' ↕'}</th>
       <th>${t('operationCol')}</th>
     </tr>
     ${sortMoldMaster(state.molds, masterSortKey, masterSortDir).map(m=>`<tr>
@@ -2857,7 +2856,6 @@ function renderMasterMolds(el) {
       <td>${m.cycle_time_sec}秒</td>
       <td style="color:var(--accent);font-weight:500">${m.simple_maint_time_min||20}${t('minuteUnit')||'分'}</td>
       <td style="color:var(--text3)">${m.oh_maint_time_min||60}${t('minuteUnit')||'分'}</td>
-      <td style="font-size:10px;color:var(--text3)">${t('needMaint')}${m.alert_min_danger||60}${t('minuteUnit')||'分'}<br>${t('caution')}${m.alert_min_warning||120}${t('minuteUnit')||'分'}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-secondary btn-sm" onclick="editMold('${m.id}')">編集</button>
         <button class="btn btn-danger btn-sm" onclick="deleteMold('${m.id}')">${t('delete')}</button>
