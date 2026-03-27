@@ -5682,8 +5682,8 @@ function renderScheduleBody() {
     let html = '';
     let globalRank = 0;
     allData.forEach((shiftData, shiftIndex) => {
-      // 4直目（受け皿）はエントリがある場合のみ表示
-      if (shiftIndex === 3 && !shiftData.scheduled.length) return;
+      // 4直目（受け皿）は直またぎ継続エントリがある場合のみ表示
+      if (shiftIndex === 3 && !shiftData.scheduled.some(s => s.isContinuation || s.crossShift)) return;
       html += makeShiftHeader(shiftData, shiftIndex);
       if (!shiftData.scheduled.length) {
         html += `<div style="text-align:center;padding:20px;color:var(--text4);font-size:11px">${t('schedNoMaint')}</div>`;
@@ -5779,8 +5779,8 @@ function renderScheduleBody() {
   let html = '';
   let globalRank = 0;
   allData.forEach((shiftData, shiftIndex) => {
-    // 4直目（受け皿）はエントリがある場合のみ表示
-    if (shiftIndex === 3 && !shiftData.scheduled.length) return;
+    // 4直目（受け皿）は直またぎ継続エントリがある場合のみ表示
+    if (shiftIndex === 3 && !shiftData.scheduled.some(s => s.isContinuation || s.crossShift)) return;
     const { shiftStart, shiftEnd, scheduled } = shiftData;
     const shiftDur = (shiftEnd - shiftStart) / 60000;
     const isCurShift = shiftData.shiftName === curShiftName && shiftStart.getDate() === now.getDate();
