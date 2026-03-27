@@ -600,7 +600,7 @@ select.form-control { cursor: pointer; }
 <!-- PIN認証モーダル -->
 <div class="modal-overlay" id="modal-pin">
   <div class="modal" style="max-width:340px;text-align:center">
-    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px" id="pin-modal-title">PINを入力</div>
+    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px" id="pin-modal-title"></div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:16px" id="pin-modal-user"></div>
     <div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px">
       <div class="pin-dot" id="pin-d0"></div>
@@ -995,6 +995,16 @@ const T = {
     sortMaintDesc:'メンテ遠い順',
     sortMachineAsc:'機番昇順',
     sortMachineDesc:'機番降順',
+    pinEnter:'PINを入力', pinNew:'新しいPINを入力（4桁）', pinConfirmInput:'もう一度入力してください',
+    pinWrong:'PINが違います', pinMismatch:'PINが一致しません。もう一度入力してください', pinSaved:'PINを設定しました', pinSaveFailed:'保存に失敗しました', pinErrorOccurred:'エラーが発生しました',
+    pinChangeLabel:'PIN変更', pinSetupLabel:'PIN設定', pinConfigured:'設定済み ✓', pinNotSet:'未設定',
+    suTitle:'ショット数更新', suMachineNotSet:'未設定', suDoneCheck:'済✓', suNotInput:'未入力',
+    suDandoriOnlyMsg:'段取り設定済みの機番のみ更新できます', suDoneLabel:'更新済', suDandoriNotSetLabel:'段取り未設定',
+    suMoldNone:'金型なし', suMoldChanged:'変更済✓', suMoldChange:'変更', suComplete:'完了',
+    bulkAddedCount:'件追加', bulkUpdatedCount:'件更新',
+    sheetjsLoadError:'ファイル出力機能の読み込みに失敗しました',
+    selectMoldTitle:'の金型を選択',
+    suBackToList:'← 一覧', suInputLabel:'入力', suPrevShot:'前回', suCurrentTotal:'現在の累計ショット数', suSaveAndBack:'保存してグリッドへ戻る',
   },
   vi: {
     appName:'Quản Lý Bảo Trì Khuôn', login:'Đăng nhập', selectShift:'Chọn ca', selectWorker:'Chọn công nhân',
@@ -1185,6 +1195,16 @@ const T = {
     sortMaintDesc:'Xa BT nhất',
     sortMachineAsc:'Máy tăng dần',
     sortMachineDesc:'Máy giảm dần',
+    pinEnter:'Nhập PIN', pinNew:'Nhập PIN mới (4 số)', pinConfirmInput:'Nhập lại lần nữa',
+    pinWrong:'PIN không đúng', pinMismatch:'PIN không khớp. Vui lòng nhập lại', pinSaved:'Đã cài đặt PIN', pinSaveFailed:'Lưu thất bại', pinErrorOccurred:'Đã xảy ra lỗi',
+    pinChangeLabel:'Đổi PIN', pinSetupLabel:'Cài PIN', pinConfigured:'Đã cài ✓', pinNotSet:'Chưa cài',
+    suTitle:'Cập nhật shot', suMachineNotSet:'Chưa cài', suDoneCheck:'Xong✓', suNotInput:'Chưa nhập',
+    suDandoriOnlyMsg:'Chỉ cập nhật được máy đã cài đặt', suDoneLabel:'Đã cập nhật', suDandoriNotSetLabel:'Chưa cài đặt',
+    suMoldNone:'Không có khuôn', suMoldChanged:'Đã đổi✓', suMoldChange:'Đổi', suComplete:'Hoàn thành',
+    bulkAddedCount:' thêm', bulkUpdatedCount:' cập nhật',
+    sheetjsLoadError:'Tải thất bại. Kiểm tra mạng',
+    selectMoldTitle:' - chọn khuôn',
+    suBackToList:'← Danh sách', suInputLabel:'Nhập', suPrevShot:'Lần trước', suCurrentTotal:'Tổng shot hiện tại', suSaveAndBack:'Lưu và quay lại',
   },
   en: {
     appName:'Mold Maintenance', login:'Login', selectShift:'Select shift', selectWorker:'Select worker',
@@ -1375,6 +1395,16 @@ const T = {
     sortMaintDesc:'Maint. latest',
     sortMachineAsc:'Machine asc.',
     sortMachineDesc:'Machine desc.',
+    pinEnter:'Enter PIN', pinNew:'Enter new PIN (4 digits)', pinConfirmInput:'Enter again to confirm',
+    pinWrong:'Wrong PIN', pinMismatch:'PIN mismatch. Please try again', pinSaved:'PIN saved', pinSaveFailed:'Failed to save', pinErrorOccurred:'An error occurred',
+    pinChangeLabel:'Change PIN', pinSetupLabel:'Set PIN', pinConfigured:'Set ✓', pinNotSet:'Not set',
+    suTitle:'Shot update', suMachineNotSet:'Not set', suDoneCheck:'Done✓', suNotInput:'No input',
+    suDandoriOnlyMsg:'Only configured machines can be updated', suDoneLabel:'Updated', suDandoriNotSetLabel:'Not configured',
+    suMoldNone:'No mold', suMoldChanged:'Changed✓', suMoldChange:'Change', suComplete:'Done',
+    bulkAddedCount:' added', bulkUpdatedCount:' updated',
+    sheetjsLoadError:'Failed to load export module',
+    selectMoldTitle:' - select mold',
+    suBackToList:'← List', suInputLabel:'Input', suPrevShot:'Previous', suCurrentTotal:'Current total shots', suSaveAndBack:'Save & back to grid',
   }
 };
 function t(key) { return T[state.lang][key] || key; }
@@ -1614,6 +1644,7 @@ async function hashPin(pin) {
 function openPinModal(user) {
   pinValue = '';
   pinTargetUser = user;
+  document.getElementById('pin-modal-title').textContent = t('pinEnter');
   document.getElementById('pin-modal-user').textContent = esc(user.name) + ' / ' + selectedShift;
   document.getElementById('pin-error').textContent = '';
   updatePinDots();
@@ -1651,7 +1682,7 @@ function pinCancel() {
   pinSetStep = 0;
   pinSetFirst = '';
   window._pinMode = null;
-  document.getElementById('pin-modal-title').textContent = 'PINを入力';
+  document.getElementById('pin-modal-title').textContent = t('pinEnter');
   closeModal('modal-pin');
 }
 
@@ -1675,7 +1706,7 @@ async function verifyPin() {
     } else {
       // 認証失敗
       pinValue = '';
-      document.getElementById('pin-error').textContent = 'PINが違います';
+      document.getElementById('pin-error').textContent = t('pinWrong');
       for (let i = 0; i < 4; i++) {
         document.getElementById('pin-d' + i).className = 'pin-dot error';
       }
@@ -1684,7 +1715,7 @@ async function verifyPin() {
   } catch(e) {
     console.error('PIN verify error:', e);
     pinValue = '';
-    document.getElementById('pin-error').textContent = 'エラーが発生しました';
+    document.getElementById('pin-error').textContent = t('pinErrorOccurred');
     updatePinDots();
   }
 }
@@ -1698,7 +1729,7 @@ function openChangePinDialog() {
   pinSetStep = 0;
   pinSetFirst = '';
   pinTargetUser = state.currentUser;
-  document.getElementById('pin-modal-title').textContent = '新しいPINを入力（4桁）';
+  document.getElementById('pin-modal-title').textContent = t('pinNew');
   document.getElementById('pin-modal-user').textContent = esc(state.currentUser?.name);
   document.getElementById('pin-error').textContent = '';
   updatePinDots();
@@ -1713,7 +1744,7 @@ async function handlePinSet() {
     pinSetFirst = pinValue;
     pinValue = '';
     pinSetStep = 1;
-    document.getElementById('pin-modal-title').textContent = 'もう一度入力してください';
+    document.getElementById('pin-modal-title').textContent = t('pinConfirmInput');
     document.getElementById('pin-error').textContent = '';
     updatePinDots();
   } else {
@@ -1731,12 +1762,12 @@ async function handlePinSet() {
         if (u) u.pin_hash = hash;
         closeModal('modal-pin');
         window._pinMode = null;
-        showToast('PINを設定しました', 'success');
+        showToast(t('pinSaved'), 'success');
         // 設定画面を再描画
         showSection('settings');
       } catch(e) {
         console.error('PIN save error:', e);
-        document.getElementById('pin-error').textContent = '保存に失敗しました';
+        document.getElementById('pin-error').textContent = t('pinSaveFailed');
         pinValue = '';
         updatePinDots();
       }
@@ -1745,8 +1776,8 @@ async function handlePinSet() {
       pinValue = '';
       pinSetStep = 0;
       pinSetFirst = '';
-      document.getElementById('pin-modal-title').textContent = '新しいPINを入力（4桁）';
-      document.getElementById('pin-error').textContent = 'PINが一致しません。もう一度入力してください';
+      document.getElementById('pin-modal-title').textContent = t('pinNew');
+      document.getElementById('pin-error').textContent = t('pinMismatch');
       for (let i = 0; i < 4; i++) {
         document.getElementById('pin-d' + i).className = 'pin-dot error';
       }
@@ -4135,7 +4166,7 @@ async function loadSheetJS() {
       console.warn('SheetJS load failed from:', src, e);
     }
   }
-  throw new Error('SheetJSの読み込みに失敗しました。ネットワーク接続を確認してください。');
+  throw new Error(t('sheetjsLoadError'));
 }
 
 // ===== CSVバックアップ =====
@@ -4224,8 +4255,8 @@ function renderSettings(el) {
         <span style="color:var(--text3)">›</span>
       </div>
       <div style="padding:10px 14px;border-top:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="openChangePinDialog()">
-        <span style="font-size:13px;color:var(--text2)">🔒 PIN${state.currentUser?.pin_hash ? '変更' : '設定'}</span>
-        <span style="font-size:10px;color:${state.currentUser?.pin_hash ? 'var(--success-text)' : 'var(--warning-text)'}">${state.currentUser?.pin_hash ? '設定済み ✓' : '未設定'}</span>
+        <span style="font-size:13px;color:var(--text2)">🔒 ${state.currentUser?.pin_hash ? t('pinChangeLabel') : t('pinSetupLabel')}</span>
+        <span style="font-size:10px;color:${state.currentUser?.pin_hash ? 'var(--success-text)' : 'var(--warning-text)'}">${state.currentUser?.pin_hash ? t('pinConfigured') : t('pinNotSet')}</span>
       </div>
     </div>
 
@@ -4435,8 +4466,8 @@ async function saveBulkMachines() {
   showMasterTabByIndex(1);
 
   let msg = '';
-  if (success) msg += `${success}${t('addTitle')||'件追加'} `;
-  if (updated) msg += `${updated}${t('updateTitle')||'件更新'} `;
+  if (success) msg += `${success}${t('bulkAddedCount')} `;
+  if (updated) msg += `${updated}${t('bulkUpdatedCount')} `;
   if (error) msg += `${error} NG`;
   showToast(msg.trim(), error ? '' : 'success');
 
@@ -4919,16 +4950,16 @@ function renderShotUpdateGrid(el) {
       gridHTML += '<div class="su-machine-disabled" data-line="' + (m.line_name || '') + '"'
         + ' style="' + hidden + 'padding:9px 4px;border:1.5px dashed var(--border);border-radius:8px;text-align:center;background:var(--bg3);opacity:0.5;cursor:not-allowed;">'
         + '<div style="font-size:14px;font-weight:500;color:var(--text4)">#' + esc(m.machine_no) + '</div>'
-        + '<div style="font-size:8px;color:var(--text4);margin-top:3px">未設定</div>'
+        + '<div style="font-size:8px;color:var(--text4);margin-top:3px">' + t('suMachineNotSet') + '</div>'
         + '</div>';
     } else {
       const border = isDone ? '0.5px solid var(--success-text)' : isUnreg ? '1px dashed var(--warning)' : '0.5px solid var(--border)';
       const bg = isDone ? 'var(--success-bg)' : 'var(--bg2)';
       const tc = isDone ? 'var(--success-text)' : isUnreg ? 'var(--text4)' : 'var(--text)';
       const sub = isDone
-        ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">済✓</div>'
+        ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">' + t('suDoneCheck') + '</div>'
         : isUnreg
-          ? '<div style="font-size:8px;color:var(--warning-text);margin-top:3px">未入力</div>'
+          ? '<div style="font-size:8px;color:var(--warning-text);margin-top:3px">' + t('suNotInput') + '</div>'
           : '<div style="width:5px;height:5px;border-radius:50%;background:var(--border2);margin:3px auto 0"></div>';
       gridHTML += '<div class="su-machine-btn" data-mno="' + m.machine_no + '" data-line="' + (m.line_name || '') + '"'
         + ' style="' + hidden + 'padding:9px 4px;border:' + border + ';border-radius:8px;text-align:center;background:' + bg + ';cursor:pointer">'
@@ -4941,23 +4972,23 @@ function renderShotUpdateGrid(el) {
   const noticeBanner = hasInactiveMachine
     ? '<div style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--warning-bg);border-bottom:0.5px solid var(--border)">'
       + '<div style="width:5px;height:5px;border-radius:50%;background:var(--warning);flex-shrink:0"></div>'
-      + '<span style="font-size:11px;color:var(--warning-text)">段取り設定済みの機番のみ更新できます</span>'
+      + '<span style="font-size:11px;color:var(--warning-text)">' + t('suDandoriOnlyMsg') + '</span>'
       + '</div>'
     : '';
 
   el.innerHTML = '<div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">'
-    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">ショット数更新</div>'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">' + t('suTitle') + '</div>'
     + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
     + '<div style="display:flex;gap:3px;background:var(--bg3);border-radius:6px;padding:3px" id="su-line-seg">' + lineTabHTML + '</div>'
-    + '<span style="margin-left:auto;font-size:12px;color:var(--text3)">' + doneCount + ' / ' + totalMachines + ' 完了</span>'
+    + '<span style="margin-left:auto;font-size:12px;color:var(--text3)">' + doneCount + ' / ' + totalMachines + ' ' + t('suComplete') + '</span>'
     + '</div></div>'
     + noticeBanner
     + '<div style="height:3px;background:var(--border)"><div style="height:100%;width:' + pct + '%;background:var(--info-text);transition:width 0.3s"></div></div>'
     + '<div id="su-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;padding:10px 12px">' + gridHTML + '</div>'
     + '<div style="padding:4px 12px 12px;display:flex;gap:12px;justify-content:center">'
-    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:7px;height:7px;border-radius:50%;background:var(--success-text)"></div><span style="font-size:10px;color:var(--text3)">更新済</span></div>'
-    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:5px;height:5px;border-radius:50%;background:var(--border2)"></div><span style="font-size:10px;color:var(--text3)">未入力</span></div>'
-    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border:1.5px dashed var(--border);border-radius:2px"></div><span style="font-size:10px;color:var(--text3)">段取り未設定</span></div>'
+    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:7px;height:7px;border-radius:50%;background:var(--success-text)"></div><span style="font-size:10px;color:var(--text3)">' + t('suDoneLabel') + '</span></div>'
+    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:5px;height:5px;border-radius:50%;background:var(--border2)"></div><span style="font-size:10px;color:var(--text3)">' + t('suNotInput') + '</span></div>'
+    + '<div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border:1.5px dashed var(--border);border-radius:2px"></div><span style="font-size:10px;color:var(--text3)">' + t('suDandoriNotSetLabel') + '</span></div>'
     + '</div>';
 
   // addEventListener でクリックイベントを登録
@@ -5024,7 +5055,7 @@ function renderShotUpdateInput(el) {
   const prevTime = currentMold && (currentMold.maint_shot_updated_at || currentMold.last_shot_updated_at);
   const prevTimeStr = prevTime ? new Date(prevTime).toLocaleString('ja-JP', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
   const moldId = (currentMold && currentMold.id) || '';
-  const moldName = currentMold ? (currentMold.part_name + (currentMold.part_no ? '\u3000' + currentMold.part_no : '') + (currentMold.model_no ? '\u3000\u578b' + currentMold.model_no : '')) : '\u91d1\u578b\u306a\u3057';
+  const moldName = currentMold ? (currentMold.part_name + (currentMold.part_no ? '\u3000' + currentMold.part_no : '') + (currentMold.model_no ? '\u3000\u578b' + currentMold.model_no : '')) : t('suMoldNone');
   const doneCount = shotUpdateDoneIds.size;
   const machineNos = new Set(state.molds.map(function(m) { return m.machine_no; }));
   const totalMachines = machineNos.size;
@@ -5045,7 +5076,7 @@ function renderShotUpdateInput(el) {
     ? (molds.find(function(m){ return m.id===dandoriMoldIdForBtn; }) ? dandoriMoldIdForBtn : (molds[0]&&molds[0].id))
     : (molds[0]&&molds[0].id);
   var isChanged = shotUpdateSelectedMoldId && shotUpdateSelectedMoldId !== defaultMoldId;
-  var changeBtnLabel = isChanged ? '\u5909\u66f4\u6e08\u2713' : '\u5909\u66f4';
+  var changeBtnLabel = isChanged ? t('suMoldChanged') : t('suMoldChange');
   var changeBtnColor = isChanged ? 'var(--success-text)' : 'var(--info-text)';
   var changeBtnBorder = isChanged ? 'var(--success-text)' : 'var(--border)';
   var changeBtnBg = isChanged ? 'var(--success-bg)' : 'transparent';
@@ -5054,22 +5085,22 @@ function renderShotUpdateInput(el) {
     : '';
 
   el.innerHTML = '<div style="background:var(--bg3);border-bottom:0.5px solid var(--border);height:46px;display:flex;align-items:center;padding:0 14px;justify-content:space-between">'
-    + '<div id="su-back-btn" style="font-size:13px;color:var(--info-text);cursor:pointer">\u2190 \u4e00\u89a7</div>'
-    + '<div style="font-size:14px;font-weight:600;color:var(--text)">#' + esc(machineNo) + ' \u5165\u529b</div>'
+    + '<div id="su-back-btn" style="font-size:13px;color:var(--info-text);cursor:pointer">' + t('suBackToList') + '</div>'
+    + '<div style="font-size:14px;font-weight:600;color:var(--text)">#' + esc(machineNo) + ' ' + t('suInputLabel') + '</div>'
     + '<div style="font-size:11px;color:var(--text3)">' + doneCount + '/' + totalMachines + '</div>'
     + '</div>'
     + '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg4);border-radius:8px;padding:8px 11px">'
     + '<div><div style="font-size:14px;font-weight:600;color:var(--text)">' + esc(moldName) + '</div>'
-    + '<div style="font-size:10px;color:var(--text3)">\u524d\u56de: ' + fmtNum(prevShot) + '\u3000\uff08' + prevTimeStr + '\uff09</div></div>'
+    + '<div style="font-size:10px;color:var(--text3)">' + t('suPrevShot') + ': ' + fmtNum(prevShot) + '\u3000\uff08' + prevTimeStr + '\uff09</div></div>'
     + changeBtn + '</div>'
     + '<div style="border:2px solid var(--info-text);border-radius:10px;padding:10px 16px;text-align:center;background:var(--bg2)">'
-    + '<div style="font-size:11px;color:var(--text3);margin-bottom:2px">\u73fe\u5728\u306e\u7d2f\u8a08\u30b7\u30e7\u30c3\u30c8\u6570</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:2px">' + t('suCurrentTotal') + '</div>'
     + '<div id="su-input-display" style="font-size:36px;font-weight:600;color:' + inputColor + ';letter-spacing:2px">' + displayVal + '</div>'
     + '</div>'
     + '<div id="su-keypad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">' + keypadHTML + '</div>'
     + '<div id="su-save-btn" data-mold-id="' + moldId + '" style="padding:13px;background:var(--info-text);border-radius:10px;text-align:center;font-size:15px;font-weight:600;color:#fff;cursor:pointer;opacity:' + btnOpacity + '">'
-    + '\u4fdd\u5b58\u3057\u3066\u30b0\u30ea\u30c3\u30c9\u3078\u623b\u308b'
+    + t('suSaveAndBack')
     + '</div></div>';
 
   // addEventListener でイベント登録
@@ -5169,7 +5200,7 @@ function showSuMoldSelect() {
   var sheet = document.createElement('div');
   sheet.style.cssText = 'width:100%;max-width:480px;background:var(--bg2);border-radius:12px 12px 0 0;border-top:0.5px solid var(--border);padding:14px 14px 32px';
   sheet.innerHTML = '<div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px"></div>'
-    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">#' + machineNo + ' ' + t('selectMold'||'の金型を選択') + '</div>'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">#' + machineNo + t('selectMoldTitle') + '</div>'
     + moldListHTML
     + '<div id="su-mold-cancel" style="margin-top:4px;padding:10px;text-align:center;font-size:13px;color:var(--text3);border:0.5px solid var(--border);border-radius:8px;cursor:pointer">' + t('cancel') + '</div>';
 
