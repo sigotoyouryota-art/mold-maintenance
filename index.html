@@ -6394,44 +6394,10 @@ async function applyRecommended(moldId, recommended) {
 // ===== アップデート確認 =====
 const CURRENT_VERSION = '1.0.0';
 
-// XHRベースのテキスト取得（fetch+AbortControllerより全ブラウザで安定）
-function _xhrGetText(url, timeoutMs) {
-  return new Promise(function(resolve, reject) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.timeout = timeoutMs;
-    xhr.onload = function() {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(xhr.responseText);
-      } else {
-        reject(new Error('HTTP ' + xhr.status));
-      }
-    };
-    xhr.onerror = function() { reject(new Error('network')); };
-    xhr.ontimeout = function() { reject(new Error('timeout')); };
-    xhr.send();
-  });
-}
-
-async function checkForUpdate() {
-  const btn = document.getElementById('update-check-btn');
-  if (btn) { btn.textContent = t('checkingText'); btn.disabled = true; }
-  try {
-    // 相対URLで自己取得（絶対URL+fetchより互換性が高い）
-    const url = location.pathname + '?_=' + Date.now();
-    const html = await _xhrGetText(url, 10000);
-    const match = html.match(/name="app-version" content="([^"]+)"/);
-    const latestVersion = match ? match[1] : null;
-    if (!latestVersion) { showToast(t('loadError'), ''); return; }
-    if (latestVersion !== CURRENT_VERSION) {
-      if (confirm('v' + latestVersion + ' → ' + t('updateNow'))) forceReload();
-    } else {
-      showToast('v' + CURRENT_VERSION + ' ✓', 'success');
-    }
-  } catch(e) {
-    showToast(t('connError'), 'error');
-  } finally {
-    if (btn) { btn.textContent = t('updateCheckBtn'); btn.disabled = false; }
+// ネットワークリクエスト不使用。強制リロードで最新版を取得する設計。
+function checkForUpdate() {
+  if (confirm(t('updateNow') || '再読み込みして最新版を確認しますか？')) {
+    forceReload();
   }
 }
 
@@ -6496,19 +6462,9 @@ const SWIPE_SECTIONS = ['dashboard','list','schedule','shotUpdate','dandori','hi
 applyTheme();
 setLang(state.lang);
 
-// バックグラウンドでアップデート確認（5分ごとに定期チェック）
-async function checkVersionInBackground() {
-  try {
-    const url = location.pathname + '?_=' + Date.now();
-    const html = await _xhrGetText(url, 10000);
-    const match = html.match(/name="app-version" content="([^"]+)"/);
-    const latest = match ? match[1] : null;
-    if (latest && latest !== CURRENT_VERSION) showUpdateBanner(latest);
-  } catch(e) { /* バックグラウンド確認失敗は無視 */ }
-}
-// 起動30秒後に初回チェック、以降5分ごとに繰り返す
-setTimeout(checkVersionInBackground, 30000);
-setInterval(checkVersionInBackground, 5 * 60 * 1000);
+// バックグラウンドのバージョンチェックはネットワーク依存のため廃止
+// （GitHub Pages CDNで自己フェッチが不安定なため）
+function checkVersionInBackground() { /* 廃止 */ }
 
 function showUpdateBanner(version) {
   const banner = document.getElementById('update-banner');
