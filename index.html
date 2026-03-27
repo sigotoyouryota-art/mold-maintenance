@@ -1004,6 +1004,9 @@ const T = {
     bulkAddedCount:'件追加', bulkUpdatedCount:'件更新',
     sheetjsLoadError:'ファイル出力機能の読み込みに失敗しました',
     selectMoldTitle:'の金型を選択',
+    suResetBtn:'リセット', suResetTitle:'累計ショット数リセット', suResetAll:'全機番リセット', suResetLine:'ラインリセット', suResetMachine:'機番リセット',
+    suResetConfirmAll:'全機番の累計ショット数をリセットしますか？', suResetConfirmLine:'ラインの累計ショット数をリセットしますか？', suResetConfirmMachine:'の累計ショット数をリセットしますか？',
+    suResetDone:'リセットしました', suResetSelect:'リセット対象を選択',
     suBackToList:'← 一覧', suInputLabel:'入力', suPrevShot:'前回', suCurrentTotal:'現在の累計ショット数', suSaveAndBack:'保存してグリッドへ戻る',
   },
   vi: {
@@ -1204,6 +1207,9 @@ const T = {
     bulkAddedCount:' thêm', bulkUpdatedCount:' cập nhật',
     sheetjsLoadError:'Tải thất bại. Kiểm tra mạng',
     selectMoldTitle:' - chọn khuôn',
+    suResetBtn:'Đặt lại', suResetTitle:'Đặt lại tổng shot', suResetAll:'Tất cả máy', suResetLine:'Theo dây', suResetMachine:'Theo máy',
+    suResetConfirmAll:'Đặt lại tổng shot tất cả máy?', suResetConfirmLine:' - đặt lại tổng shot?', suResetConfirmMachine:' - đặt lại tổng shot?',
+    suResetDone:'Đã đặt lại', suResetSelect:'Chọn đối tượng đặt lại',
     suBackToList:'← Danh sách', suInputLabel:'Nhập', suPrevShot:'Lần trước', suCurrentTotal:'Tổng shot hiện tại', suSaveAndBack:'Lưu và quay lại',
   },
   en: {
@@ -1404,6 +1410,9 @@ const T = {
     bulkAddedCount:' added', bulkUpdatedCount:' updated',
     sheetjsLoadError:'Failed to load export module',
     selectMoldTitle:' - select mold',
+    suResetBtn:'Reset', suResetTitle:'Reset total shots', suResetAll:'All machines', suResetLine:'By line', suResetMachine:'By machine',
+    suResetConfirmAll:'Reset total shots for all machines?', suResetConfirmLine:' - reset total shots?', suResetConfirmMachine:' - reset total shots?',
+    suResetDone:'Reset complete', suResetSelect:'Select reset target',
     suBackToList:'← List', suInputLabel:'Input', suPrevShot:'Previous', suCurrentTotal:'Current total shots', suSaveAndBack:'Save & back to grid',
   }
 };
@@ -4985,7 +4994,10 @@ function renderShotUpdateGrid(el) {
     : '';
 
   el.innerHTML = '<div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">'
-    + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">' + t('suTitle') + '</div>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text)">' + t('suTitle') + '</div>'
+    + '<div style="font-size:11px;padding:4px 10px;border:0.5px solid var(--danger-border);border-radius:5px;color:var(--danger-text);cursor:pointer" onclick="openShotResetPanel()">' + t('suResetBtn') + '</div>'
+    + '</div>'
     + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
     + '<div style="display:flex;gap:3px;background:var(--bg3);border-radius:6px;padding:3px" id="su-line-seg">' + lineTabHTML + '</div>'
     + '<span style="margin-left:auto;font-size:12px;color:var(--text3)">' + doneCount + ' / ' + totalMachines + ' ' + t('suComplete') + '</span>'
@@ -5175,6 +5187,106 @@ async function saveShotUpdate(moldId) {
     backToSuGrid();
   } catch(e) {
     showToast(t('shotUpdateFailed'), 'error');
+  }
+}
+
+// ===== ショット数リセット機能 =====
+function openShotResetPanel() {
+  // ラインリスト生成
+  const lineNames = [...new Set(state.machines.map(m => {
+    const line = state.lines.find(l => l.id === m.line_id);
+    return line ? line.name : null;
+  }).filter(Boolean))];
+
+  // 段取り設定済み機番リスト
+  const activeMachines = state.machines.filter(m => dandoriData.hasOwnProperty(m.id) && dandoriData[m.id] != null);
+
+  let html = '<div style="padding:16px">'
+    + '<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px">' + t('suResetTitle') + '</div>'
+    // 全リセット
+    + '<div style="margin-bottom:10px">'
+    + '<div onclick="execShotReset(\'all\')" style="padding:12px;background:var(--bg2);border:0.5px solid var(--border);border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px">'
+    + '<div style="width:32px;height:32px;border-radius:50%;background:var(--danger-bg);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger-text)" stroke-width="2" stroke-linecap="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M5 6l1 14h12l1-14"/></svg></div>'
+    + '<div><div style="font-size:13px;font-weight:500;color:var(--text)">' + t('suResetAll') + '</div>'
+    + '<div style="font-size:10px;color:var(--text4)">' + activeMachines.length + ' ' + t('machineNo') + '</div></div>'
+    + '</div></div>'
+    // ラインごとリセット
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;padding-top:4px">' + t('suResetLine') + '</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">'
+    + lineNames.map(function(ln) {
+        const cnt = activeMachines.filter(m => { const l = state.lines.find(l2 => l2.id === m.line_id); return l && l.name === ln; }).length;
+        return '<div onclick="execShotReset(\'line\',\'' + esc(ln) + '\')" style="padding:8px 14px;background:var(--bg2);border:0.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--text)">' + esc(ln) + ' <span style="color:var(--text4)">(' + cnt + ')</span></div>';
+      }).join('')
+    + '</div>'
+    // 機番ごとリセット
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:6px">' + t('suResetMachine') + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:4px;max-height:200px;overflow-y:auto">'
+    + activeMachines.sort(function(a,b) { return (parseInt(a.machine_no)||0) - (parseInt(b.machine_no)||0); }).map(function(m) {
+        const moldId = dandoriData[m.id];
+        const mold = moldId ? state.molds.find(function(mol) { return mol.id === moldId; }) : null;
+        const shotVal = mold ? fmtNum(mold.current_shot || 0) : '0';
+        return '<div onclick="execShotReset(\'machine\',\'' + m.id + '\')" style="padding:6px 4px;background:var(--bg2);border:0.5px solid var(--border);border-radius:6px;cursor:pointer;text-align:center">'
+          + '<div style="font-size:12px;font-weight:500;color:var(--text)">#' + esc(m.machine_no) + '</div>'
+          + '<div style="font-size:8px;color:var(--text4)">' + shotVal + '</div></div>';
+      }).join('')
+    + '</div>'
+    // 閉じるボタン
+    + '<div onclick="backToSuGrid()" style="margin-top:14px;padding:10px;text-align:center;font-size:13px;color:var(--text3);cursor:pointer;border:0.5px solid var(--border);border-radius:8px">' + t('cancel') + '</div>'
+    + '</div>';
+
+  const el = document.getElementById('main-content');
+  if (el) el.innerHTML = html;
+}
+
+async function execShotReset(mode, target) {
+  let targetMolds = [];
+  let confirmMsg = '';
+
+  if (mode === 'all') {
+    // 段取り設定済みの全金型
+    const activeIds = new Set(Object.values(dandoriData).filter(Boolean));
+    targetMolds = state.molds.filter(m => activeIds.has(m.id));
+    confirmMsg = t('suResetConfirmAll');
+  } else if (mode === 'line') {
+    // 指定ラインの段取り設定済み金型
+    const lineMachineIds = state.machines.filter(m => {
+      const l = state.lines.find(l2 => l2.id === m.line_id);
+      return l && l.name === target;
+    }).map(m => m.id);
+    const moldIds = lineMachineIds.map(mid => dandoriData[mid]).filter(Boolean);
+    targetMolds = state.molds.filter(m => moldIds.includes(m.id));
+    confirmMsg = target + t('suResetConfirmLine');
+  } else if (mode === 'machine') {
+    // 指定機番の段取り設定済み金型
+    const moldId = dandoriData[target];
+    if (moldId) {
+      const mold = state.molds.find(m => m.id === moldId);
+      if (mold) targetMolds = [mold];
+    }
+    const mc = state.machines.find(m => m.id === target);
+    confirmMsg = '#' + (mc ? mc.machine_no : '?') + t('suResetConfirmMachine');
+  }
+
+  if (!targetMolds.length) { showToast(t('noData'), ''); return; }
+  if (!confirm(confirmMsg + '\n(' + targetMolds.length + t('men') + ')')) return;
+
+  try {
+    const now = new Date().toISOString();
+    for (const mold of targetMolds) {
+      await sb('molds', 'PATCH',
+        { maint_shot: 0, current_shot: 0, maint_shot_updated_at: now, last_shot_updated_at: now, updated_at: now },
+        '?id=eq.' + mold.id
+      );
+      mold.maint_shot = 0;
+      mold.current_shot = 0;
+      mold.maint_shot_updated_at = now;
+    }
+    showToast(t('suResetDone') + ' (' + targetMolds.length + t('men') + ')', 'success');
+    await loadMolds();
+    shotUpdateView = 'grid';
+    renderShotUpdateGrid(document.getElementById('main-content'));
+  } catch(e) {
+    showToast(t('loadError') + ': ' + e.message, 'error');
   }
 }
 
