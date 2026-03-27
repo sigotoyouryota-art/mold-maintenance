@@ -549,6 +549,7 @@ select.form-control { cursor: pointer; }
     <div class="header-right">
       <button class="theme-btn" onclick="toggleTheme()" id="theme-btn-main">☾</button>
       <span class="user-info" id="main-user-info"></span>
+      <span id="alert-count-badge" style="display:none;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
       <button onclick="manualRefresh()" id="refresh-btn" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:#60a5fa;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="データ更新"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
       <button onclick="showSection('settings')" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;color:var(--text2);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="設定">⚙</button>
     </div>
@@ -2360,18 +2361,24 @@ function renderAlertBody() {
   if (!molds.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noAlert')}</div>`; return; }
 
   if (state.alertViewMode === 'simple') {
-    el.innerHTML = molds.map(m=>`
-      <div style="background:var(--bg2);border-radius:6px;padding:8px 10px;border-left:2px solid ${statusColor(m.status)};display:flex;align-items:center;gap:8px;margin-bottom:4px">
+    el.innerHTML = molds.map(m=>{
+      const sv = calcStatus(m);
+      const svRem = calcEstimatedRemaining(m);
+      const svRemMin = calcEstimatedRemainingMin(m);
+      const svPct = Math.min(100, calcEstimatedProgress(m));
+      return `
+      <div style="background:var(--bg2);border-radius:6px;padding:8px 10px;border-left:2px solid ${statusColor(sv)};display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <div style="flex:1;min-width:0">
           <div style="font-size:11px;font-weight:600;color:var(--text)">#${esc(m.machine_no||'?')}　<span style="font-weight:400;color:var(--text2)">${esc(m.part_name)}</span></div>
-          <div style="font-size:10px;color:${statusColor(m.status)};margin-top:1px">${t('remainLabel')} ${fmtNum(m.remaining_shot)}shot・${fmtTime(m.remaining_min)}・${m.progress_pct}%</div>
+          <div style="font-size:10px;color:${statusColor(sv)};margin-top:1px">${t('remainLabel')} ${fmtNum(svRem)}shot・${fmtTime(svRemMin)}・${svPct}%</div>
         </div>
-        ${statusBadge(m.status)}
-        <div class="btn btn-sm ${m.status==='danger'?'btn-success':'btn-secondary'}" onclick="${m.status==='danger'?`openMaintenanceFromAlert('${m.id}')`:`openShotModal('${m.id}')`}">${m.status==='danger'?t('maintDone2'):t('shotUpdate')}</div>
-      </div>`).join('');
+        ${statusBadge(sv)}
+        <div class="btn btn-sm ${sv==='danger'?'btn-success':'btn-secondary'}" onclick="${sv==='danger'?`openMaintenanceFromAlert('${m.id}')`:`openShotModal('${m.id}')`}">${sv==='danger'?t('maintDone2'):t('shotUpdate')}</div>
+      </div>`;
+    }).join('');
   } else {
     el.innerHTML = molds.map(m=>`
-      <div class="alert-card ${m.status==='warning'?'warning':''}">
+      <div class="alert-card alert-rt-card ${m.status==='warning'?'warning':''}" data-mold-id="${m.id}">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:3px">
           <div>
             <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">#${esc(m.machine_no||'?')}　<span style="font-weight:400;color:var(--text2)">${esc(m.part_name)}</span></div>
@@ -2381,15 +2388,15 @@ function renderAlertBody() {
               <span style="font-size:10px;color:var(--text3)">${esc(m.line_name||'-')}</span>
             </div>
           </div>
-          ${statusBadge(m.status)}
+          <span class="rt-status-badge">${statusBadge(calcStatus(m))}</span>
         </div>
         <div style="height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin:6px 0">
-          <div style="width:${m.progress_pct}%;height:100%;border-radius:2px;background:${statusColor(m.status)}"></div>
+          <div class="rt-progress" style="width:${Math.min(100,calcEstimatedProgress(m))}%;height:100%;border-radius:2px;background:${statusColor(calcStatus(m))}"></div>
         </div>
         <div class="alert-stats">
-          <div class="alert-stat"><div class="alert-stat-label">${t('remainShot')}</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${fmtNum(m.remaining_shot)}</div></div>
-          <div class="alert-stat"><div class="alert-stat-label">${t('remainTime')}</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${fmtTime(m.remaining_min)}</div></div>
-          <div class="alert-stat"><div class="alert-stat-label">${t('progress')}</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${m.progress_pct}%</div></div>
+          <div class="alert-stat"><div class="alert-stat-label">${t('remainShot')}</div><div class="alert-stat-val rt-remain-shot" style="color:${statusColor(calcStatus(m))}">${fmtNum(calcEstimatedRemaining(m))}</div></div>
+          <div class="alert-stat"><div class="alert-stat-label">${t('remainTime')}</div><div class="alert-stat-val rt-remain-time" style="color:${statusColor(calcStatus(m))}">${fmtTime(calcEstimatedRemainingMin(m))}</div></div>
+          <div class="alert-stat"><div class="alert-stat-label">${t('progress')}</div><div class="alert-stat-val rt-pct" style="color:${statusColor(calcStatus(m))}">${Math.min(100,calcEstimatedProgress(m))}%</div></div>
         </div>
         <div class="alert-btns">
           <div class="alert-btn" style="background:var(--info-bg);color:var(--info-text)" onclick="openShotModal('${m.id}')">${t('shotUpdate')}</div>
@@ -3055,14 +3062,18 @@ function openShotModal(moldId) {
   document.getElementById('shot-machine').textContent = `#${mold.machine_no||'?'}　${mold.line_name||'-'}`;
   document.getElementById('shot-part-no').textContent = mold.part_no;
   document.getElementById('shot-part-name').textContent = mold.part_name;
+  const rtStatus = calcStatus(mold);
+  const rtPct = Math.min(100, calcEstimatedProgress(mold));
+  const rtRemShot = calcEstimatedRemaining(mold);
+  const rtRemMin = calcEstimatedRemainingMin(mold);
   const badgeEl = document.getElementById('shot-status-badge');
-  if (badgeEl) badgeEl.innerHTML = statusBadge(mold.status);
+  if (badgeEl) badgeEl.innerHTML = statusBadge(rtStatus);
 
   const prog = document.getElementById('shot-progress-bar');
-  prog.style.width = mold.progress_pct + '%';
-  prog.style.background = statusColor(mold.status);
+  prog.style.width = rtPct + '%';
+  prog.style.background = statusColor(rtStatus);
 
-  document.getElementById('shot-remaining-label').textContent = `${t('remainLabel')} ${fmtNum(mold.remaining_shot)}shot・${fmtTime(mold.remaining_min)}`;
+  document.getElementById('shot-remaining-label').textContent = `${t('remainLabel')} ${fmtNum(rtRemShot)}shot・${fmtTime(rtRemMin)}`;
   document.getElementById('shot-limit-label').textContent = `${t('limitLabel')} ${fmtNum(mold.maintenance_interval)}shot`;
   document.getElementById('shot-submit-btn').textContent = t('update');
   document.getElementById('shot-cancel-label').textContent = t('cancel');
@@ -3134,7 +3145,7 @@ async function submitShot() {
     }, `?id=eq.${state.currentMold.id}`);
     await sb('shot_logs','POST',{
       mold_id: state.currentMold.id,
-      machine_id: null,
+      machine_id: state.currentMold.machine_id || null,
       shot_count: maintVal,
       shift: state.currentShift,
       logged_by: state.currentUser.id,
@@ -3160,9 +3171,11 @@ function openMaintenanceModal() {
   document.getElementById('maint-machine').textContent = `#${mold.machine_no||'?'}　${mold.line_name||'-'}`;
   document.getElementById('maint-part').textContent = `${mold.part_no}　${mold.part_name}　${t('currentLabel')||'現在'}: ${fmtNum(mold.current_shot)} shot`;
 
+  const maintRtStatus = calcStatus(mold);
+  const maintRtPct = Math.min(100, calcEstimatedProgress(mold));
   const prog = document.getElementById('maint-progress-bar');
-  prog.style.width = mold.progress_pct + '%';
-  prog.style.background = statusColor(mold.status);
+  prog.style.width = maintRtPct + '%';
+  prog.style.background = statusColor(maintRtStatus);
 
   document.getElementById('maint-worker-display').innerHTML = `<span>${esc(state.currentUser.name)}</span><span style="color:var(--text3)">${state.currentShift}</span>`;
   document.getElementById('maint-register-btn').textContent = t('maintRegister');
@@ -3501,7 +3514,7 @@ async function editUser(id) {
   if (!user) return;
   editingUserId = id;
   userActive = user.is_active !== false;
-  document.getElementById('user-save-btn').textContent = t('updateTitle');
+  document.getElementById('user-edit-title').textContent = t('userEditTitle2');
   document.getElementById('user-save-btn').textContent = t('updateTitle');
   document.getElementById('user-f-name').value = user.name || '';
   document.getElementById('user-f-role').value = user.role || 'worker';
@@ -4737,11 +4750,22 @@ async function manualRefresh() {
   btn.style.animation = 'spin 0.8s linear infinite';
   try {
     await loadMolds();
+    await loadDandoriForSchedule();
     updateRealtimeDisplay();
-    // ダッシュボード表示中なら再描画
-    if (state.currentSection === 'dashboard') {
-      const content = document.getElementById('main-content');
-      if (content) renderDashboard(content);
+    // 現在の画面を再描画
+    const content = document.getElementById('main-content');
+    if (content) {
+      const sec = state.currentSection;
+      if (sec === 'dashboard') {
+        renderDashboard(content);
+      } else if (sec === 'list') {
+        renderListBody();
+      } else if (sec === 'schedule') {
+        const sbEl = document.getElementById('sched-body');
+        if (sbEl) renderScheduleBody();
+      } else if (sec === 'alert') {
+        renderAlertBody();
+      }
     }
     startPolling();
     showToast(t('dataFetched') || 'データを取得しました', 'success');
@@ -5285,15 +5309,18 @@ async function execShotReset(mode, target) {
 
   try {
     const now = new Date().toISOString();
-    for (const mold of targetMolds) {
-      await sb('molds', 'PATCH',
-        { maint_shot: 0, current_shot: 0, maint_shot_updated_at: now, last_shot_updated_at: now, updated_at: now },
-        '?id=eq.' + mold.id
-      );
+    // 一括PATCHで N+1 を回避
+    const resetIds = targetMolds.map(m => m.id).join(',');
+    await sb('molds', 'PATCH',
+      { maint_shot: 0, current_shot: 0, maint_shot_updated_at: now, last_shot_updated_at: now, updated_at: now },
+      '?id=in.(' + resetIds + ')'
+    );
+    // ローカルキャッシュも更新
+    targetMolds.forEach(mold => {
       mold.maint_shot = 0;
       mold.current_shot = 0;
       mold.maint_shot_updated_at = now;
-    }
+    });
     showToast(t('suResetDone') + ' (' + targetMolds.length + t('men') + ')', 'success');
     await loadMolds();
     shotUpdateView = 'grid';
@@ -5468,21 +5495,6 @@ async function loadDandoriForSchedule() {
   } catch(e) {
     console.error('loadDandoriForSchedule error:', e);
   }
-}
-
-function renderAllSchedule() {
-  // 全直のスケジュールを時系列で表示
-  const shifts = ['1S','2S','3S'];
-  const allScheduled = [];
-  let shiftStartRef = null, shiftEndRef = null;
-  shifts.forEach(shift => {
-    const result = buildSchedule(shift);
-    if (!shiftStartRef) { shiftStartRef = result.shiftStart; shiftEndRef = result.shiftEnd; }
-    result.scheduled.forEach(s => allScheduled.push({...s, shift}));
-  });
-  // 時刻順に並べ替え
-  allScheduled.sort((a,b) => a.schedStart - b.schedStart);
-  return allScheduled;
 }
 
 function setSchedView(view, el) {
@@ -5725,18 +5737,6 @@ function _buildEntry(e, sr, crossShift) {
   };
 }
 
-function buildSchedule(shift) {
-  const allData = buildAllShifts();
-  const found = allData.find(d => d.shiftName === shift);
-  if (found) return { scheduled: found.scheduled, shiftStart: found.shiftStart, shiftEnd: found.shiftEnd };
-  const now = new Date();
-  const [sh, eh] = SHIFT_HOURS[shift];
-  const shiftStart = new Date(now); shiftStart.setHours(sh, 0, 0, 0);
-  const shiftEnd   = new Date(shiftStart);
-  if (eh === 24) { shiftEnd.setDate(shiftEnd.getDate() + 1); shiftEnd.setHours(0, 0, 0, 0); }
-  else shiftEnd.setHours(eh, 0, 0, 0);
-  return { scheduled: [], shiftStart, shiftEnd };
-}
 function fmtHM(date) {
   return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
 }
@@ -6493,8 +6493,8 @@ const SWIPE_SECTIONS = ['dashboard','list','schedule','shotUpdate','dandori','hi
 applyTheme();
 setLang(state.lang);
 
-// バックグラウンドでアップデート確認（起動5秒後）
-setTimeout(async () => {
+// バックグラウンドでアップデート確認（5分ごとに定期チェック）
+async function checkVersionInBackground() {
   try {
     const res = await fetch(window.location.href.split('?')[0] + '?cache=' + Date.now(), {
       cache: 'no-store',
@@ -6507,7 +6507,10 @@ setTimeout(async () => {
       showUpdateBanner(latest);
     }
   } catch(e) { /* バックグラウンド確認失敗は無視 */ }
-}, 5000);
+}
+// 起動30秒後に初回チェック、以降5分ごとに繰り返す
+setTimeout(checkVersionInBackground, 30000);
+setInterval(checkVersionInBackground, 5 * 60 * 1000);
 
 function showUpdateBanner(version) {
   const banner = document.getElementById('update-banner');
