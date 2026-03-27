@@ -4951,18 +4951,28 @@ function renderShotUpdateGrid(el) {
         + '<div style="font-size:8px;color:var(--text4);margin-top:3px">' + t('suMachineNotSet') + '</div>'
         + '</div>';
     } else {
+      // 段取り設定中の金型情報を取得
+      const dandoriMoldId = m.machine_id ? dandoriData[m.machine_id] : null;
+      const dandoriMold = dandoriMoldId ? moldsForMachine.find(function(mol) { return mol.id === dandoriMoldId; }) : null;
+      const moldName = dandoriMold ? dandoriMold.part_name : '';
+      const totalShot = dandoriMold ? fmtNum(calcEstimatedTotalShot(dandoriMold)) : '';
+
       const border = isDone ? '0.5px solid var(--success-text)' : isUnreg ? '1px dashed var(--warning)' : '0.5px solid var(--border)';
       const bg = isDone ? 'var(--success-bg)' : 'var(--bg2)';
       const tc = isDone ? 'var(--success-text)' : isUnreg ? 'var(--text4)' : 'var(--text)';
-      const sub = isDone
-        ? '<div style="font-size:9px;color:var(--success-text);margin-top:2px">' + t('suDoneCheck') + '</div>'
-        : isUnreg
-          ? '<div style="font-size:8px;color:var(--warning-text);margin-top:3px">' + t('suNotInput') + '</div>'
-          : '<div style="width:5px;height:5px;border-radius:50%;background:var(--border2);margin:3px auto 0"></div>';
+      const sub = isUnreg
+        ? '<div style="font-size:8px;color:var(--warning-text);margin-top:3px">' + t('suNotInput') + '</div>'
+        : '';
+      const moldNameHTML = moldName
+        ? '<div style="font-size:8px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:68px">' + esc(moldName) + '</div>'
+        : '';
+      const shotHTML = totalShot && !isUnreg
+        ? '<div style="font-size:7px;color:' + (isDone ? 'var(--success-text)' : 'var(--text4)') + ';margin-top:1px">' + totalShot + 'shot</div>'
+        : '';
       gridHTML += '<div class="su-machine-btn" data-mno="' + m.machine_no + '" data-line="' + (m.line_name || '') + '"'
-        + ' style="' + hidden + 'padding:9px 4px;border:' + border + ';border-radius:8px;text-align:center;background:' + bg + ';cursor:pointer">'
+        + ' style="' + hidden + 'padding:7px 4px;border:' + border + ';border-radius:8px;text-align:center;background:' + bg + ';cursor:pointer">'
         + '<div style="font-size:14px;font-weight:500;color:' + tc + '">#' + esc(m.machine_no) + '</div>'
-        + sub + '</div>';
+        + moldNameHTML + shotHTML + sub + '</div>';
     }
   });
 
