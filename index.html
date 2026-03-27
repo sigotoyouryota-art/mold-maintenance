@@ -1944,7 +1944,7 @@ async function renderDashboard(el) {
   // 段取り設定を取得してactiveMoldIdsを更新
   if (!dandoriConfigured && activeMoldIds.size === 0) await loadDandoriForList();
   // 段取り設定済みの金型のみを対象とする（未設定の場合は全金型を表示）
-  const dashMolds = dandoriConfigured ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds;
+  const dashMolds = dandoriConfigured ? state.molds.filter(m=>dandoriMoldIdSet.has(m.id)) : state.molds;
   const lv4Count = dashMolds.filter(m=>calcStatus(m)==='overdue').length;
   const lv3Count = dashMolds.filter(m=>calcStatus(m)==='danger').length;
   const lv2Count = dashMolds.filter(m=>calcStatus(m)==='warning').length;
@@ -2089,7 +2089,7 @@ async function renderDashboard(el) {
 
 function renderLineAlertBars() {
   const bars = state.lines.map(line => {
-    const lineMolds = (dandoriConfigured ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds).filter(m=>m.line_name===line.name);
+    const lineMolds = (dandoriConfigured ? state.molds.filter(m=>dandoriMoldIdSet.has(m.id)) : state.molds).filter(m=>m.line_name===line.name);
     const o = lineMolds.filter(m=>calcStatus(m)==='overdue').length;
     const d = lineMolds.filter(m=>calcStatus(m)==='danger').length;
     const w = lineMolds.filter(m=>calcStatus(m)==='warning').length;
@@ -2110,7 +2110,7 @@ function renderLineAlertBars() {
 }
 
 function renderTop5() {
-  const top5src = dandoriConfigured ? state.molds.filter(m=>activeMoldIds.has(m.id)) : state.molds;
+  const top5src = dandoriConfigured ? state.molds.filter(m=>dandoriMoldIdSet.has(m.id)) : state.molds;
   const top5 = [...top5src].sort((a,b)=>calcEstimatedProgress(b)-calcEstimatedProgress(a)).slice(0,5);
   return `<div style="background:var(--bg2);border-radius:8px;overflow:hidden;margin-bottom:12px;border:0.5px solid var(--border)">` +
   top5.map(m=>{
@@ -4757,7 +4757,7 @@ function updateRealtimeDisplay() {
   if (!state.molds.length) return;
 
   // アラートバッジ更新（段取り設定済みの金型のみ対象）
-  const rtMolds = dandoriConfigured ? state.molds.filter(m => activeMoldIds.has(m.id)) : state.molds;
+  const rtMolds = dandoriConfigured ? state.molds.filter(m => dandoriMoldIdSet.has(m.id)) : state.molds;
   const overdueCount = rtMolds.filter(m => calcStatus(m) === 'overdue').length;
   const dangerCount = rtMolds.filter(m => calcStatus(m) === 'danger').length;
   const warnCount = rtMolds.filter(m => calcStatus(m) === 'warning').length;
