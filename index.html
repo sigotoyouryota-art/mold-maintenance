@@ -15,7 +15,7 @@
 <meta name="theme-color" content="#161d2e">
 
 <title>MoldMainte</title>
-<meta name="app-version" content="1.5.1">
+<meta name="app-version" content="1.0.0">
 <style>
 /* ===== CSS変数 ===== */
 :root {
@@ -6392,33 +6392,35 @@ async function applyRecommended(moldId, recommended) {
 
 
 // ===== アップデート確認 =====
-const CURRENT_VERSION = '1.5.1';
+const CURRENT_VERSION = '1.0.0';
 
 async function checkForUpdate() {
+  const btn = document.getElementById('update-check-btn');
+  if (btn) { btn.textContent = t('checkingText'); btn.disabled = true; }
   try {
-    const btn = document.getElementById('update-check-btn');
-    if (btn) { btn.textContent = t('checkingText'); btn.disabled = true; }
-
-    // GitHub Pagesのindex.htmlからバージョンを取得
-    const res = await fetch(window.location.href.split('?')[0] + '?cache=' + Date.now(), {
+    // Cache-Controlヘッダーを送らない（GitHub Pagesで拒否される場合がある）
+    // AbortControllerで10秒タイムアウト
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(window.location.href.split('?')[0] + '?v=' + Date.now(), {
       cache: 'no-store',
-      headers: { 'Cache-Control': 'no-cache' }
+      signal: controller.signal,
     });
-    const html = await res.text();
+    clearTimeout(tid);
 
-    // メタタグからバージョンを取得
+    if (!res.ok) {
+      showToast(t('loadError'), '');
+      return;
+    }
+    const html = await res.text();
     const match = html.match(/name="app-version" content="([^"]+)"/);
     const latestVersion = match ? match[1] : null;
-
-    if (btn) { btn.textContent = t('updateCheckBtn'); btn.disabled = false; }
 
     if (!latestVersion) {
       showToast(t('loadError'), '');
       return;
     }
-
     if (latestVersion !== CURRENT_VERSION) {
-      // 新しいバージョンあり
       if (confirm(`v${latestVersion} → ${t('updateNow')}`)) {
         forceReload();
       }
@@ -6426,9 +6428,10 @@ async function checkForUpdate() {
       showToast(`v${CURRENT_VERSION} ✓`, 'success');
     }
   } catch(e) {
-    const btn = document.getElementById('update-check-btn');
+    const isTimeout = e.name === 'AbortError';
+    showToast(isTimeout ? (t('connError') + '（タイムアウト）') : t('connError'), 'error');
+  } finally {
     if (btn) { btn.textContent = t('updateCheckBtn'); btn.disabled = false; }
-    showToast(t('connError'), 'error');
   }
 }
 
@@ -6496,10 +6499,14 @@ setLang(state.lang);
 // バックグラウンドでアップデート確認（5分ごとに定期チェック）
 async function checkVersionInBackground() {
   try {
-    const res = await fetch(window.location.href.split('?')[0] + '?cache=' + Date.now(), {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(window.location.href.split('?')[0] + '?v=' + Date.now(), {
       cache: 'no-store',
-      headers: { 'Cache-Control': 'no-cache' }
+      signal: controller.signal,
     });
+    clearTimeout(tid);
+    if (!res.ok) return;
     const html = await res.text();
     const match = html.match(/name="app-version" content="([^"]+)"/);
     const latest = match ? match[1] : null;
