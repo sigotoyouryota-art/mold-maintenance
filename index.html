@@ -2163,6 +2163,7 @@ async function loadDandoriForList() {
     let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     
+    // 今日のレコードが存在しない場合のみ週次クエリを実行
     if (!settings || settings.length === 0) {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -5482,6 +5483,9 @@ async function loadDandoriForSchedule() {
     const today = getLocalDateStr();
     let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
+
+    // 今日のレコードが存在しない場合のみ週次クエリを実行
+    // ※今日全台停止（mold_id=null）で保存済みの場合は週次クエリをスキップする
     if (!settings || settings.length === 0) {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
