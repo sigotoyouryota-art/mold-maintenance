@@ -2163,13 +2163,13 @@ async function loadDandoriForList() {
     let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     
-    // 今日のレコードが存在しない場合のみ週次クエリを実行
+    // 今日のレコードがなければ前日のレコードを参照（週次クエリ廃止）
     if (!settings || settings.length === 0) {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekAgoStr = getLocalDateStr(weekAgo);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = getLocalDateStr(yesterday);
       settings = await sb('dandori_settings','GET',null,
-        `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
+        `?setting_date=eq.${yesterdayStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     }
 
     // レコードが1件でもあれば段取り設定済み
@@ -2656,13 +2656,13 @@ async function loadDandori() {
     // 今日の段取り設定を取得
     let settings = await sb('dandori_settings','GET',null,`?setting_date=eq.${today}&shift=eq.${state.currentShift}`);
 
-    // なければ直近7日間の設定をフォールバック
+    // なければ前日の設定をフォールバック（週次クエリ廃止）
     if (!settings || !settings.length) {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekAgoStr = getLocalDateStr(weekAgo);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = getLocalDateStr(yesterday);
       settings = await sb('dandori_settings','GET',null,
-        `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&order=setting_date.desc&limit=100`);
+        `?setting_date=eq.${yesterdayStr}&shift=eq.${state.currentShift}`);
     }
 
     // レコードが1件でもあれば段取り設定済み
@@ -2924,20 +2924,7 @@ function renderMasterMachines(el) {
         </div></td>
       </tr>`;
     }).join('')}
-  </table></div>
-  <div class="mold-cards">${sortMasterData(state.machines, masterSortState[masterCurrentTab]?.key||'machine_no', masterSortState[masterCurrentTab]?.dir||'asc').map(m=>{
-    const line = state.lines.find(l=>l.id===m.line_id);
-    return `<div class="mold-card" style="border-left-color:var(--border)">
-      <div class="mold-card-top"><div>
-        <div class="mold-card-name">#${esc(m.machine_no)}</div>
-        <div class="mold-card-part">${esc(line?.name||'-')} / <span class="badge ${m.is_dandori?'badge-info':'badge-gray'}">${m.is_dandori?t('dandori'):t('fixed')}</span></div>
-      </div></div>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="editMachine('${m.id}')">編集</button>
-        <button class="btn btn-danger btn-sm" style="flex:1" onclick="deleteMachine('${m.id}')">${t('delete')}</button>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
+  </table></div>`;
 }
 
 function renderMasterLines(el) {
@@ -2967,17 +2954,7 @@ function renderMasterLines(el) {
       <td>${l.machine_count}${t('tai')}</td>
       <td><button class="btn btn-secondary btn-sm" onclick="editLine('${l.id}')">編集</button></td>
     </tr>`).join('')}
-  </table></div>
-  <div class="mold-cards">${sorted.map(l=>`
-    <div class="mold-card" style="border-left-color:var(--border)">
-      <div class="mold-card-top"><div>
-        <div class="mold-card-name">${esc(l.name)}</div>
-        <div class="mold-card-part">${l.machine_count}${t('tai')}</div>
-      </div></div>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="editLine('${l.id}')">編集</button>
-      </div>
-    </div>`).join('')}</div>`;
+  </table></div>`;
 }
 
 async function renderMasterUsers(el) {
@@ -3021,20 +2998,7 @@ function renderMasterUsersTable(el) {
     + '<button class="btn btn-secondary" onclick="openImportModal(\'users\')">' + t('importCsv') + '</button>'
     + '<button class="btn btn-primary" onclick="openAddUserModal()">\uff0b \u30e6\u30fc\u30b6\u30fc\u8ffd\u52a0</button>'
     + '</div></div>'
-    + '<div class="table-wrap"><table>' + thead + tbody + '</table></div>'
-    + '<div class="mold-cards">' + (sorted.length === 0 ? '' : sorted.map(function(u) {
-        var ll = u.last_login_at || u.updated_at;
-        var ls = ll ? new Date(ll).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
-        return '<div class="mold-card" style="border-left-color:var(--border)">'
-          + '<div class="mold-card-top"><div>'
-          + '<div class="mold-card-name">' + esc(u.name||'') + '</div>'
-          + '<div class="mold-card-part"><span class="badge ' + (u.role==='admin'?'badge-warning':'badge-gray') + '">' + (u.role==='admin'?'\u7ba1\u7406\u8005':'\u4f5c\u696d\u8005') + '</span> ' + ls + '</div>'
-          + '</div></div>'
-          + '<div style="display:flex;gap:6px;margin-top:6px">'
-          + '<button class="btn btn-secondary btn-sm" style="flex:1" data-uid="' + (u.id||'') + '" onclick="editUser(this.getAttribute(\'data-uid\'))">\u7de8\u96c6</button>'
-          + '<button class="btn btn-danger btn-sm" style="flex:1" data-uid="' + (u.id||'') + '" data-uname="' + esc(u.name||'').replace(/"/g,'') + '" onclick="(function(b){var uid=b.getAttribute(\'data-uid\');var nm=b.getAttribute(\'data-uname\')||\'?\';if(confirm(\'\u300c\'+nm+\'\u300d\u3092\u524a\u9664\u3057\u307e\u3059\u304b\uff1f\u3053\u306e\u64cd\u4f5c\u306f\u53d6\u308a\u6d88\u305b\u307e\u305b\u3093\u3002\')){deleteUser(uid);}})(this)">\u524a\u9664</button>'
-          + '</div></div>';
-      }).join('')) + '</div>';
+    + '<div class="table-wrap"><table>' + thead + tbody + '</table></div>';
   el.querySelectorAll('.su-th').forEach(function(th) {
     th.addEventListener('click', function() {
       masterCurrentTab = 'users';
@@ -4774,11 +4738,15 @@ async function manualRefresh() {
   btn.style.animation = 'spin 0.8s linear infinite';
   try {
     await loadMolds();
+    await loadDandoriForSchedule();
     updateRealtimeDisplay();
-    // ダッシュボード表示中なら再描画
-    if (state.currentSection === 'dashboard') {
-      const content = document.getElementById('main-content');
-      if (content) renderDashboard(content);
+    const content = document.getElementById('main-content');
+    if (content) {
+      const sec = state.currentSection;
+      if (sec === 'dashboard') renderDashboard(content);
+      else if (sec === 'list') renderList(content);
+      else if (sec === 'schedule') { buildAllShifts(); renderScheduleBody(); }
+      else if (sec === 'alert') renderAlert(content);
     }
     startPolling();
     showToast(t('dataFetched') || 'データを取得しました', 'success');
@@ -5483,15 +5451,13 @@ async function loadDandoriForSchedule() {
     const today = getLocalDateStr();
     let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
-
-    // 今日のレコードが存在しない場合のみ週次クエリを実行
-    // ※今日全台停止（mold_id=null）で保存済みの場合は週次クエリをスキップする
     if (!settings || settings.length === 0) {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekAgoStr = getLocalDateStr(weekAgo);
+      // 今日のレコードがなければ前日のレコードを参照（週次クエリ廃止）
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = getLocalDateStr(yesterday);
       settings = await sb('dandori_settings','GET',null,
-        `?setting_date=gte.${weekAgoStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id&order=setting_date.desc&limit=100`);
+        `?setting_date=eq.${yesterdayStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     }
 
     // レコードが1件でもあれば段取り設定済み
