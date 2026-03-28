@@ -2741,21 +2741,17 @@ async function saveDandori() {
     // 全ライン・全機械を対象にする（ライン単位の保存漏れを防ぐ）
     const allMachines = state.machines;
 
-    // 金型が設定されている機械のレコード（upsert用）
+    // 金型設定あり・停止中(null)を含む全レコードをupsert
+    // （停止中もmold_id=nullでレコードを残すことで「段取り未設定」と区別する）
     const records = allMachines
-      .filter(machine => dandoriData[machine.id])
+      .filter(machine => dandoriData.hasOwnProperty(machine.id))
       .map(machine => ({
         setting_date: today,
         machine_id: machine.id,
-        mold_id: dandoriData[machine.id],
+        mold_id: dandoriData[machine.id] || null,
         shift: state.currentShift,
         set_by: state.currentUser.id
       }));
-
-    // 停止中（null）に設定された機械のID一覧
-    const nullMachineIds = allMachines
-      .filter(machine => dandoriData.hasOwnProperty(machine.id) && dandoriData[machine.id] === null)
-      .map(machine => machine.id);
 
     if (records.length > 0) {
       const url = `${SUPABASE_URL}/rest/v1/dandori_settings?on_conflict=setting_date,machine_id,shift`;
@@ -2773,22 +2769,6 @@ async function saveDandori() {
         const e = await res.text();
         console.error('dandori upsert error:', e);
         throw new Error(t('connError'));
-      }
-    }
-
-    // 停止中の機械：全日付のレコードを削除
-    if (nullMachineIds.length > 0) {
-      const delIds = nullMachineIds.map(id=>`"${id}"`).join(',');
-      const delUrl = `${SUPABASE_URL}/rest/v1/dandori_settings?shift=eq.${state.currentShift}&machine_id=in.(${delIds})`;
-      const delRes = await fetch(delUrl, {
-        method: 'DELETE',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-        },
-      });
-      if (!delRes.ok) {
-        console.error('dandori delete error:', await delRes.text());
       }
     }
 
