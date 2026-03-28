@@ -1941,8 +1941,11 @@ function fmtNum(n) { return Number(n).toLocaleString(); }
 
 // ===== ダッシュボード =====
 async function renderDashboard(el) {
+  // デバッグログ
+  console.log('[DEBUG renderDashboard] dandoriConfigured=', dandoriConfigured, 'dandoriMoldIdSet.size=', dandoriMoldIdSet.size, 'activeMoldIds.size=', activeMoldIds.size);
   // 段取り設定を取得してactiveMoldIdsを更新
   if (!dandoriConfigured && activeMoldIds.size === 0) await loadDandoriForList();
+  console.log('[DEBUG renderDashboard after load] dandoriConfigured=', dandoriConfigured, 'dandoriMoldIdSet.size=', dandoriMoldIdSet.size);
   // 段取り設定済みの金型のみを対象とする（未設定の場合は全金型を表示）
   const dashMolds = dandoriConfigured ? state.molds.filter(m=>dandoriMoldIdSet.has(m.id)) : state.molds;
   const lv4Count = dashMolds.filter(m=>calcStatus(m)==='overdue').length;
@@ -5447,10 +5450,12 @@ async function loadDandoriForSchedule() {
 
     // DBから取得した結果でdandoriConfiguredを正確に判定（localStorage不使用）
     dandoriConfigured = !!(settings && settings.some(s => s.mold_id !== null));
+    console.log('[DEBUG loadDandoriForSchedule] settings.length=', (settings||[]).length, 'dandoriConfigured=', dandoriConfigured, 'records:', JSON.stringify((settings||[]).slice(0,5)));
 
     dandoriData = {};
     (settings||[]).forEach(s => { if (s.mold_id && !dandoriData.hasOwnProperty(s.machine_id)) dandoriData[s.machine_id] = s.mold_id; });
     dandoriMoldIdSet = new Set(Object.values(dandoriData));
+    console.log('[DEBUG loadDandoriForSchedule] dandoriMoldIdSet.size=', dandoriMoldIdSet.size);
   } catch(e) {
     console.error('loadDandoriForSchedule error:', e);
   }
