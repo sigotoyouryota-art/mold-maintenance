@@ -2162,8 +2162,8 @@ async function loadDandoriForList() {
     const today = getLocalDateStr();
     let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
-    
-    // 今日のレコードがなければ前日のレコードを参照（週次クエリ廃止）
+
+    // 今日のレコードがなければ前日を参照（週次クエリ廃止）
     if (!settings || settings.length === 0) {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
@@ -2172,13 +2172,9 @@ async function loadDandoriForList() {
         `?setting_date=eq.${yesterdayStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     }
 
-    // レコードが1件でもあれば段取り設定済み
-    if (settings && settings.length > 0) {
-      dandoriConfigured = true;
-      localStorage.setItem('dandoriConfigured_' + state.currentShift, 'true');
-    }
-    
-    // 結果はsetting_date降順のため、同一machine_idは最初（最新）のmold_idのみ採用
+    // DBから取得した結果でdandoriConfiguredを正確に判定（localStorage不使用）
+    dandoriConfigured = !!(settings && settings.length > 0);
+
     const seen = {};
     const moldIds = [];
     (settings||[]).forEach(s => {
@@ -2665,11 +2661,8 @@ async function loadDandori() {
         `?setting_date=eq.${yesterdayStr}&shift=eq.${state.currentShift}`);
     }
 
-    // レコードが1件でもあれば段取り設定済み
-    if (settings && settings.length > 0) {
-      dandoriConfigured = true;
-      localStorage.setItem('dandoriConfigured_' + state.currentShift, 'true');
-    }
+    // DBから取得した結果でdandoriConfiguredを正確に判定（localStorage不使用）
+    dandoriConfigured = !!(settings && settings.length > 0);
 
     dandoriData = {};
     // 同一machine_idは最新のみ採用、nullは含める（停止表示用）
@@ -2744,14 +2737,13 @@ function selectDandoriMold(machineId, moldId, el) {
 async function saveDandori() {
   try {
     const today = getLocalDateStr();
-    const lineMachines = state.machines.filter(m=>{
-      const line = state.lines.find(l=>l.id===m.line_id);
-      return line?.name === state.dandoriFilter;
-    });
+
+    // 全ライン・全機械を対象にする（ライン単位の保存漏れを防ぐ）
+    const allMachines = state.machines;
 
     // 金型が設定されている機械のレコード（upsert用）
-    const records = lineMachines
-      .filter(machine => dandoriData[machine.id]) // mold_idがあるもののみ
+    const records = allMachines
+      .filter(machine => dandoriData[machine.id])
       .map(machine => ({
         setting_date: today,
         machine_id: machine.id,
@@ -2761,7 +2753,7 @@ async function saveDandori() {
       }));
 
     // 停止中（null）に設定された機械のID一覧
-    const nullMachineIds = lineMachines
+    const nullMachineIds = allMachines
       .filter(machine => dandoriData.hasOwnProperty(machine.id) && dandoriData[machine.id] === null)
       .map(machine => machine.id);
 
@@ -2784,7 +2776,7 @@ async function saveDandori() {
       }
     }
 
-    // 停止中の機械：全日付のレコードを削除（フォールバックで復活させない）
+    // 停止中の機械：全日付のレコードを削除
     if (nullMachineIds.length > 0) {
       const delIds = nullMachineIds.map(id=>`"${id}"`).join(',');
       const delUrl = `${SUPABASE_URL}/rest/v1/dandori_settings?shift=eq.${state.currentShift}&machine_id=in.(${delIds})`;
@@ -2800,15 +2792,10 @@ async function saveDandori() {
       }
     }
 
-    // 段取り設定済みフラグ（全台停止と未設定を区別）
-    dandoriConfigured = true;
-    localStorage.setItem('dandoriConfigured_' + state.currentShift, 'true');
-
     showToast(`${t('dandoriSaveOk')} (${records.length})`, 'success');
 
     // 保存後にDBから再読み込みして最新状態に同期
     await loadDandori();
-    // スケジュール・一覧用のグローバル変数も同期
     await loadDandoriForSchedule();
     await loadDandoriForList();
   } catch(e) {
@@ -4747,6 +4734,9 @@ async function manualRefresh() {
       else if (sec === 'list') renderList(content);
       else if (sec === 'schedule') { buildAllShifts(); renderScheduleBody(); }
       else if (sec === 'alert') renderAlert(content);
+      else if (sec === 'shotUpdate') renderShotUpdateGrid(content);
+      else if (sec === 'history') renderHistory(content);
+      else if (sec === 'dandori') renderDandori(content);
     }
     startPolling();
     showToast(t('dataFetched') || 'データを取得しました', 'success');
@@ -5261,9 +5251,8 @@ async function execShotReset(mode, target) {
   let confirmMsg = '';
 
   if (mode === 'all') {
-    // 段取り設定済みの全金型
-    const activeIds = new Set(Object.values(dandoriData).filter(Boolean));
-    targetMolds = state.molds.filter(m => activeIds.has(m.id));
+    // 全金型対象（段取り設定有無に関わらず）
+    targetMolds = state.molds.slice();
     confirmMsg = t('suResetConfirmAll');
   } else if (mode === 'line') {
     // 指定ラインの段取り設定済み金型
@@ -5443,16 +5432,12 @@ async function renderSchedule(el) {
 
 async function loadDandoriForSchedule() {
   try {
-    // localStorageからフラグ復元（ページリロード対策）
-    if (localStorage.getItem('dandoriConfigured_' + state.currentShift) === 'true') {
-      dandoriConfigured = true;
-    }
-
     const today = getLocalDateStr();
     let settings = await sb('dandori_settings','GET',null,
       `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
+
+    // 今日のレコードがなければ前日を参照（週次クエリ廃止）
     if (!settings || settings.length === 0) {
-      // 今日のレコードがなければ前日のレコードを参照（週次クエリ廃止）
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = getLocalDateStr(yesterday);
@@ -5460,16 +5445,11 @@ async function loadDandoriForSchedule() {
         `?setting_date=eq.${yesterdayStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
     }
 
-    // レコードが1件でもあれば段取り設定済み
-    if (settings && settings.length > 0) {
-      dandoriConfigured = true;
-      localStorage.setItem('dandoriConfigured_' + state.currentShift, 'true');
-    }
+    // DBから取得した結果でdandoriConfiguredを正確に判定（localStorage不使用）
+    dandoriConfigured = !!(settings && settings.length > 0);
 
     dandoriData = {};
-    // 結果はsetting_date降順のため、同一machine_idは最初（最新）のみ採用。mold_id=nullは除外
     (settings||[]).forEach(s => { if (s.mold_id && !dandoriData.hasOwnProperty(s.machine_id)) dandoriData[s.machine_id] = s.mold_id; });
-    // O(n²)を避けるためSetキャッシュを更新
     dandoriMoldIdSet = new Set(Object.values(dandoriData));
   } catch(e) {
     console.error('loadDandoriForSchedule error:', e);
