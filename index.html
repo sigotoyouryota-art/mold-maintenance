@@ -1627,8 +1627,18 @@ function showToast(msg, type='') {
 }
 
 // ===== モーダル =====
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if (!document.querySelector('.modal-overlay.open')) {
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+  }
+}
 
 // ===== ログイン =====
 let selectedShift = '1S';
