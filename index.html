@@ -717,6 +717,29 @@ select.form-control { cursor: pointer; }
       </div>
       <div class="toggle-wrap" id="reset-toggle" onclick="toggleReset()"><div class="toggle-dot"></div></div>
     </div>
+    <div style="border:0.5px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:500;color:var(--text)" id="label-maint-shot-section">メンテ時点のshot数</div>
+        <div style="font-size:10px;color:var(--text4)" id="label-maint-shot-auto">自動計算値を修正可</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px" id="label-maint-shot-maint">メンテ間 shot</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" id="maint-shot-input" min="0" style="flex:1;font-size:14px;font-weight:500;padding:6px 8px;border-radius:6px;border:0.5px solid var(--border2);background:var(--bg);color:var(--text);min-width:0">
+            <span style="font-size:12px;color:var(--text3);white-space:nowrap">shot</span>
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px" id="label-maint-shot-total">累計 shot</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" id="maint-total-input" min="0" style="flex:1;font-size:14px;font-weight:500;padding:6px 8px;border-radius:6px;border:0.5px solid var(--border2);background:var(--bg);color:var(--text);min-width:0">
+            <span style="font-size:12px;color:var(--text3);white-space:nowrap">shot</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text4)" id="label-maint-shot-hint">※ 実機の表示と異なる場合は修正してください</div>
+    </div>
     <div style="margin-bottom:12px">
       <div style="font-size:11px;color:var(--text3);margin-bottom:5px" id="label-worker">作業者</div>
       <div style="background:var(--bg);border:0.5px solid var(--border2);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);display:flex;justify-content:space-between" id="maint-worker-display"></div>
@@ -793,6 +816,8 @@ const state = {
   shotInputValue: '',
   maintType: 'simple',
   isReset: false,
+  maintShotOverride: 0,
+  maintTotalOverride: 0,
   histFilter: 'all',
   listFilter: 'all',
   dandoriFilter: 'all',
@@ -817,6 +842,7 @@ const T = {
     simpleMaint:'簡易メンテ', ohMaint:'OHメンテ', resetDesc:'リセット選択可', ohDesc:'自動リセット',
     resetCounter:'ショットカウンターをリセット', resetNote:'OHメンテは自動でリセット',
     worker:'作業者', confirmTitle:'登録内容を確認', back:'戻る', register:'登録する',
+    maintShotSection:'メンテ時点のshot数', maintShotAutoCalc:'自動計算値を修正可', maintShotMaint:'メンテ間 shot', maintShotTotal:'累計 shot', maintShotHint:'実機の表示と異なる場合は修正してください',
     maintType:'メンテ種別', resetStatus:'カウンター', withReset:'リセットあり', noReset:'リセットなし',
     shotCount:'実施shot数', shift:'直', detail:'詳細', simple:'簡易',
     dandoriOnly:'段替え号機のみ表示', dandoriNotSet:'段取り未設定', operating:'段取り設定中', men:'面', prevConfig:'前回構成を自動引継済み',
@@ -1024,6 +1050,7 @@ const T = {
     simpleMaint:'BT đơn giản', ohMaint:'BT tổng hợp', resetDesc:'Có thể reset', ohDesc:'Tự động reset',
     resetCounter:'Reset bộ đếm shot', resetNote:'BT tổng hợp tự động reset',
     worker:'Công nhân', confirmTitle:'Xác nhận nội dung', back:'Quay lại', register:'Đăng ký',
+    maintShotSection:'Shot tại thời điểm BT', maintShotAutoCalc:'Có thể chỉnh sửa', maintShotMaint:'Shot kỳ BT', maintShotTotal:'Tổng shot', maintShotHint:'Sửa nếu khác với màn hình máy',
     maintType:'Loại BT', resetStatus:'Bộ đếm', withReset:'Có reset', noReset:'Không reset',
     shotCount:'Số shot thực hiện', shift:'Ca', detail:'Chi tiết', simple:'Đơn giản',
     dandoriOnly:'Chỉ máy đổi khuôn', dandoriNotSet:'Chưa cài đặt', operating:'Đang cài đặt', men:'khuôn', prevConfig:'Đã kế thừa cấu hình hôm qua',
@@ -1230,6 +1257,7 @@ const T = {
     simpleMaint:'Simple maint.', ohMaint:'OH maint.', resetDesc:'Reset optional', ohDesc:'Auto reset',
     resetCounter:'Reset shot counter', resetNote:'OH maint. resets automatically',
     worker:'Worker', confirmTitle:'Confirm details', back:'Back', register:'Register',
+    maintShotSection:'Shot at maintenance', maintShotAutoCalc:'Auto-calculated, editable', maintShotMaint:'Interval shot', maintShotTotal:'Total shot', maintShotHint:'Correct if different from machine display',
     maintType:'Maint. type', resetStatus:'Counter', withReset:'Reset', noReset:'Keep',
     shotCount:'Shot count', shift:'Shift', detail:'Detail', simple:'Simple',
     dandoriOnly:'Changeover only', dandoriNotSet:'Not set', operating:'Set up', men:'mold(s)', prevConfig:'Previous config auto-loaded',
@@ -3140,6 +3168,18 @@ function openMaintenanceModal() {
 
   updateMaintTypeUI();
   updateResetToggle();
+
+  // shot入力フィールドを自動計算値で初期化
+  const initMaintShot = calcEstimatedShot(mold);
+  const initTotalShot = calcEstimatedTotalShot(mold);
+  document.getElementById('maint-shot-input').value = initMaintShot;
+  document.getElementById('maint-total-input').value = initTotalShot;
+  document.getElementById('label-maint-shot-section').textContent = t('maintShotSection');
+  document.getElementById('label-maint-shot-auto').textContent = t('maintShotAutoCalc');
+  document.getElementById('label-maint-shot-maint').textContent = t('maintShotMaint');
+  document.getElementById('label-maint-shot-total').textContent = t('maintShotTotal');
+  document.getElementById('label-maint-shot-hint').textContent = '※ ' + t('maintShotHint');
+
   closeModal('modal-shot');
   openModal('modal-maint');
 }
@@ -3180,6 +3220,13 @@ function updateResetToggle() {
 
 function confirmMaintenance() {
   const mold = state.currentMold;
+
+  // shot入力値を読み取り（不正値は自動計算値にフォールバック）
+  const maintShotRaw = parseInt(document.getElementById('maint-shot-input').value);
+  const totalShotRaw = parseInt(document.getElementById('maint-total-input').value);
+  state.maintShotOverride = (!isNaN(maintShotRaw) && maintShotRaw >= 0) ? maintShotRaw : calcEstimatedShot(mold);
+  state.maintTotalOverride = (!isNaN(totalShotRaw) && totalShotRaw >= 0) ? totalShotRaw : calcEstimatedTotalShot(mold);
+
   const card = document.getElementById('confirm-card-content');
   card.innerHTML = `
     <div class="confirm-row"><div class="confirm-label">${t('machineNo')} / ${t('line')}</div><div class="confirm-value">#${esc(mold.machine_no||'?')}　${esc(mold.line_name||'-')}</div></div>
@@ -3189,11 +3236,11 @@ function confirmMaintenance() {
     <div class="confirm-row"><div class="confirm-label">${t('resetStatus')}</div><div class="confirm-value" style="color:${state.isReset?'var(--danger-text)':'var(--text3)'}">${state.isReset?t('withReset'):t('noReset')}</div></div>
     <div class="confirm-row">
       <div class="confirm-label">${t('maintInterval')}</div>
-      <div class="confirm-value">${fmtNum(calcEstimatedShot(mold))} shot</div>
+      <div class="confirm-value">${fmtNum(state.maintShotOverride)} shot</div>
     </div>
     <div class="confirm-row">
       <div class="confirm-label">${t('totalShotLabel2')}shot</div>
-      <div class="confirm-value">${fmtNum(calcEstimatedTotalShot(mold))} shot</div>
+      <div class="confirm-value">${fmtNum(state.maintTotalOverride)} shot</div>
     </div>
     <div class="confirm-row"><div class="confirm-label">${t('worker')} / ${t('shift')}</div><div class="confirm-value">${esc(state.currentUser.name)} / ${state.currentShift}</div></div>`;
   document.getElementById('confirm-dialog-title').textContent = t('confirmTitle');
@@ -3207,8 +3254,8 @@ async function executeMaintenance() {
   const mold = state.currentMold;
   try {
     const now = new Date().toISOString();
-    const currentMaintShot = calcEstimatedShot(mold);
-    const currentTotalShot = calcEstimatedTotalShot(mold);
+    const currentMaintShot = state.maintShotOverride;
+    const currentTotalShot = state.maintTotalOverride;
     // メンテ間ショット数は常にリセット（簡易もOHも）
     const newMaintShot = 0;
     // 累計ショット数: OHは自動リセット、簡易はisResetで判断
