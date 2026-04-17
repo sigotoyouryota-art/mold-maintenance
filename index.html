@@ -738,6 +738,25 @@ select.form-control { cursor: pointer; }
       </div>
       <div style="font-size:10px;color:var(--text4)" id="label-maint-shot-hint">※ 実機の表示と異なる場合は修正してください</div>
     </div>
+    <div style="border:0.5px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:10px" id="label-maint-time-section">作業時間</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px" id="label-maint-start-time">開始時刻</div>
+          <input type="time" id="maint-start-time" onchange="updateMaintDuration()" style="width:100%;font-size:15px;font-weight:500;padding:7px 8px;border-radius:6px;border:0.5px solid var(--border2);background:var(--bg);color:var(--text);box-sizing:border-box">
+        </div>
+        <div style="color:var(--text4);font-size:16px;padding-bottom:9px">→</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px" id="label-maint-end-time">終了時刻</div>
+          <input type="time" id="maint-end-time" onchange="updateMaintDuration()" style="width:100%;font-size:15px;font-weight:500;padding:7px 8px;border-radius:6px;border:0.5px solid var(--border2);background:var(--bg);color:var(--text);box-sizing:border-box">
+        </div>
+      </div>
+      <div style="background:var(--bg);border-radius:6px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:11px;color:var(--text3)" id="label-maint-duration">所要時間</div>
+        <div style="font-size:15px;font-weight:500;color:var(--text)" id="maint-duration-display">- 分</div>
+      </div>
+      <div id="maint-time-error" style="display:none;margin-top:8px;font-size:11px;color:var(--danger-text)"></div>
+    </div>
     <div style="margin-bottom:12px">
       <div style="font-size:11px;color:var(--text3);margin-bottom:5px" id="label-worker">作業者</div>
       <div style="background:var(--bg);border:0.5px solid var(--border2);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--text);display:flex;justify-content:space-between" id="maint-worker-display"></div>
@@ -756,7 +775,7 @@ select.form-control { cursor: pointer; }
     </div>
     <div class="confirm-card" id="confirm-card-content"></div>
     <div class="modal-btns">
-      <div class="btn btn-secondary" onclick="closeModal('modal-maint-confirm')" id="confirm-back-btn">戻る</div>
+      <div class="btn btn-secondary" onclick="backToMaintModal()" id="confirm-back-btn">戻る</div>
       <div class="btn btn-success" onclick="executeMaintenance()" id="confirm-register-btn">登録する</div>
     </div>
   </div>
@@ -816,6 +835,9 @@ const state = {
   isReset: false,
   maintShotOverride: 0,
   maintTotalOverride: 0,
+  maintStartTime: '',
+  maintEndTime: '',
+  maintDurationMin: 0,
   histFilter: 'all',
   listFilter: 'all',
   dandoriFilter: 'all',
@@ -841,6 +863,7 @@ const T = {
     resetCounter:'ショットカウンターをリセット', resetNote:'OHメンテは自動でリセット',
     worker:'作業者', confirmTitle:'登録内容を確認', back:'戻る', register:'登録する',
     maintShotSection:'メンテ時点のshot数', maintShotAutoCalc:'自動計算値を修正可', maintShotMaint:'メンテ間 shot', maintShotTotal:'累計 shot', maintShotHint:'実機の表示と異なる場合は修正してください',
+    maintTimeSection:'作業時間', maintStartTime:'開始時刻', maintEndTime:'終了時刻', maintDuration:'所要時間', maintDurationUnit:'分', maintTimeRequired:'開始・終了時刻を入力してください',
     maintType:'メンテ種別', resetStatus:'カウンター', withReset:'リセットあり', noReset:'リセットなし',
     shotCount:'実施shot数', shift:'直', detail:'詳細', simple:'簡易',
     dandoriOnly:'段替え号機のみ表示', dandoriNotSet:'段取り未設定', operating:'段取り設定中', men:'面', prevConfig:'前回構成を自動引継済み',
@@ -1049,6 +1072,7 @@ const T = {
     resetCounter:'Reset bộ đếm shot', resetNote:'BT tổng hợp tự động reset',
     worker:'Công nhân', confirmTitle:'Xác nhận nội dung', back:'Quay lại', register:'Đăng ký',
     maintShotSection:'Shot tại thời điểm BT', maintShotAutoCalc:'Có thể chỉnh sửa', maintShotMaint:'Shot kỳ BT', maintShotTotal:'Tổng shot', maintShotHint:'Sửa nếu khác với màn hình máy',
+    maintTimeSection:'Thời gian BT', maintStartTime:'Giờ bắt đầu', maintEndTime:'Giờ kết thúc', maintDuration:'Thời lượng', maintDurationUnit:'phút', maintTimeRequired:'Vui lòng nhập giờ bắt đầu và kết thúc',
     maintType:'Loại BT', resetStatus:'Bộ đếm', withReset:'Có reset', noReset:'Không reset',
     shotCount:'Số shot thực hiện', shift:'Ca', detail:'Chi tiết', simple:'Đơn giản',
     dandoriOnly:'Chỉ máy đổi khuôn', dandoriNotSet:'Chưa cài đặt', operating:'Đang cài đặt', men:'khuôn', prevConfig:'Đã kế thừa cấu hình hôm qua',
@@ -1256,6 +1280,7 @@ const T = {
     resetCounter:'Reset shot counter', resetNote:'OH maint. resets automatically',
     worker:'Worker', confirmTitle:'Confirm details', back:'Back', register:'Register',
     maintShotSection:'Shot at maintenance', maintShotAutoCalc:'Auto-calculated, editable', maintShotMaint:'Interval shot', maintShotTotal:'Total shot', maintShotHint:'Correct if different from machine display',
+    maintTimeSection:'Work time', maintStartTime:'Start time', maintEndTime:'End time', maintDuration:'Duration', maintDurationUnit:'min', maintTimeRequired:'Please enter start and end time',
     maintType:'Maint. type', resetStatus:'Counter', withReset:'Reset', noReset:'Keep',
     shotCount:'Shot count', shift:'Shift', detail:'Detail', simple:'Simple',
     dandoriOnly:'Changeover only', dandoriNotSet:'Not set', operating:'Set up', men:'mold(s)', prevConfig:'Previous config auto-loaded',
@@ -3147,6 +3172,27 @@ async function submitShot() {
 }
 
 // ===== メンテ完了モーダル =====
+function backToMaintModal() {
+  closeModal('modal-maint-confirm');
+  openModal('modal-maint');
+}
+
+function updateMaintDuration() {
+  const start = document.getElementById('maint-start-time').value;
+  const end   = document.getElementById('maint-end-time').value;
+  const disp  = document.getElementById('maint-duration-display');
+  if (start && end) {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    let mins = (eh * 60 + em) - (sh * 60 + sm);
+    if (mins < 0) mins += 24 * 60; // 日またぎ対応
+    if (mins === 0) mins = 24 * 60; // 同時刻=24h（念のため）
+    disp.textContent = mins + ' ' + (t('maintDurationUnit') || '分');
+  } else {
+    disp.textContent = '- ' + (t('maintDurationUnit') || '分');
+  }
+}
+
 function openMaintenanceModal() {
   const mold = state.currentMold;
   if (!mold) return;
@@ -3177,6 +3223,18 @@ function openMaintenanceModal() {
   document.getElementById('label-maint-shot-maint').textContent = t('maintShotMaint');
   document.getElementById('label-maint-shot-total').textContent = t('maintShotTotal');
   document.getElementById('label-maint-shot-hint').textContent = '※ ' + t('maintShotHint');
+
+  // 作業時間: 開始は空欄、終了は現在時刻をセット
+  const nowH = String(new Date().getHours()).padStart(2,'0');
+  const nowM = String(new Date().getMinutes()).padStart(2,'0');
+  document.getElementById('maint-start-time').value = '';
+  document.getElementById('maint-end-time').value = `${nowH}:${nowM}`;
+  document.getElementById('maint-time-error').style.display = 'none';
+  document.getElementById('label-maint-time-section').textContent = t('maintTimeSection');
+  document.getElementById('label-maint-start-time').textContent = t('maintStartTime');
+  document.getElementById('label-maint-end-time').textContent = t('maintEndTime');
+  document.getElementById('label-maint-duration').textContent = t('maintDuration');
+  updateMaintDuration();
 
   closeModal('modal-shot');
   openModal('modal-maint');
@@ -3219,6 +3277,26 @@ function updateResetToggle() {
 function confirmMaintenance() {
   const mold = state.currentMold;
 
+  // 作業時間バリデーション
+  const startTime = document.getElementById('maint-start-time').value;
+  const endTime   = document.getElementById('maint-end-time').value;
+  const timeErr   = document.getElementById('maint-time-error');
+  if (!startTime || !endTime) {
+    timeErr.textContent = '⚠ ' + (t('maintTimeRequired') || '開始・終了時刻を入力してください');
+    timeErr.style.display = 'block';
+    return;
+  }
+  timeErr.style.display = 'none';
+
+  // 所要時間計算・state保存
+  const [sh, sm] = startTime.split(':').map(Number);
+  const [eh, em] = endTime.split(':').map(Number);
+  let durationMin = (eh * 60 + em) - (sh * 60 + sm);
+  if (durationMin <= 0) durationMin += 24 * 60;
+  state.maintStartTime   = startTime;
+  state.maintEndTime     = endTime;
+  state.maintDurationMin = durationMin;
+
   // shot入力値を読み取り（不正値は自動計算値にフォールバック）
   const maintShotRaw = parseInt(document.getElementById('maint-shot-input').value);
   const totalShotRaw = parseInt(document.getElementById('maint-total-input').value);
@@ -3240,7 +3318,8 @@ function confirmMaintenance() {
       <div class="confirm-label">${t('totalShotLabel2')}shot</div>
       <div class="confirm-value">${fmtNum(state.maintTotalOverride)} shot</div>
     </div>
-    <div class="confirm-row"><div class="confirm-label">${t('worker')} / ${t('shift')}</div><div class="confirm-value">${esc(state.currentUser.name)} / ${state.currentShift}</div></div>`;
+    <div class="confirm-row"><div class="confirm-label">${t('worker')} / ${t('shift')}</div><div class="confirm-value">${esc(state.currentUser.name)} / ${state.currentShift}</div></div>
+    <div class="confirm-row"><div class="confirm-label">${t('maintTimeSection')}</div><div class="confirm-value">${state.maintStartTime} → ${state.maintEndTime}（${state.maintDurationMin}${t('maintDurationUnit')}）</div></div>`;
   document.getElementById('confirm-dialog-title').textContent = t('confirmTitle');
   document.getElementById('confirm-back-btn').textContent = t('back');
   document.getElementById('confirm-register-btn').textContent = t('register');
@@ -3275,6 +3354,18 @@ async function executeMaintenance() {
       is_reset: state.maintType === 'OH' ? true : state.isReset,
       shift: state.currentShift,
       performed_by: state.currentUser.id,
+      started_at: (() => {
+        const d = new Date(); const [h,m] = state.maintStartTime.split(':').map(Number);
+        return new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,m,0).toISOString();
+      })(),
+      ended_at: (() => {
+        const d = new Date(); const [h,m] = state.maintEndTime.split(':').map(Number);
+        const end = new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,m,0);
+        const [sh] = state.maintStartTime.split(':').map(Number);
+        if (h < sh) end.setDate(end.getDate() + 1); // 日またぎ対応
+        return end.toISOString();
+      })(),
+      duration_min: state.maintDurationMin,
     });
     closeModal('modal-maint-confirm');
     showToast(t('maintDone'), 'success');
