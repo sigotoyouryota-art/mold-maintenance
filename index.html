@@ -793,13 +793,11 @@ const state = {
   shotInputValue: '',
   maintType: 'simple',
   isReset: false,
-  alertFilter: 'all',
   histFilter: 'all',
   listFilter: 'all',
   dandoriFilter: 'all',
   dandoriDandoriOnly: false,
   listViewMode: 'detail',
-  alertViewMode: 'detail',
   listSortMode: 'machine_asc',
 };
 
@@ -953,6 +951,9 @@ const T = {
     selectPlaceholder:'選択してください',
     insufficientData:'データが不足しています',
     schedNoMaint:'メンテナンスの予定はありません',
+    nextBizDay:'明日',
+    unplacedTitle:'スケジュール枠外',
+    unplacedNote:'32時間以内に完了不可・追加人員または稼働停止の検討が必要',
     histDeleteConfirmMsg:'件のメンテ履歴を削除します。取り消せません。',
     histDeleted:'件の履歴を削除しました',
     histDeleteError:'削除エラー: ',
@@ -1156,6 +1157,9 @@ const T = {
     selectPlaceholder:'Chọn',
     insufficientData:'Dữ liệu chưa đủ',
     schedNoMaint:'Không có lịch bảo trì',
+    nextBizDay:'Ngày mai',
+    unplacedTitle:'Ngoài phạm vi lịch',
+    unplacedNote:'Không thể hoàn thành trong 32 giờ - cần bổ sung nhân lực hoặc xem xét dừng vận hành',
     histDeleteConfirmMsg:'bản ghi BT. Không thể hoàn tác.',
     histDeleted:'bản ghi đã xóa',
     histDeleteError:'Lỗi xóa: ',
@@ -1359,6 +1363,9 @@ const T = {
     selectPlaceholder:'Select',
     insufficientData:'Insufficient data',
     schedNoMaint:'No maintenance scheduled',
+    nextBizDay:'Tomorrow',
+    unplacedTitle:'Outside schedule window',
+    unplacedNote:'Cannot complete within 32 hours - additional staff or operation stop needed',
     histDeleteConfirmMsg:'maint. records. Cannot be undone.',
     histDeleted:'history records deleted',
     histDeleteError:'Delete error: ',
@@ -1455,7 +1462,6 @@ function applyLabels() {
   const sidebarLabels = {
     'nav-label-dashboard': 'navDashboard',
     'nav-label-list': 'navList',
-    'nav-label-alert': 'navAlert',
     'nav-label-history': 'navHistory',
     'nav-label-schedule': 'schedule',
     'nav-label-dandori': 'navDandori',
@@ -1883,7 +1889,6 @@ function showSection(section) {
   const renders = {
     dashboard: renderDashboard,
     list: renderList,
-    alert: renderAlert,
     history: renderHistory,
     schedule: renderSchedule,
     shotUpdate: renderShotUpdate,
@@ -1944,7 +1949,7 @@ async function renderDashboard(el) {
   // 段取りデータを毎回DBから取得（dandoriMoldIdSet・dandoriConfiguredを最新状態に同期）
   await loadDandoriForSchedule();
   // 段取り設定済みの金型のみを対象とする（未設定の場合は全金型を表示）
-  const dashMolds = dandoriConfigured ? state.molds.filter(m=>dandoriMoldIdSet.has(m.id)) : state.molds;
+  const dashMolds = state.molds.filter(m=>dandoriMoldIdSet.has(m.id));
   const lv4Count = dashMolds.filter(m=>calcStatus(m)==='overdue').length;
   const lv3Count = dashMolds.filter(m=>calcStatus(m)==='danger').length;
   const lv2Count = dashMolds.filter(m=>calcStatus(m)==='warning').length;
@@ -2089,7 +2094,7 @@ async function renderDashboard(el) {
 
 function renderLineAlertBars() {
   const bars = state.lines.map(line => {
-    const lineMolds = (dandoriConfigured ? state.molds.filter(m=>dandoriMoldIdSet.has(m.id)) : state.molds).filter(m=>m.line_name===line.name);
+    const lineMolds = state.molds.filter(m=>dandoriMoldIdSet.has(m.id)&&m.line_name===line.name);
     const o = lineMolds.filter(m=>calcStatus(m)==='overdue').length;
     const d = lineMolds.filter(m=>calcStatus(m)==='danger').length;
     const w = lineMolds.filter(m=>calcStatus(m)==='warning').length;
@@ -2110,7 +2115,7 @@ function renderLineAlertBars() {
 }
 
 function renderTop5() {
-  const top5src = dandoriConfigured ? state.molds.filter(m=>dandoriMoldIdSet.has(m.id)) : state.molds;
+  const top5src = state.molds.filter(m=>dandoriMoldIdSet.has(m.id));
   const top5 = [...top5src].sort((a,b)=>calcEstimatedProgress(b)-calcEstimatedProgress(a)).slice(0,5);
   return `<div style="background:var(--bg2);border-radius:8px;overflow:hidden;margin-bottom:12px;border:0.5px solid var(--border)">` +
   top5.map(m=>{
@@ -2214,7 +2219,7 @@ function renderListBody() {
   const active = sorted.filter(m=>activeMoldIds.has(m.id));
   const inactive = sorted.filter(m=>!activeMoldIds.has(m.id));
   // 段取り設定がどこかのラインに1面でもあれば、全ラインで段取り分類表示する
-  const hasDandori = dandoriConfigured;
+  const hasDandori = dandoriMoldIdSet.size > 0;
   document.getElementById('list-count').textContent = hasDandori
     ? `${sorted.length}${t('men')||'面'} (${t('operating')||'段取り設定中'} ${active.length}${t('men')||'面'})`
     : `${sorted.length}${t('men')||'面'}`;
@@ -2305,96 +2310,6 @@ function renderListBody() {
   el.innerHTML = tableHTML + cardsHTML;
 }
 
-// ===== アラート =====
-function renderAlert(el) {
-  // 段取り設定済みの場合は対象金型のみフィルタ
-  const dandoriMoldSet = dandoriConfigured ? new Set(Object.values(dandoriData).filter(Boolean)) : null;
-  const baseMolds = dandoriMoldSet ? state.molds.filter(m => dandoriMoldSet.has(m.id)) : state.molds;
-  const alerts = baseMolds.filter(m=>{const s=calcStatus(m);return s==='overdue'||s==='danger'||s==='warning';});
-  const lines = [null, ...state.lines];
-  el.innerHTML = `
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">
-    <div style="display:flex;align-items:center;gap:8px">
-      <div style="font-size:14px;font-weight:600;color:var(--text)">${t('alert')}</div>
-      <span style="font-size:11px;background:var(--danger-bg);color:var(--danger-text);padding:2px 8px;border-radius:4px;font-weight:600" id="alert-header-count">${alerts.length}${t('readMoreUnit')||'件'}</span>
-    </div>
-  </div>
-  <div class="seg-wrap" id="alert-line-seg">
-    ${lines.map((l,i)=>`<button class="seg-btn ${i===0?'active':''}" onclick="setAlertFilter('${l?esc(l.name):'all'}',this)">${i===0?t('allLine'):esc(l.name)}</button>`).join('')}
-  </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px 0">
-    <div class="seg-wrap" style="margin:0">
-      <button class="seg-btn active" onclick="setAlertViewMode('detail',this)" style="padding:3px 8px;font-size:10px">${t('detail')}</button>
-      <button class="seg-btn" onclick="setAlertViewMode('simple',this)" style="padding:3px 8px;font-size:10px">${t('simple')}</button>
-    </div>
-  </div>
-  <div id="alert-body" style="padding:8px 12px"></div>`;
-  renderAlertBody();
-}
-
-function setAlertFilter(filter, el) {
-  state.alertFilter = filter;
-  document.querySelectorAll('#alert-line-seg .seg-btn').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  renderAlertBody();
-}
-
-function setAlertViewMode(mode, el) {
-  state.alertViewMode = mode;
-  el.closest('.seg-wrap').querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  renderAlertBody();
-}
-
-function renderAlertBody() {
-  // 段取り設定済みの場合は対象金型のみフィルタ
-  const dandoriMoldSet = dandoriConfigured ? new Set(Object.values(dandoriData).filter(Boolean)) : null;
-  const baseMolds = dandoriMoldSet ? state.molds.filter(m => dandoriMoldSet.has(m.id)) : state.molds;
-  let molds = baseMolds.filter(m=>{const s=calcStatus(m);return s==='overdue'||s==='danger'||s==='warning';});
-  if (state.alertFilter !== 'all') molds = molds.filter(m=>m.line_name===state.alertFilter);
-  const el = document.getElementById('alert-body');
-  if (!el) return;
-  if (!molds.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noAlert')}</div>`; return; }
-
-  if (state.alertViewMode === 'simple') {
-    el.innerHTML = molds.map(m=>`
-      <div style="background:var(--bg2);border-radius:6px;padding:8px 10px;border-left:2px solid ${statusColor(m.status)};display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:600;color:var(--text)">#${esc(m.machine_no||'?')}　<span style="font-weight:400;color:var(--text2)">${esc(m.part_name)}</span></div>
-          <div style="font-size:10px;color:${statusColor(m.status)};margin-top:1px">${t('remainLabel')} ${fmtNum(m.remaining_shot)}shot・${fmtTime(m.remaining_min)}・${m.progress_pct}%</div>
-        </div>
-        ${statusBadge(m.status)}
-        <div class="btn btn-sm ${m.status==='danger'?'btn-success':'btn-secondary'}" onclick="${m.status==='danger'?`openMaintenanceFromAlert('${m.id}')`:`openShotModal('${m.id}')`}">${m.status==='danger'?t('maintDone2'):t('shotUpdate')}</div>
-      </div>`).join('');
-  } else {
-    el.innerHTML = molds.map(m=>`
-      <div class="alert-card ${m.status==='warning'?'warning':''}">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:3px">
-          <div>
-            <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">#${esc(m.machine_no||'?')}　<span style="font-weight:400;color:var(--text2)">${esc(m.part_name)}</span></div>
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-              <span style="font-size:10px;color:var(--text3)">${esc(m.part_no)}</span>
-              ${typeBadge(m.category_name)}
-              <span style="font-size:10px;color:var(--text3)">${esc(m.line_name||'-')}</span>
-            </div>
-          </div>
-          ${statusBadge(m.status)}
-        </div>
-        <div style="height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin:6px 0">
-          <div style="width:${m.progress_pct}%;height:100%;border-radius:2px;background:${statusColor(m.status)}"></div>
-        </div>
-        <div class="alert-stats">
-          <div class="alert-stat"><div class="alert-stat-label">${t('remainShot')}</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${fmtNum(m.remaining_shot)}</div></div>
-          <div class="alert-stat"><div class="alert-stat-label">${t('remainTime')}</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${fmtTime(m.remaining_min)}</div></div>
-          <div class="alert-stat"><div class="alert-stat-label">${t('progress')}</div><div class="alert-stat-val" style="color:${statusColor(m.status)}">${m.progress_pct}%</div></div>
-        </div>
-        <div class="alert-btns">
-          <div class="alert-btn" style="background:var(--info-bg);color:var(--info-text)" onclick="openShotModal('${m.id}')">${t('shotUpdate')}</div>
-          <div class="alert-btn" style="background:var(--success);color:#052e16" onclick="openMaintenanceFromAlert('${m.id}')">${t('maintDone2')}</div>
-        </div>
-      </div>`).join('');
-  }
-}
 
 // ===== 履歴 =====
 let histEditMode = false;
@@ -2597,7 +2512,7 @@ async function renderDandori(el) {
         <div style="width:15px;height:15px;border-radius:3px;border:1.5px solid var(--border2);background:${state.dandoriDandoriOnly?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:10px;color:#1c1917;cursor:pointer;flex-shrink:0" onclick="toggleDandoriFilter(this)" id="dandori-check">${state.dandoriDandoriOnly?'✓':''}</div>
         ${t('dandoriOnly')}
       </label>
-      <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text4);white-space:nowrap">
+      <div id="dandori-autoloaded-msg" style="display:none;align-items:center;gap:4px;font-size:10px;color:var(--text4);white-space:nowrap">
         <div style="width:6px;height:6px;border-radius:50%;background:var(--success);flex-shrink:0"></div>
         ${t('dandoriAutoLoaded')}
       </div>
@@ -2653,12 +2568,14 @@ async function loadDandori() {
     let settings = await sb('dandori_settings','GET',null,`?setting_date=eq.${today}&shift=eq.${state.currentShift}`);
 
     // なければ前日の設定をフォールバック（週次クエリ廃止）
+    let isYesterdayFallback = false;
     if (!settings || !settings.length) {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = getLocalDateStr(yesterday);
       settings = await sb('dandori_settings','GET',null,
         `?setting_date=eq.${yesterdayStr}&shift=eq.${state.currentShift}`);
+      isYesterdayFallback = !!(settings && settings.length > 0);
     }
 
     // DBから取得した結果でdandoriConfiguredを正確に判定（localStorage不使用）
@@ -2674,6 +2591,11 @@ async function loadDandori() {
       }
     });
     dandoriMoldIdSet = new Set(Object.values(dandoriData).filter(Boolean));
+
+    // 「前回構成を自動引継済み」メッセージ：前日データを引継いだ場合のみ表示
+    const autoloadedMsg = document.getElementById('dandori-autoloaded-msg');
+    if (autoloadedMsg) autoloadedMsg.style.display = isYesterdayFallback ? 'flex' : 'none';
+
     renderDandoriMachines();
   } catch(e) {
     document.getElementById('dandori-body').innerHTML = `<div style="color:var(--danger-text)">${t('loadError')}</div>`;
@@ -2741,17 +2663,32 @@ async function saveDandori() {
     // 全ライン・全機械を対象にする（ライン単位の保存漏れを防ぐ）
     const allMachines = state.machines;
 
-    // 金型設定あり・停止中(null)を含む全レコードをupsert
+    // 【停止→稼働時のタイムスタンプリセット用】保存前のDB状態を取得
+    // loadDandoriForScheduleと同じロジック（今日 or 前日のレコード）
+    let beforeSettings = await sb('dandori_settings','GET',null,
+      `?setting_date=eq.${today}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
+    if (!beforeSettings || beforeSettings.length === 0) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = getLocalDateStr(yesterday);
+      beforeSettings = await sb('dandori_settings','GET',null,
+        `?setting_date=eq.${yesterdayStr}&shift=eq.${state.currentShift}&select=machine_id,mold_id`);
+    }
+    const beforeConfigured = !!(beforeSettings && beforeSettings.length > 0);
+    const beforeActiveSet = new Set(
+      (beforeSettings || []).map(s => s.mold_id).filter(Boolean)
+    );
+
+    // 全機械を対象にupsert（未操作機械は停止中として保存）
+    // これにより、画面上で「停止中」に見える機械が必ずDBに記録される
     // （停止中もmold_id=nullでレコードを残すことで「段取り未設定」と区別する）
-    const records = allMachines
-      .filter(machine => dandoriData.hasOwnProperty(machine.id))
-      .map(machine => ({
-        setting_date: today,
-        machine_id: machine.id,
-        mold_id: dandoriData[machine.id] || null,
-        shift: state.currentShift,
-        set_by: state.currentUser.id
-      }));
+    const records = allMachines.map(machine => ({
+      setting_date: today,
+      machine_id: machine.id,
+      mold_id: dandoriData.hasOwnProperty(machine.id) ? (dandoriData[machine.id] || null) : null,
+      shift: state.currentShift,
+      set_by: state.currentUser.id
+    }));
 
     if (records.length > 0) {
       const url = `${SUPABASE_URL}/rest/v1/dandori_settings?on_conflict=setting_date,machine_id,shift`;
@@ -2772,9 +2709,35 @@ async function saveDandori() {
       }
     }
 
+    // 【停止→稼働時のタイムスタンプリセット】
+    // 「停止中→稼働中」に変わった金型の基準時刻を now にリセットすることで、
+    // 停止していた時間分がショット数に加算されないようにする。
+    // beforeConfigured=false（段取り未設定状態）からの移行ではリセット不要
+    // （未設定時は全金型が加算されていたため、累積値をそのまま凍結するのが正しい）
+    if (beforeConfigured) {
+      const afterActiveSet = new Set(
+        records.map(r => r.mold_id).filter(Boolean)
+      );
+      const resetMoldIds = [];
+      afterActiveSet.forEach(moldId => {
+        if (!beforeActiveSet.has(moldId)) {
+          resetMoldIds.push(moldId);
+        }
+      });
+      if (resetMoldIds.length > 0) {
+        const now = new Date().toISOString();
+        await sb('molds', 'PATCH',
+          { maint_shot_updated_at: now, last_shot_updated_at: now, updated_at: now },
+          `?id=in.(${resetMoldIds.join(',')})`
+        );
+      }
+    }
+
     showToast(`${t('dandoriSaveOk')} (${records.length})`, 'success');
 
     // 保存後にDBから再読み込みして最新状態に同期
+    // state.moldsも再読み込み（リセットしたタイムスタンプを反映するため）
+    await loadMolds();
     await loadDandori();
     await loadDandoriForSchedule();
     await loadDandoriForList();
@@ -4604,8 +4567,10 @@ function calcEstimatedShot(mold) {
   const lastUpdated = mold.maint_shot_updated_at || mold.last_shot_updated_at || mold.updated_at;
   const cycleTime = mold.cycle_time_sec || 30;
   if (!lastUpdated) return baseShot;
-  // 段取り未設定の金型はショット加算しない（baseShotのまま返す）
-  if (dandoriConfigured && !dandoriMoldIdSet.has(mold.id)) {
+  // dandoriMoldIdSetに含まれない金型はショット加算しない
+  // dandoriConfigured=false（未設定・DB空）時はdandoriMoldIdSetが空のため全件対象外
+  // dandoriConfigured=true・全台停止時も同様に全件対象外
+  if (!dandoriMoldIdSet.has(mold.id)) {
     return baseShot;
   }
   const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
@@ -4620,8 +4585,10 @@ function calcEstimatedTotalShot(mold) {
   const lastUpdated = mold.last_shot_updated_at || mold.updated_at;
   const cycleTime = mold.cycle_time_sec || 30;
   if (!lastUpdated) return baseShot;
-  // 段取り未設定の金型はショット加算しない（baseShotのまま返す）
-  if (dandoriConfigured && !dandoriMoldIdSet.has(mold.id)) {
+  // dandoriMoldIdSetに含まれない金型はショット加算しない
+  // dandoriConfigured=false（未設定・DB空）時はdandoriMoldIdSetが空のため全件対象外
+  // dandoriConfigured=true・全台停止時も同様に全件対象外
+  if (!dandoriMoldIdSet.has(mold.id)) {
     return baseShot;
   }
   const elapsedSec = (Date.now() - new Date(lastUpdated).getTime()) / 1000;
@@ -4752,7 +4719,6 @@ async function manualRefresh() {
       if (sec === 'dashboard') renderDashboard(content);
       else if (sec === 'list') renderList(content);
       else if (sec === 'schedule') { buildAllShifts(); renderScheduleBody(); }
-      else if (sec === 'alert') renderAlert(content);
       else if (sec === 'shotUpdate') renderShotUpdateGrid(content);
       else if (sec === 'history') renderHistory(content);
       else if (sec === 'dandori') renderDandori(content);
@@ -4771,7 +4737,7 @@ function updateRealtimeDisplay() {
   if (!state.molds.length) return;
 
   // アラートバッジ更新（段取り設定済みの金型のみ対象）
-  const rtMolds = dandoriConfigured ? state.molds.filter(m => dandoriMoldIdSet.has(m.id)) : state.molds;
+  const rtMolds = state.molds.filter(m => dandoriMoldIdSet.has(m.id));
   const overdueCount = rtMolds.filter(m => calcStatus(m) === 'overdue').length;
   const dangerCount = rtMolds.filter(m => calcStatus(m) === 'danger').length;
   const warnCount = rtMolds.filter(m => calcStatus(m) === 'warning').length;
@@ -4784,49 +4750,6 @@ function updateRealtimeDisplay() {
 
   // セクションに応じてリアルタイム更新
   const section = state.currentSection;
-
-  if (section === 'alert') {
-    // アラートカードのDOM要素を直接更新（全体再描画なし）
-    state.molds.forEach(mold => {
-      const card = document.querySelector(`.alert-rt-card[data-mold-id="${mold.id}"]`);
-      if (!card) return;
-      const rem = calcEstimatedRemaining(mold);
-      const remMin = calcEstimatedRemainingMin(mold);
-      const pct = calcEstimatedProgress(mold);
-      const status = calcStatus(mold);
-      const color = statusColor(status);
-      // ボーダー色
-      card.style.borderLeftColor = color;
-      // プログレスバー
-      const bar = card.querySelector('.rt-progress');
-      if (bar) { bar.style.width = pct + '%'; bar.style.background = color; }
-      // 残りshot
-      const remShotEl = card.querySelector('.rt-remain-shot');
-      if (remShotEl) { remShotEl.textContent = fmtNum(rem); remShotEl.style.color = color; }
-      // 残り時間
-      const remTimeEl = card.querySelector('.rt-remain-time');
-      if (remTimeEl) { remTimeEl.textContent = fmtTime(remMin); remTimeEl.style.color = color; }
-      // 進捗
-      const pctEl = card.querySelector('.rt-pct');
-      if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = color; }
-      // ステータスバッジ
-      const badgeEl = card.querySelector('.rt-status-badge');
-      if (badgeEl) badgeEl.innerHTML = statusBadge(status);
-    });
-    // 件数バッジ更新（段取り設定済みの金型のみ）
-    const alertDandoriSet = dandoriConfigured ? new Set(Object.values(dandoriData).filter(Boolean)) : null;
-    const alertBaseMolds = alertDandoriSet ? state.molds.filter(m => alertDandoriSet.has(m.id)) : state.molds;
-    const alertMolds = alertBaseMolds.filter(m=>{const s=calcStatus(m);return s==='overdue'||s==='danger'||s==='warning';});
-    const filtered = state.alertFilter !== 'all'
-      ? alertMolds.filter(m=>m.line_name===state.alertFilter)
-      : alertMolds;
-    const countEl = document.getElementById('alert-header-count');
-    if (countEl) countEl.textContent = filtered.length + t('readMoreUnit');
-    // グローバルバッジ
-    const badge = document.getElementById('alert-count-badge');
-    if (badge) { badge.textContent = alertMolds.length; badge.style.display = alertMolds.length > 0 ? 'inline' : 'none'; }
-    return;
-  }
 
   if (section === 'schedule') {
     // スケジュール画面も再描画
@@ -4848,12 +4771,9 @@ function updateRealtimeDisplay() {
   }
 
   // 一覧テーブルのリアルタイム更新（DOM操作で高速更新）
-  // 段取り未設定判定用: dandoriDataにmold.idが含まれているかチェック
-  const dandoriMoldIds = dandoriConfigured ? new Set(Object.values(dandoriData).filter(Boolean)) : null;
-
   state.molds.forEach(mold => {
-    // 段取り未設定の金型はリアルタイム更新をスキップ（dim表示を維持）
-    if (dandoriMoldIds && !dandoriMoldIds.has(mold.id)) return;
+    // dandoriMoldIdSetに含まれない金型はリアルタイム更新をスキップ（dim表示を維持）
+    if (!dandoriMoldIdSet.has(mold.id)) return;
 
     const status = calcStatus(mold);
     const isOverdue = status === 'overdue';
@@ -5298,15 +5218,19 @@ async function execShotReset(mode, target) {
 
   try {
     const now = new Date().toISOString();
-    for (const mold of targetMolds) {
-      await sb('molds', 'PATCH',
-        { maint_shot: 0, current_shot: 0, maint_shot_updated_at: now, last_shot_updated_at: now, updated_at: now },
-        '?id=eq.' + mold.id
-      );
+    // バルクPATCH: ?id=in.(id1,id2,...) で1回のAPI呼び出しにまとめる（sequential loopは148件で~30秒かかるため）
+    const moldIds = targetMolds.map(m => m.id).join(',');
+    await sb('molds', 'PATCH',
+      { maint_shot: 0, current_shot: 0, maint_shot_updated_at: now, last_shot_updated_at: now, updated_at: now },
+      '?id=in.(' + moldIds + ')'
+    );
+    // stateも即時更新（loadMoldsの前にrealtimeDisplayが走っても正しい値を表示するため）
+    targetMolds.forEach(mold => {
       mold.maint_shot = 0;
       mold.current_shot = 0;
       mold.maint_shot_updated_at = now;
-    }
+      mold.last_shot_updated_at = now;
+    });
     showToast(t('suResetDone') + ' (' + targetMolds.length + t('men') + ')', 'success');
     await loadMolds();
     shotUpdateView = 'grid';
@@ -5593,6 +5517,7 @@ function buildAllShifts() {
   // ⑥-b 前向き配置（latestStartで引っ張り上限を制限）
   let cursor = cursorBase;
   const placed = [];
+  const unplacedMolds = []; // 32時間枠に収まらず配置できなかった金型
   const MAX_ENTRIES = 300;
 
   for (let i = 0; i < entries.length; i++) {
@@ -5600,13 +5525,18 @@ function buildAllShifts() {
     // 引っ張り目標 = latestStart[i]（deadlineMs以下、かつ後続が間に合う上限）
     const startMs = Math.max(cursor, latestStart[i]);
     const endMs   = startMs + e.dur;
-    if (startMs >= totalEndMs) continue;
+    if (startMs >= totalEndMs) {
+      unplacedMolds.push(e.mold);
+      continue;
+    }
     placed.push({ ...e, startMs, endMs, deadlineOver: (e.status !== 'overdue') && (startMs > e.deadlineMs) });
     cursor = endMs;
   }
 
   // ⑦ 複数回メンテの展開
   //   次のdeadline = endMs + interval × cycSec × 1000
+  //   開始時刻: 1回目終了とdeadlineの遅い方を起点に、既配置との重複を避けて最早空きスロットを探す
+  //   （greedyカーソル非使用: 他金型の配置より前に隙間があれば挿入可能）
   let expandIdx = 0;
   while (expandIdx < placed.length && placed.length < MAX_ENTRIES) {
     const e        = placed[expandIdx++];
@@ -5615,10 +5545,21 @@ function buildAllShifts() {
     const nextDeadline = e.endMs + interval * cycSec * 1000;
     if (nextDeadline >= totalEndMs) continue;
 
-    const nextStart = Math.max(cursor, nextDeadline);
-    const nextEnd   = nextStart + e.dur;
+    // 1回目終了とdeadlineの遅い方を候補開始時刻とする
+    let nextStart = Math.max(e.endMs, nextDeadline);
+
+    // 既配置エントリとの重複を避けて最早空きスロットを探す
+    const sortedPlaced = placed.slice().sort((a, b) => a.startMs - b.startMs);
+    for (const p of sortedPlaced) {
+      if (p.endMs <= nextStart) continue;         // 完全に前 → スキップ
+      if (p.startMs >= nextStart + e.dur) break;  // 完全に後ろ → 隙間あり → 確定
+      nextStart = p.endMs;                         // 重複 → 後ろに押し出し
+    }
+
+    const nextEnd = nextStart + e.dur;
     if (nextStart >= totalEndMs) continue;
 
+    cursor = Math.max(cursor, nextEnd);
     placed.push({
       mold:         e.mold,
       status:       'normal',
@@ -5631,7 +5572,6 @@ function buildAllShifts() {
       startMs:      nextStart,
       endMs:        nextEnd,
     });
-    cursor = nextEnd;
   }
 
   // ⑧ 直への振り分け・直またぎ処理
@@ -5711,6 +5651,7 @@ function buildAllShifts() {
   }
 
   result.unregisteredMolds = unregisteredMolds;
+  result.unplacedMolds = unplacedMolds;
   return result;
 }
 
@@ -5769,7 +5710,13 @@ function renderScheduleBody() {
   </div>` : '';
 
   // DEADLINE OVER バナー
-  const deadlineOverCount = allData.reduce((n,d)=>n+d.scheduled.filter(s=>s.deadlineOver&&!s.isContinuation).length,0);
+  // 4直目は「直またぎ/継続がある場合のみ表示」なので、それが無い場合は
+  // 4直目のエントリはUIに現れない → バナーカウントから除外して整合性を保つ
+  const deadlineOverCount = allData.reduce((n, d, i) => {
+    // 4直目かつ直またぎ/継続が無い場合は、その直のエントリは表示されないのでカウントしない
+    if (i === 3 && !d.scheduled.some(s => s.isContinuation || s.crossShift)) return n;
+    return n + d.scheduled.filter(s => s.deadlineOver && !s.isContinuation).length;
+  }, 0);
   const deadlineOverBanner = deadlineOverCount > 0 ? `<div style="border-radius:12px;overflow:hidden;border:2px solid #dc2626;margin-bottom:14px">
     <div style="background:#dc2626;padding:10px 16px;display:flex;align-items:center;gap:10px">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -5903,6 +5850,25 @@ function renderScheduleBody() {
           </div>
           <div style="display:flex;align-items:center;gap:5px;background:var(--warning-bg);border-radius:5px;padding:6px 10px;font-size:11px;color:var(--warning-text)">
             <div style="width:5px;height:5px;border-radius:50%;background:var(--warning-text);flex-shrink:0"></div>${t('shotUnregisteredSched')}
+          </div>
+        </div>`).join('')}
+      </div>`;
+    }
+    // スケジュール枠外金型の表示（カードビュー）
+    const unplacedCard = allData.unplacedMolds || [];
+    if (unplacedCard.length > 0) {
+      html += `<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
+        <div style="font-size:11px;color:var(--text4);margin-bottom:8px;display:flex;align-items:center;gap:5px">
+          <div style="width:6px;height:6px;border-radius:50%;background:#dc2626"></div>${t('unplacedTitle')} (${unplacedCard.length})
+        </div>
+        ${unplacedCard.map(m=>`<div style="border:1.5px dashed #dc2626;border-radius:12px;padding:10px 14px;margin-bottom:8px;opacity:0.7">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="width:26px;height:26px;border-radius:50%;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">!</div>
+            <div style="font-size:15px;font-weight:700;color:var(--text3)">#${esc(m.machine_no||'?')}　${esc(m.part_name)}</div>
+            <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#fef2f2;color:#991b1b;font-weight:500;border:0.5px solid #fca5a5">${t('unplacedTitle')}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;background:#fef2f2;border-radius:5px;padding:6px 10px;font-size:11px;color:#991b1b">
+            <div style="width:5px;height:5px;border-radius:50%;background:#dc2626;flex-shrink:0"></div>${t('unplacedNote')}
           </div>
         </div>`).join('')}
       </div>`;
@@ -6066,6 +6032,26 @@ function renderScheduleBody() {
         </div>
         <div style="display:flex;align-items:center;gap:5px;background:var(--warning-bg);border-radius:5px;padding:5px 8px;font-size:10px;color:var(--warning-text)">
           <div style="width:5px;height:5px;border-radius:50%;background:var(--warning-text);flex-shrink:0"></div>${t('shotUnregisteredSched')}
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  // スケジュール枠外金型の表示
+  const unplacedTL = allData.unplacedMolds || [];
+  if (unplacedTL.length > 0) {
+    html += `<div style="margin-top:14px;padding-top:10px;border-top:0.5px solid var(--border)">
+      <div style="font-size:11px;color:var(--text4);margin-bottom:8px;display:flex;align-items:center;gap:5px">
+        <div style="width:6px;height:6px;border-radius:50%;background:#dc2626"></div>${t('unplacedTitle')} (${unplacedTL.length})
+      </div>
+      ${unplacedTL.map(m=>`<div style="border:1.5px dashed #dc2626;border-radius:10px;padding:9px 12px;margin-bottom:6px;opacity:0.7">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <div style="width:20px;height:20px;border-radius:50%;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">!</div>
+          <span style="font-size:13px;font-weight:600;color:var(--text3)">#${esc(m.machine_no||'?')}　${esc(m.part_name)}</span>
+          <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:#fef2f2;color:#991b1b;font-weight:500;border:0.5px solid #fca5a5">${t('unplacedTitle')}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;background:#fef2f2;border-radius:5px;padding:5px 8px;font-size:10px;color:#991b1b">
+          <div style="width:5px;height:5px;border-radius:50%;background:#dc2626;flex-shrink:0"></div>${t('unplacedNote')}
         </div>
       </div>`).join('')}
     </div>`;
