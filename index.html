@@ -3276,10 +3276,8 @@ function openMaintenanceModal() {
   const now = new Date();
   const endH = now.getHours();
   const endM = now.getMinutes();
-  const maintMin = mold.simple_maint_time_min || 20;
-  const startTotalMin = endH * 60 + endM - maintMin;
-  const startH = Math.floor(((startTotalMin % 1440) + 1440) % 1440 / 60);
-  const startM = ((startTotalMin % 60) + 60) % 60;
+  const startH = endH;
+  const startM = endM;
   document.getElementById('maint-time-error').style.display = 'none';
   document.getElementById('label-maint-time-section').textContent = t('maintTimeSection');
   document.getElementById('label-maint-start-time').textContent = t('maintStartTime');
