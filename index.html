@@ -5406,11 +5406,15 @@ function setShachoImgEl(el, src) {
   }
 }
 
+let _shachoHappyIdx = 0; // 笑顔パターン固定（画面切り替え時のみ更新）
+function updateShachoHappyIdx() {
+  _shachoHappyIdx = Math.floor(Math.random() * 3);
+}
 function getShachoImg(tab, delayCount) {
   if (delayCount >= 3) return SHACHO_IMG_ANGRY;
   if (delayCount >= 1) return SHACHO_IMG_SERIOUS;
   const happy = [SHACHO_IMG_HAPPY1, SHACHO_IMG_HAPPY2, SHACHO_IMG_HAPPY3];
-  return happy[Math.floor(Math.random() * 3)];
+  return happy[_shachoHappyIdx];
 }
 
 function getShachoSerif(tab, delayCount) {
@@ -6290,7 +6294,8 @@ async function renderSchedule(el) {
   // 段取りデータをロード（スケジュールフィルタ用）
   await loadDandoriForSchedule();
   renderScheduleBody();
-  // 社長画像初期設定（ライトモードは黒背景除去）
+  // 社長画像初期設定（画面切り替え時に笑顔パターン更新）
+  updateShachoHappyIdx();
   setShachoImgEl(document.getElementById('shacho-tab-img'), getShachoImg('all', currentDelayCount));
   // 社長自動セリフ開始
   startShachoAutoPlay('all');
