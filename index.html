@@ -2153,6 +2153,20 @@ function setDashLine(v) {
   dashLine = v;
   renderDashboard(document.getElementById('main-content'));
 }
+function setDashCompTab(key) {
+  document.querySelectorAll('#comp-tab-seg button').forEach(b => {
+    b.style.background = 'none';
+    b.style.color = 'var(--text4)';
+    b.style.borderColor = 'transparent';
+  });
+  const btn = document.getElementById('comp-tab-'+key);
+  if (btn) { btn.style.background = 'var(--bg2)'; btn.style.color = 'var(--text)'; btn.style.borderColor = 'var(--border2)'; }
+  const body = document.getElementById('comp-tab-body');
+  if (!body) return;
+  const dataMap = window._dashCompData;
+  if (!dataMap) return;
+  body.innerHTML = dataMap[key];
+}
 
 let _dashLogs = [];
 function renderDashBody() {
@@ -2251,6 +2265,81 @@ function renderDashBody() {
     .sort((a,b)=>b.avg-a.avg).slice(0,8);
   const maxDur=durRank[0]?.avg||1;
 
+  // ===== 直別件数 =====
+  const shiftCountMap = {'1S':0,'2S':0,'3S':0};
+  logs.forEach(l => { if (l.shift && shiftCountMap[l.shift]!==undefined) shiftCountMap[l.shift]++; });
+
+  // ===== 遵守率 (±10%以内を遵守) =====
+  function isCompliant(log) {
+    const interval = log.molds?.maintenance_interval;
+    const actual = log.maint_shot_at_maintenance;
+    if (!interval || !actual || actual <= 0) return null; // 判定不能
+    const ratio = actual / interval;
+    return ratio >= 0.9 && ratio <= 1.1;
+  }
+  const compLogs = logs.filter(l => isCompliant(l) !== null);
+  const compTotal = compLogs.length ? Math.round(compLogs.filter(l=>isCompliant(l)).length / compLogs.length * 100) : null;
+
+  // 金型別
+  const compMoldMap = {};
+  compLogs.forEach(l => {
+    const k = l.mold_id;
+    const label = `#${state.molds.find(m=>m.id===k)?.machine_no||'?'} ${l.molds?.part_no||'-'}`;
+    if (!compMoldMap[k]) compMoldMap[k] = {label, ok:0, total:0};
+    compMoldMap[k].total++;
+    if (isCompliant(l)) compMoldMap[k].ok++;
+  });
+  const compMoldRank = Object.values(compMoldMap).map(m=>({...m,pct:Math.round(m.ok/m.total*100)})).sort((a,b)=>b.pct-a.pct);
+
+  // 品番別
+  const compPartMap = {};
+  compLogs.forEach(l => {
+    const k = l.molds?.part_no||'-';
+    if (!compPartMap[k]) compPartMap[k] = {label:k, ok:0, total:0};
+    compPartMap[k].total++;
+    if (isCompliant(l)) compPartMap[k].ok++;
+  });
+  const compPartRank = Object.values(compPartMap).map(m=>({...m,pct:Math.round(m.ok/m.total*100)})).sort((a,b)=>b.pct-a.pct);
+
+  // ライン別
+  const compLineMap = {};
+  compLogs.forEach(l => {
+    const lineName = state.molds.find(m=>m.id===l.mold_id)?.line_name||'-';
+    if (!compLineMap[lineName]) compLineMap[lineName] = {label:lineName, ok:0, total:0};
+    compLineMap[lineName].total++;
+    if (isCompliant(l)) compLineMap[lineName].ok++;
+  });
+  const compLineRank = Object.values(compLineMap).map(m=>({...m,pct:Math.round(m.ok/m.total*100)})).sort((a,b)=>b.pct-a.pct);
+
+  // 直別
+  const compShiftMap = {};
+  compLogs.forEach(l => {
+    const k = l.shift||'-';
+    if (!compShiftMap[k]) compShiftMap[k] = {label:k, ok:0, total:0};
+    compShiftMap[k].total++;
+    if (isCompliant(l)) compShiftMap[k].ok++;
+  });
+  const compShiftRank = ['1S','2S','3S'].filter(s=>compShiftMap[s]).map(s=>({...compShiftMap[s],pct:Math.round(compShiftMap[s].ok/compShiftMap[s].total*100)}));
+
+  function compColor(p) { return p>=80?'#1D9E75':p>=60?'#EF9F27':'#E24B4A'; }
+  function compBarRows(arr) {
+    if (!arr.length) return `<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">データなし</div>`;
+    return arr.map(m=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+      <span style="font-size:11px;color:var(--text2);width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(m.label)}">${esc(m.label)}</span>
+      <div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${m.pct}%;height:100%;background:${compColor(m.pct)};border-radius:4px"></div></div>
+      <span style="font-size:11px;width:34px;text-align:right;flex-shrink:0;color:${compColor(m.pct)}">${m.pct}%</span>
+    </div>`).join('');
+  }
+
+  // ===== 作業者別件数 =====
+  const workerMap = {};
+  logs.forEach(l => {
+    const name = l.users?.name||'-';
+    workerMap[name] = (workerMap[name]||0)+1;
+  });
+  const workerRank = Object.entries(workerMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxWorker = workerRank[0]?.[1]||1;
+
   // Weekday labels for heatmap
   const dowLabels = ['日','月','火','水','木','金','土'];
 
@@ -2325,7 +2414,59 @@ function renderDashBody() {
       ${!durRank.length?`<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">所要時間の登録データが2件以上ある金型が対象です</div>`:''}
     </div>
 
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-top:8px">
+      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:10px">直別件数</div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+        ${['1S','2S','3S'].map(s=>`<div style="background:var(--bg);border-radius:6px;padding:8px 10px;border:0.5px solid var(--border)">
+          <div style="font-size:10px;color:var(--text4);margin-bottom:4px">${s}</div>
+          <div style="font-size:20px;font-weight:500;color:var(--info-text)">${shiftCountMap[s]}</div>
+          <div style="font-size:10px;color:var(--text4)">件</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-top:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:500;color:var(--text)">メンテ間隔遵守率</div>
+        <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px" id="comp-tab-seg">
+          ${[['line','ライン別'],['shift','直別'],['part','品番別'],['mold','金型別']].map(([k,l])=>`<button onclick="setDashCompTab('${k}')" id="comp-tab-${k}" style="font-size:10px;padding:2px 8px;border-radius:4px;border:0.5px solid transparent;background:none;color:var(--text4);cursor:pointer${k==='line'?';background:var(--bg2);color:var(--text);border-color:var(--border2)':''}">${l}</button>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border-radius:6px;border:0.5px solid var(--border);margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;color:var(--text4)">総合遵守率</div>
+          <div style="font-size:20px;font-weight:500;color:${compTotal!==null?compColor(compTotal):'var(--text4)'}">${compTotal!==null?compTotal+'%':'-'}</div>
+        </div>
+        <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+          <div style="width:${compTotal||0}%;height:100%;background:${compTotal!==null?compColor(compTotal):'var(--border)'};border-radius:4px"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text4)">${compLogs.length}件対象</div>
+      </div>
+      <div id="comp-tab-body">${compBarRows(compLineRank)}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border);flex-wrap:wrap">
+        ${[['#1D9E75','80%以上'],['#EF9F27','60〜79%'],['#E24B4A','60%未満']].map(([c,l])=>`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:${c}"></div><span style="font-size:10px;color:var(--text4)">${l}</span></div>`).join('')}
+        <span style="font-size:10px;color:var(--text4);margin-left:auto">閾値 ±10%以内</span>
+      </div>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-top:8px">
+      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">作業者別件数</div>
+      ${workerRank.map(([name,cnt])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <span style="font-size:11px;color:var(--text2);width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</span>
+        <div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${Math.round(cnt/maxWorker*100)}%;height:100%;background:#378ADD;border-radius:4px"></div></div>
+        <span style="font-size:11px;color:var(--text3);width:34px;text-align:right;flex-shrink:0">${cnt}件</span>
+      </div>`).join('')}
+      ${!workerRank.length?`<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">${t('noData')}</div>`:''}
+    </div>
+
   </div>`;
+
+  window._dashCompData = {
+    line: compBarRows(compLineRank),
+    shift: compBarRows(compShiftRank),
+    part: compBarRows(compPartRank),
+    mold: compBarRows(compMoldRank),
+  };
 
   requestAnimationFrame(() => drawDashDailyChart(dailyLabels, dailyData));
 }
@@ -2338,7 +2479,7 @@ async function renderDashboard(el) {
 
   try {
     const { startDate, endDate } = getDashPeriodDates();
-    let q = `?performed_at=gte.${startDate}&order=performed_at.asc&select=id,mold_id,maintenance_type,performed_at,duration_min,molds(part_no,part_name)&limit=5000`;
+    let q = `?performed_at=gte.${startDate}&order=performed_at.asc&select=id,mold_id,maintenance_type,performed_at,duration_min,maint_shot_at_maintenance,shift,performed_by,molds(part_no,part_name,maintenance_interval),users(name)&limit=5000`;
     if (endDate) q += `&performed_at=lte.${endDate}`;
     _dashLogs = (await sb("maintenance_logs","GET",null,q)) || [];
     renderDashBody();
