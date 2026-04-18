@@ -63,11 +63,13 @@
   --info-text: #60a5fa;
   /* レイアウト */
   --sidebar-w: 130px;
+  --hm-empty: #1e2d45;
 }
 .light {
   /* ベース背景 */
   --bg: #f1f5f9;
   --bg2: #ffffff;
+  --hm-empty: #f0ede8;
   --bg3: #e2e8f0;
   --bg4: #e2e8f0;
   --border: #cbd5e1;
@@ -1507,6 +1509,11 @@ function toggleTheme() {
   if (btn) btn.textContent = icon;
   const btnMain = document.getElementById('theme-btn-main');
   if (btnMain) btnMain.textContent = icon;
+  // ダッシュボード表示中はCanvasを再描画
+  if (state.currentSection === 'dashboard') {
+    const content = document.getElementById('main-content');
+    if (content) renderDashboard(content);
+  }
 }
 
 // ===== 言語 =====
@@ -2031,9 +2038,7 @@ function drawDashDailyChart(labels, data) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const isDark = document.body.classList.contains('dark') ||
-    window.matchMedia('(prefers-color-scheme:dark)').matches ||
-    document.documentElement.getAttribute('data-theme') === 'dark';
+  const isDark = state.theme === 'dark';
   const textColor = isDark ? '#94a3b8' : '#64748b';
   const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
@@ -2109,8 +2114,7 @@ function getDashPeriodDates() {
 }
 
 function heatColor(n) {
-  const dark = !document.body.classList.contains('light');
-  if (n===0) return dark ? '#1e2d45' : '#f0ede8';
+  if (n===0) return 'var(--hm-empty)';
   if (n===1) return '#C8F5D4';
   if (n<=3)  return '#6EE89A';
   if (n<=5)  return '#FFE580';
@@ -2277,12 +2281,7 @@ function renderDashBody() {
         `).join('')}
       </div>
       <div style="display:flex;gap:8px;margin-top:10px;align-items:flex-end">
-        ${[['#f0ede8','#1e2d45','0件'],['#C8F5D4','#C8F5D4','1件'],['#6EE89A','#6EE89A','2-3件'],['#FFE580','#FFE580','4-5件'],['#FFB3B3','#FFB3B3','6-7件'],['#FF6B6B','#FF6B6B','8件+']].map(([lc,dc,lbl])=>{
-          const isDarkMode = !document.body.classList.contains('light');          return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-            <div style="width:24px;height:10px;border-radius:2px;background:${isDarkMode?dc:lc}"></div>
-            <div style="font-size:9px;color:var(--text3);white-space:nowrap">${lbl}</div>
-          </div>`;
-        }).join('')}
+        ${[['var(--hm-empty)','0件'],['#C8F5D4','1件'],['#6EE89A','2-3件'],['#FFE580','4-5件'],['#FFB3B3','6-7件'],['#FF6B6B','8件+']].map(([bg,lbl])=>`<div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:24px;height:10px;border-radius:2px;background:${bg}"></div><div style="font-size:9px;color:var(--text3);white-space:nowrap">${lbl}</div></div>`).join('')}
       </div>
     </div>
 
