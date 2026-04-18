@@ -1530,6 +1530,9 @@ function toggleTheme() {
     const content = document.getElementById('main-content');
     if (content) renderDashboard(content);
   }
+  // 社長画像をテーマに合わせて更新
+  const shachoImg = document.getElementById('shacho-tab-img');
+  if (shachoImg) setShachoImgEl(shachoImg, getShachoImg(_shachoCurrentTab, currentDelayCount));
 }
 
 // ===== 言語 =====
@@ -5368,7 +5371,7 @@ function removeShachoBlackBg(src) {
 }
 function setShachoImgEl(el, src) {
   if (!el || !src) return;
-  if (document.documentElement.classList.contains('light')) {
+  if (document.body.classList.contains('light')) {
     console.log('[shacho] light mode: removing black bg, src length=', src.length);
     removeShachoBlackBg(src).then(url => {
       console.log('[shacho] done, url length=', url.length, url === src ? '(unchanged)' : '(processed)');
