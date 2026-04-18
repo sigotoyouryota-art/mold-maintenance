@@ -4215,13 +4215,17 @@ async function generateMonthlyReport() {
     const startDate = `${y}-${String(m).padStart(2,'0')}-01`;
     const endDate = `${y}-${String(m).padStart(2,'0')}-${new Date(y, m, 0).getDate()}T23:59:59`;
 
-    // メンテ履歴取得
+    // メンテ履歴取得（select=*で started_at/ended_at/duration_min も含む）
     const maintLogs = await sb('maintenance_logs','GET',null,
-      `?performed_at=gte.${startDate}&performed_at=lte.${endDate}&order=performed_at.desc&select=*,molds(part_no,part_name,mold_categories(name)),machines(machine_no,lines(name)),users(name)`);
+      `?performed_at=gte.${startDate}&performed_at=lte.${endDate}&order=performed_at.desc&select=*,molds(part_no,part_name,model_no,mold_categories(name)),machines(machine_no,lines(name)),users(name)`);
 
     // アラート履歴取得
     const alertLogs = await sb('alert_logs','GET',null,
       `?created_at=gte.${startDate}&created_at=lte.${endDate}&order=created_at.desc&select=*,molds(part_no,part_name),machines(machine_no,lines(name)),users(name)`);
+
+    // 乖離率ランキング用：全期間の簡易メンテ実績を取得
+    const analysisLogs = await sb('maintenance_logs','GET',null,
+      '?maintenance_type=eq.simple&order=performed_at.desc&select=mold_id,maint_shot_at_maintenance,shot_at_maintenance,molds(part_no,part_name,model_no,maintenance_interval,mold_categories(name)),machines(machine_no,lines(name))&limit=500');
 
     // SheetJSを動的ロード
     await loadSheetJS();
@@ -4244,6 +4248,12 @@ async function generateMonthlyReport() {
       ['リセットなし', maintLogs.length - resetCount, ''],
       ['月間アラート発生', alertLogs.length, ''],
       [],
+      ['■ 所要時間集計（作業時間登録分）'],
+      ['項目', '平均所要時間（分）', '対象件数'],
+      (() => { const d = maintLogs.filter(l=>l.duration_min>0); return ['全体平均', d.length ? Math.round(d.reduce((s,l)=>s+l.duration_min,0)/d.length) : '-', d.length]; })(),
+      (() => { const d = maintLogs.filter(l=>l.duration_min>0&&l.maintenance_type==='OH'); return ['OHメンテ', d.length ? Math.round(d.reduce((s,l)=>s+l.duration_min,0)/d.length) : '-', d.length]; })(),
+      (() => { const d = maintLogs.filter(l=>l.duration_min>0&&l.maintenance_type==='simple'); return ['簡易メンテ', d.length ? Math.round(d.reduce((s,l)=>s+l.duration_min,0)/d.length) : '-', d.length]; })(),
+      [],
       ['■ ライン別集計'],
       ['ライン', 'OHメンテ', '簡易メンテ', '合計'],
       ...state.lines.map(line => {
@@ -4260,9 +4270,11 @@ async function generateMonthlyReport() {
     XLSX.utils.book_append_sheet(wb, wsSummary, '①サマリー');
 
     // ② メンテ実績一覧
-    const maintHeader = ['実施日時','機番','品名','品番','分類','ライン','種別','実施shot数','リセット','作業者','直'];
+    const maintHeader = ['実施日時','機番','品名','品番','分類','ライン','種別','メンテ間shot','累計shot','リセット','所要時間(分)','開始時刻','終了時刻','作業者','直'];
     const maintRows = maintLogs.map(l => {
       const dt = new Date(l.performed_at);
+      const startStr = l.started_at ? (() => { const s=new Date(l.started_at); return `${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}`; })() : '-';
+      const endStr   = l.ended_at   ? (() => { const e=new Date(l.ended_at);   return `${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}`; })() : '-';
       return [
         `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`,
         l.machines?.machine_no ? '#'+l.machines.machine_no : '-',
@@ -4271,14 +4283,18 @@ async function generateMonthlyReport() {
         l.molds?.mold_categories?.name || '-',
         l.machines?.lines?.name || '-',
         l.maintenance_type === 'OH' ? 'OHメンテ' : '簡易メンテ',
+        l.maint_shot_at_maintenance || 0,
         l.shot_at_maintenance || 0,
         l.is_reset ? 'あり' : 'なし',
+        l.duration_min != null ? l.duration_min : '-',
+        startStr,
+        endStr,
         l.users?.name || '-',
         l.shift || '-',
       ];
     });
     const wsMaint = XLSX.utils.aoa_to_sheet([maintHeader, ...maintRows]);
-    wsMaint['!cols'] = [{wch:18},{wch:8},{wch:12},{wch:18},{wch:10},{wch:10},{wch:10},{wch:12},{wch:8},{wch:10},{wch:6}];
+    wsMaint['!cols'] = [{wch:18},{wch:8},{wch:12},{wch:18},{wch:10},{wch:10},{wch:10},{wch:14},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:10},{wch:6}];
     styleReportSheet(wsMaint, [maintHeader, ...maintRows], true);
     XLSX.utils.book_append_sheet(wb, wsMaint, '②メンテ実績一覧');
 
@@ -4329,6 +4345,79 @@ async function generateMonthlyReport() {
     XLSX.utils.book_append_sheet(wb, wsAlert, '④アラート履歴');
 
     // ファイル出力
+    // ⑤ 直別集計
+    const shifts = ['1S','2S','3S'];
+    const shiftHeader = ['直','OHメンテ','簡易メンテ','合計','OH率(%)','平均所要時間(分)'];
+    const shiftRows = shifts.map(s => {
+      const sl = maintLogs.filter(l=>l.shift===s);
+      const oh = sl.filter(l=>l.maintenance_type==='OH').length;
+      const sim = sl.filter(l=>l.maintenance_type==='simple').length;
+      const dur = sl.filter(l=>l.duration_min>0);
+      return [s, oh, sim, sl.length, sl.length?Math.round(oh/sl.length*100):0,
+        dur.length ? Math.round(dur.reduce((a,l)=>a+l.duration_min,0)/dur.length) : '-'];
+    });
+    shiftRows.push(['合計', ohCount, simpleCount, maintLogs.length,
+      maintLogs.length?Math.round(ohCount/maintLogs.length*100):0, '-']);
+    const wsShift = XLSX.utils.aoa_to_sheet([shiftHeader, ...shiftRows]);
+    wsShift['!cols'] = [{wch:8},{wch:12},{wch:12},{wch:8},{wch:10},{wch:16}];
+    styleReportSheet(wsShift, [shiftHeader,...shiftRows], true);
+    XLSX.utils.book_append_sheet(wb, wsShift, '⑤直別集計');
+
+    // ⑥ 作業者別集計
+    const userMap = {};
+    maintLogs.forEach(l => {
+      const name = l.users?.name || '不明';
+      if (!userMap[name]) userMap[name] = { oh:0, simple:0, durations:[] };
+      if (l.maintenance_type==='OH') userMap[name].oh++;
+      else userMap[name].simple++;
+      if (l.duration_min>0) userMap[name].durations.push(l.duration_min);
+    });
+    const userHeader = ['作業者','OHメンテ','簡易メンテ','合計','OH率(%)','平均所要時間(分)'];
+    const userRows = Object.entries(userMap).sort((a,b)=>(b[1].oh+b[1].simple)-(a[1].oh+a[1].simple)).map(([name,d])=>{
+      const total = d.oh+d.simple;
+      return [name, d.oh, d.simple, total, total?Math.round(d.oh/total*100):0,
+        d.durations.length ? Math.round(d.durations.reduce((a,b)=>a+b,0)/d.durations.length) : '-'];
+    });
+    const wsUser = XLSX.utils.aoa_to_sheet([userHeader, ...userRows]);
+    wsUser['!cols'] = [{wch:14},{wch:12},{wch:12},{wch:8},{wch:10},{wch:16}];
+    styleReportSheet(wsUser, [userHeader,...userRows], true);
+    XLSX.utils.book_append_sheet(wb, wsUser, '⑥作業者別集計');
+
+    // ⑦ 乖離率ランキング（実績平均 vs 設定間隔、2件以上のもの）
+    const aMoldMap = {};
+    (analysisLogs||[]).forEach(log => {
+      const key = log.mold_id;
+      const shot = log.maint_shot_at_maintenance || log.shot_at_maintenance || 0;
+      if (!shot) return;
+      if (!aMoldMap[key]) {
+        aMoldMap[key] = {
+          part_no: log.molds?.part_no||'-', part_name: log.molds?.part_name||'-',
+          model_no: log.molds?.model_no||'-', machine_no: log.machines?.machine_no||'-',
+          line: log.machines?.lines?.name||'-', category: log.molds?.mold_categories?.name||'-',
+          setting: log.molds?.maintenance_interval||5000, shots: []
+        };
+      }
+      aMoldMap[key].shots.push(shot);
+    });
+    const rankHeader = ['順位','機番','品名','品番','型番','ライン','カテゴリ','設定間隔(shot)','実績平均(shot)','乖離率(%)','推奨間隔(shot)','実績件数'];
+    const rankItems = Object.values(aMoldMap)
+      .filter(m=>m.shots.length>=2)
+      .map(m=>{
+        const avg = Math.round(m.shots.slice(0,10).reduce((a,b)=>a+b,0)/Math.min(m.shots.length,10));
+        const deviation = Math.round((avg-m.setting)/m.setting*1000)/10;
+        const recommended = Math.round(avg*0.9/100)*100;
+        return {...m, avg, deviation, recommended, cnt: m.shots.length};
+      })
+      .sort((a,b)=>a.deviation-b.deviation);
+    const rankRows = rankItems.map((r,i)=>[
+      i+1, '#'+r.machine_no, r.part_name, r.part_no, r.model_no,
+      r.line, r.category, r.setting, r.avg, r.deviation, r.recommended, r.cnt
+    ]);
+    const wsRank = XLSX.utils.aoa_to_sheet([rankHeader, ...rankRows]);
+    wsRank['!cols'] = [{wch:6},{wch:8},{wch:14},{wch:18},{wch:10},{wch:10},{wch:10},{wch:14},{wch:14},{wch:12},{wch:14},{wch:10}];
+    styleReportSheet(wsRank, [rankHeader,...rankRows], true);
+    XLSX.utils.book_append_sheet(wb, wsRank, '⑦乖離率ランキング');
+
     XLSX.writeFile(wb, `MoldMainte_月次レポート_${y}年${String(m).padStart(2,'0')}月.xlsx`);
     showToast(`${y}/${m} ${t('reportDone')}`, 'success');
 
