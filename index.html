@@ -2082,7 +2082,7 @@ function drawDashDailyChart(labels, data) {
 }
 
 
-let dashPeriod = '30';
+let dashPeriod = 'today';
 let dashLine = 'all';
 let dashPartNo = '';
 let dashDateFrom = '';
@@ -2090,6 +2090,13 @@ let dashDateTo = '';
 
 function getDashPeriodDates() {
   const now = new Date();
+  if (dashPeriod === 'today') {
+    // 業務日08:00起点
+    const start = new Date(now);
+    if (start.getHours() < 8) start.setDate(start.getDate() - 1);
+    start.setHours(8, 0, 0, 0);
+    return { startDate: start.toISOString(), endDate: null };
+  }
   if (dashPeriod === 'custom') {
     const s = dashDateFrom || getLocalDateStr(new Date(now.getTime() - 30*86400000));
     const e = dashDateTo ? dashDateTo + 'T23:59:59' : null;
@@ -2116,7 +2123,7 @@ function heatTextCol(n) {
 }
 
 function renderDashFilterBar() {
-  const periods = [['7','直近7日'],['30','直近30日'],['90','直近90日'],['all','全期間'],['custom','カスタム']];
+  const periods = [['today','今日'],['7','直近7日'],['30','直近30日'],['90','直近90日'],['all','全期間'],['custom','カスタム']];
   const lines = [['all','すべて'], ...state.lines.map(l=>[l.name, l.name])];
   return `<div style="position:sticky;top:0;z-index:20;background:var(--bg3);border-bottom:0.5px solid var(--border);padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
     <div style="display:flex;gap:4px;flex-wrap:wrap">
