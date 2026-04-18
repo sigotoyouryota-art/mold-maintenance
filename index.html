@@ -2447,7 +2447,7 @@ async function loadHistory() {
   const el = document.getElementById('hist-body');
   if (!el) return;
   try {
-    let query = '?order=performed_at.desc&limit=100&select=id,mold_id,machine_id,maintenance_type,shot_at_maintenance,maint_shot_at_maintenance,is_reset,shift,performed_at,molds(part_no,part_name,mold_categories(name)),machines(machine_no,lines(name)),users(name)';
+    let query = '?order=performed_at.desc&limit=100&select=id,mold_id,machine_id,maintenance_type,shot_at_maintenance,maint_shot_at_maintenance,is_reset,shift,performed_at,started_at,ended_at,duration_min,molds(part_no,part_name,model_no,mold_categories(name)),machines(machine_no,lines(name)),users(name)';
     if (state.histFilter === 'OH') query += '&maintenance_type=eq.OH';
     else if (state.histFilter === 'simple') query += '&maintenance_type=eq.simple';
     const logs = await sb('maintenance_logs', 'GET', null, query);
@@ -2475,12 +2475,21 @@ async function loadHistory() {
       const sel = histSelectedIds.has(log.id);
       const chkStyle = `width:18px;height:18px;border-radius:4px;border:2px solid ${sel?'var(--info-text)':'var(--border2)'};background:${sel?'var(--info-bg)':'transparent'};display:flex;align-items:center;justify-content:center`;
       const chkInner = sel ? '<span style="font-size:10px;color:var(--info-text);font-weight:700">✓</span>' : '';
-      return { isOH, lineName, machineNo, dateStr, timeStr, shot, sel, chkStyle, chkInner };
+      return { isOH, lineName, machineNo, dateStr, timeStr, shot, sel, chkStyle, chkInner,
+        totalShot: log.shot_at_maintenance != null ? fmtNum(log.shot_at_maintenance) : '-',
+        duration: log.duration_min != null ? log.duration_min + (t('maintDurationUnit')||'分') : '-',
+        workTime: (log.started_at && log.ended_at) ? (() => {
+          const s = new Date(log.started_at), e = new Date(log.ended_at);
+          return `${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}〜${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}`;
+        })() : '-',
+        category: esc(log.molds?.mold_categories?.name || '-'),
+        modelNo: esc(log.molds?.model_no || '-'),
+      };
     };
 
     // PC テーブル
     const tableHTML = `<div class="table-wrap"><table>
-      <tr>${histEditMode?'<th></th>':''}<th>${t('execDate')}</th><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>${t('line')}</th><th>${t('maintType')}</th><th>${t('shotCount')}</th><th>${t('worker')}/${t('shift')}</th></tr>
+      <tr>${histEditMode?'<th></th>':''}<th>${t('execDate')}</th><th>${t('machineNo')}</th><th>${t('partName')}</th><th>${t('partNo')}</th><th>${t('category')||'カテゴリ'}</th><th>${t('line')}</th><th>${t('maintType')}</th><th>${t('shotCount')}</th><th>${t('totalShotLabel2')||'累計'}shot</th><th>${t('maintDuration')||'所要時間'}</th><th>${t('maintTimeSection')||'作業時間'}</th><th>${t('worker')}/${t('shift')}</th></tr>
       ${filtered.map(log => {
         const r = getRow(log);
         return `<tr data-lid="${log.id}" style="${r.sel?'background:var(--info-bg);':''}" onclick="${histEditMode?`histToggle('${log.id}')`:''}" ${histEditMode?'style="cursor:pointer"':''}>
@@ -2489,9 +2498,13 @@ async function loadHistory() {
           <td style="font-weight:600">#${r.machineNo}</td>
           <td>${esc(log.molds?.part_name||'-')}</td>
           <td style="font-size:11px;color:var(--text3)">${esc(log.molds?.part_no||'-')}</td>
+          <td style="font-size:11px;color:var(--text3)">${r.category}</td>
           <td>${r.lineName}</td>
           <td><span class="hist-tag ${r.isOH?'hist-tag-oh':'hist-tag-simple'}">${r.isOH?'OH':t('simple')}</span></td>
           <td>${r.shot} shot</td>
+          <td style="font-size:11px;color:var(--info-text)">${r.totalShot} shot</td>
+          <td style="font-size:11px">${r.duration}</td>
+          <td style="font-size:11px;color:var(--text3)">${r.workTime}</td>
           <td style="font-size:11px;color:var(--text3)">${esc(log.users?.name||'-')} / ${esc(log.shift||'-')}</td>
         </tr>`;
       }).join('')}
@@ -2512,16 +2525,22 @@ async function loadHistory() {
             <div style="font-size:13px;font-weight:600;color:var(--text)">#${r.machineNo}　${esc(log.molds?.part_name||'-')}</div>
             <div style="font-size:11px;color:var(--text4)">${r.dateStr} ${r.timeStr}</div>
           </div>
-          <div style="display:flex;gap:5px;align-items:center;margin-bottom:5px">
+          <div style="display:flex;gap:5px;align-items:center;margin-bottom:5px;flex-wrap:wrap">
             <span class="hist-tag ${r.isOH?'hist-tag-oh':'hist-tag-simple'}">${r.isOH?'OH':t('simple')}</span>
             <span class="hist-tag ${log.is_reset?'hist-tag-reset':'hist-tag-keep'}">${log.is_reset?t('withReset'):t('noReset')}</span>
             <span style="font-size:10px;color:var(--text4)">${r.lineName}</span>
+            ${r.category !== '-' ? `<span style="font-size:10px;color:var(--text4)">${r.category}</span>` : ''}
           </div>
-          <div style="display:flex;gap:14px;font-size:11px;color:var(--text3)">
+          <div style="display:flex;gap:10px;font-size:11px;color:var(--text3);flex-wrap:wrap;margin-bottom:${r.duration !== '-' ? '4' : '0'}px">
             <span>${t('shotCount')}: <b style="font-weight:600;color:var(--text)">${r.shot} shot</b></span>
+            <span>${t('totalShotLabel2')||'累計'}: <b style="font-weight:600;color:var(--info-text)">${r.totalShot} shot</b></span>
             <span>${t('worker')}: <b style="font-weight:600;color:var(--text)">${esc(log.users?.name||'-')}</b></span>
             <span>${t('shift')}: <b style="font-weight:600;color:var(--text)">${esc(log.shift||'-')}</b></span>
           </div>
+          ${r.duration !== '-' ? `<div style="display:flex;gap:10px;font-size:11px;color:var(--text3)">
+            <span>${t('maintDuration')||'所要時間'}: <b style="font-weight:600;color:var(--text)">${r.duration}</b></span>
+            ${r.workTime !== '-' ? `<span>${t('maintTimeSection')||'作業時間'}: <b style="font-weight:600;color:var(--text)">${r.workTime}</b></span>` : ''}
+          </div>` : ''}
         </div>
       </div>`;
 
