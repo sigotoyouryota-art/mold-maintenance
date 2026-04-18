@@ -5482,7 +5482,8 @@ function showShachoBubble(text, isRare) {
   _shachoBubbleTimer = setTimeout(() => {
     bubble.classList.remove('shacho-bubble-show','shacho-bubble-rare');
     bubble.innerHTML = '';
-  }, isRare ? 20000 : 10000);
+    _shachoBubbleTimer = null;
+  }, isRare ? 6000 : 4000);
 }
 
 function shachoTap(tab, delayCount) {
@@ -5500,17 +5501,26 @@ function shachoTap(tab, delayCount) {
 function startShachoAutoPlay(tab) {
   stopShachoAutoPlay();
   _shachoCurrentTab = tab || 'all';
-  // 初回1.5秒後に開始
-  _shachoAutoTimer = setTimeout(function loop() {
-    if (!shachoVisible) return;
+  // 表示(4秒) → 消える → 待機(6秒) → 次のセリフ のループ
+  const displayTime = 4000;   // セリフ表示時間
+  const waitTime   = 6000;   // 非表示の待機時間
+  function loop() {
+    if (!shachoVisible) {
+      _shachoAutoTimer = setTimeout(loop, waitTime);
+      return;
+    }
     const serif = getShachoSerif(_shachoCurrentTab, currentDelayCount);
     showShachoBubble(serif.text, serif.isRare);
-    _shachoAutoTimer = setTimeout(loop, serif.isRare ? 7000 : 5500);
-  }, 1500);
+    // 表示時間 + 待機時間 後に次のセリフ
+    const totalWait = (serif.isRare ? 6000 : displayTime) + waitTime;
+    _shachoAutoTimer = setTimeout(loop, totalWait);
+  }
+  _shachoAutoTimer = setTimeout(loop, 1500); // 初回1.5秒後
 }
 
 function stopShachoAutoPlay() {
   if (_shachoAutoTimer) { clearTimeout(_shachoAutoTimer); _shachoAutoTimer = null; }
+  if (_shachoBubbleTimer) { clearTimeout(_shachoBubbleTimer); _shachoBubbleTimer = null; }
 }
 
 function renderShachoWidget(tab, delayCount, position) {
