@@ -2109,18 +2109,21 @@ function getDashPeriodDates() {
 }
 
 function heatColor(n) {
-  if (n===0) return 'var(--bg)';
-  if (n===1) return '#86efac';
-  if (n<=3)  return '#22c55e';
-  if (n<=5)  return '#fbbf24';
-  if (n<=7)  return '#fca5a5';
-  return '#ef4444';
+  const dark = document.body.classList.contains('dark') || !document.body.classList.contains('light');
+  if (n===0) return dark ? '#1e2d45' : '#f0ede8';
+  if (n===1) return '#C8F5D4';
+  if (n<=3)  return '#6EE89A';
+  if (n<=5)  return '#FFE580';
+  if (n<=7)  return '#FFB3B3';
+  return '#FF6B6B';
 }
 function heatTextCol(n) {
-  if (n===0) return 'var(--text4)';
-  if (n<=3)  return '#14532d';
-  if (n<=5)  return '#78350f';
-  return '#7f1d1d';
+  if (n===0) return 'transparent';
+  if (n===1) return '#0f4f1f';
+  if (n<=3)  return '#0a3d1f';
+  if (n<=5)  return '#4d3800';
+  if (n<=7)  return '#6b0000';
+  return '#fff';
 }
 
 function renderDashFilterBar() {
@@ -2262,27 +2265,25 @@ function renderDashBody() {
 
     <div style="background:var(--bg2);border-radius:8px;padding:14px 16px;margin-bottom:8px;border:0.5px solid var(--border);overflow-x:auto">
       <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:12px">時間帯別件数ヒートマップ</div>
-      <table style="border-collapse:separate;border-spacing:3px;font-size:11px">
-        <thead>
-          <tr>
-            <th style="min-width:60px"></th>
-            ${['月','火','水','木','金','土','日'].map(d=>`<th style="text-align:center;font-size:12px;font-weight:500;color:var(--text3);padding-bottom:6px;min-width:64px">${d}</th>`).join('')}
-          </tr>
-        </thead>
-        <tbody>
-          ${timeSlots.map((slot,si)=>`<tr>
-            <td style="text-align:right;padding-right:10px;color:var(--text3);font-size:10px;white-space:nowrap;vertical-align:middle">${slot}</td>
-            ${[1,2,3,4,5,6,0].map(dow=>{
-              const n=heatmap[si][dow];
-              const bg=heatColor(n);
-              const tc=heatTextCol(n);
-              return `<td style="padding:1px"><div style="width:60px;height:28px;border-radius:5px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:${tc}">${n>0?n:''}</div></td>`;
-            }).join('')}
-          </tr>`).join('')}
-        </tbody>
-      </table>
-      <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
-        ${[[0,'0件'],[1,'1件'],['2-3','2-3件'],['4-5','4-5件'],['6-7','6-7件'],['8+','8件+']].map(([k,l])=>`<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3)"><span style="width:14px;height:14px;border-radius:3px;background:${k===0?'var(--bg)':k===1?'#86efac':k==='2-3'?'#22c55e':k==='4-5'?'#fbbf24':k==='6-7'?'#fca5a5':'#ef4444'};border:0.5px solid var(--border2);display:inline-block;flex-shrink:0"></span>${l}</span>`).join('')}
+      <div style="display:grid;grid-template-columns:52px repeat(7,1fr);gap:3px;align-items:center;min-width:360px">
+        <div></div>
+        ${['月','火','水','木','金','土','日'].map(d=>`<div style="font-size:11px;color:var(--text3);text-align:center;padding-bottom:4px">${d}</div>`).join('')}
+        ${timeSlots.map((slot,si)=>`
+          <div style="font-size:10px;color:var(--text3);text-align:right;padding-right:6px;white-space:nowrap">${slot}</div>
+          ${[1,2,3,4,5,6,0].map(dow=>{
+            const n=heatmap[si][dow];
+            return `<div style="height:30px;border-radius:4px;background:${heatColor(n)};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:${heatTextCol(n)}" title="${slot} ${['月','火','水','木','金','土','日'][dow===0?6:dow-1]}曜: ${n}件">${n>0?n:''}</div>`;
+          }).join('')}
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:flex-end">
+        ${[['#f0ede8','#1e2d45','0件'],['#C8F5D4','#C8F5D4','1件'],['#6EE89A','#6EE89A','2-3件'],['#FFE580','#FFE580','4-5件'],['#FFB3B3','#FFB3B3','6-7件'],['#FF6B6B','#FF6B6B','8件+']].map(([lc,dc,lbl])=>{
+          const isDarkMode = !document.body.classList.contains('light');
+          return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+            <div style="width:24px;height:10px;border-radius:2px;background:${isDarkMode?dc:lc}"></div>
+            <div style="font-size:9px;color:var(--text3);white-space:nowrap">${lbl}</div>
+          </div>`;
+        }).join('')}
       </div>
     </div>
 
