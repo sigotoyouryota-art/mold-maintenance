@@ -5369,7 +5369,11 @@ function removeShachoBlackBg(src) {
 function setShachoImgEl(el, src) {
   if (!el || !src) return;
   if (document.documentElement.classList.contains('light')) {
-    removeShachoBlackBg(src).then(url => { if (el) el.src = url; });
+    console.log('[shacho] light mode: removing black bg, src length=', src.length);
+    removeShachoBlackBg(src).then(url => {
+      console.log('[shacho] done, url length=', url.length, url === src ? '(unchanged)' : '(processed)');
+      if (el) el.src = url;
+    });
   } else {
     el.src = src;
   }
