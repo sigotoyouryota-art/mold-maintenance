@@ -504,8 +504,8 @@ select.form-control { cursor: pointer; }
 .shacho-bubble-box::after { content:''; position:absolute; right:-5px; top:50%; transform:translateY(-50%) rotate(45deg); width:8px; height:8px; background:var(--bg2); border-top:0.5px solid var(--border2); border-right:0.5px solid var(--border2); }
 .shacho-tab-wrap { display:flex; align-items:center; flex-shrink:0; position:relative; cursor:pointer; background:var(--bg3); }
 .shacho-tab-wrap img { mix-blend-mode:screen; }
-.light .shacho-tab-wrap { background:var(--bg3); }
-.light .shacho-tab-wrap img { mix-blend-mode:multiply; }
+.light .shacho-tab-wrap { background:transparent; }
+.light .shacho-tab-wrap img { mix-blend-mode:normal; }
 .shacho-bubble-show { opacity:1 !important; transform:translateY(-50%) translateX(0) !important; }
 @keyframes shachoShimmer { 0%,100%{color:#f8d060} 25%{color:#ffe89a} 50%{color:#c8a000} 75%{color:#ffd040} }
 @keyframes shachoCrownBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
@@ -5332,6 +5332,40 @@ const SHACHO_SERIFS = {
   rare: ['橋本ーー！！メンテは一丁目一番地だ！','ハシモトーー、メンテが一丁目一番地だぞ！','はしもとーー、一丁目一番地を忘れるな！','橋本ーーー！！一丁目一番地だ！わかっとるか！！','段取り八分、仕事二分だぞ','備えあれば憂いなし、メンテがそれだ','転ばぬ先の杖がメンテだ'],
 };
 
+// 黒背景をアルファ透過に変換（キャッシュ付き）
+const _shachoImgCache = {};
+function removeShachoBlackBg(src, threshold=30) {
+  if (_shachoImgCache[src]) return Promise.resolve(_shachoImgCache[src]);
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const d = ctx.getImageData(0, 0, c.width, c.height);
+      const data = d.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i+1], b = data[i+2];
+        if (r < threshold && g < threshold && b < threshold) data[i+3] = 0;
+      }
+      ctx.putImageData(d, 0, 0);
+      const url = c.toDataURL('image/png');
+      _shachoImgCache[src] = url;
+      resolve(url);
+    };
+    img.src = src;
+  });
+}
+function setShachoImgEl(el, src) {
+  if (!el) return;
+  if (document.documentElement.classList.contains('light')) {
+    removeShachoBlackBg(src).then(url => { el.src = url; });
+  } else {
+    el.src = src;
+  }
+}
+
 function getShachoImg(tab, delayCount) {
   if (delayCount >= 3) return SHACHO_IMG_ANGRY;
   if (delayCount >= 1) return SHACHO_IMG_SERIOUS;
@@ -5447,7 +5481,7 @@ function renderShachoWidget(tab, delayCount, position) {
 function updateShachoTab(tab, delayCount) {
   _shachoCurrentTab = tab;
   const img = document.getElementById('shacho-tab-img');
-  if (img) img.src = getShachoImg(tab, delayCount);
+  if (img) setShachoImgEl(img, getShachoImg(tab, delayCount));
 }
 
 // ロゴ5秒長押しでON/OFF切り替え
@@ -6187,7 +6221,7 @@ async function renderSchedule(el) {
         <!-- 社長（PC・スマホ共通、右カラム） -->
         <div class="shacho-tab-wrap" id="shacho-title-wrap" style="${shachoVisible?'display:flex':'display:none'}" onclick="shachoTap('all', currentDelayCount)">
           <div id="shacho-bubble" class="shacho-bubble-box"></div>
-          <img id="shacho-tab-img" src="${getShachoImg('all',0)}" style="width:86px;height:96px;object-fit:cover;object-position:top center;display:block">
+          <img id="shacho-tab-img" src="" style="width:86px;height:96px;object-fit:cover;object-position:top center;display:block">
         </div>
       </div>
     </div>
@@ -6206,6 +6240,8 @@ async function renderSchedule(el) {
   // 段取りデータをロード（スケジュールフィルタ用）
   await loadDandoriForSchedule();
   renderScheduleBody();
+  // 社長画像初期設定（ライトモードは黒背景除去）
+  setShachoImgEl(document.getElementById('shacho-tab-img'), getShachoImg('all', currentDelayCount));
   // 社長自動セリフ開始
   startShachoAutoPlay('all');
 }
