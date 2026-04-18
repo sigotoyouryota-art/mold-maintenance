@@ -500,7 +500,7 @@ select.form-control { cursor: pointer; }
 .drum-col { width:44px; height:120px; overflow-y:scroll; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; overscroll-behavior:contain; position:relative; z-index:2; cursor:grab; }
 .drum-col::-webkit-scrollbar { display:none; }
 .drum-item { height:40px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:500; color:var(--text3); scroll-snap-align:center; user-select:none; cursor:default; }
-.shacho-bubble-box { position:absolute; right:calc(100% + 8px); top:0; transform:translateY(0) translateX(4px); background:var(--bg2); border:0.5px solid var(--border2); border-radius:10px; padding:6px 11px; font-size:12px; color:var(--text); white-space:nowrap; opacity:0; transition:opacity 0.22s,transform 0.22s; pointer-events:none; z-index:200; }
+.shacho-bubble-box { position:absolute; right:calc(100% - 20px); top:0; transform:translateY(0) translateX(4px); background:var(--bg2); border:0.5px solid var(--border2); border-radius:10px; padding:6px 11px; font-size:12px; color:var(--text); white-space:nowrap; opacity:0; transition:opacity 0.22s,transform 0.22s; pointer-events:none; z-index:200; }
 .shacho-bubble-box::after { content:''; position:absolute; right:-5px; top:12px; transform:rotate(45deg); width:8px; height:8px; background:var(--bg2); border-top:0.5px solid var(--border2); border-right:0.5px solid var(--border2); }
 .shacho-tab-wrap { display:flex; align-items:center; flex-shrink:0; position:relative; cursor:pointer; background:var(--bg3); }
 .shacho-tab-wrap img { mix-blend-mode:screen; }
