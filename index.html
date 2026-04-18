@@ -3263,7 +3263,7 @@ function updateMaintDuration() {
   const disp  = document.getElementById('maint-duration-display');
   if (!disp) return;
   let mins = (end.h * 60 + end.m) - (start.h * 60 + start.m);
-  if (mins <= 0) mins += 24 * 60;
+  if (mins < 0) mins += 24 * 60;
   disp.textContent = mins + ' ' + (t('maintDurationUnit') || '分');
 }
 
@@ -3363,7 +3363,7 @@ function confirmMaintenance() {
   const startT = getDrumTime('start');
   const endT   = getDrumTime('end');
   let durationMin = (endT.h * 60 + endT.m) - (startT.h * 60 + startT.m);
-  if (durationMin <= 0) durationMin += 24 * 60;
+  if (durationMin < 0) durationMin += 24 * 60;
   state.maintStartTime   = startT.str;
   state.maintEndTime     = endT.str;
   state.maintDurationMin = durationMin;
