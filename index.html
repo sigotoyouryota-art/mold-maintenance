@@ -2019,7 +2019,69 @@ function fmtTime(min) {
 function fmtNum(n) { return Number(n).toLocaleString(); }
 
 // ===== ダッシュボード =====
-let dashPeriod = '30';
+function drawDashDailyChart(labels, data) {
+  const canvas = document.getElementById('dash-daily-canvas');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth;
+  const H = 120;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const isDark = document.body.classList.contains('dark') ||
+    window.matchMedia('(prefers-color-scheme:dark)').matches ||
+    document.documentElement.getAttribute('data-theme') === 'dark';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+  const padL=4, padR=4, padT=14, padB=20;
+  const cW=W-padL-padR, cH=H-padT-padB;
+  const max=Math.max(...data,1);
+  const slotW=cW/data.length;
+  const bw=slotW*0.65;
+  const bx0=(slotW-bw)/2;
+
+  // Grid lines
+  ctx.strokeStyle = gridColor;
+  ctx.lineWidth = 0.5;
+  [0.25,0.5,0.75,1].forEach(r => {
+    const y = padT + cH*(1-r);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+cW,y); ctx.stroke();
+  });
+
+  // Bars
+  data.forEach((v,i) => {
+    const bh = Math.max(v/max*cH, v>0?2:0);
+    const x = padL + i*slotW + bx0;
+    const y = padT + cH - bh;
+    ctx.fillStyle = '#378ADD';
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(x, y, bw, bh, 2); }
+    else { ctx.rect(x, y, bw, bh); }
+    ctx.fill();
+
+    // Count on top of bar
+    if (v > 0 && bw >= 10) {
+      ctx.fillStyle = '#378ADD';
+      ctx.font = `500 ${Math.min(9,Math.floor(bw*0.7))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(v, x+bw/2, y-2);
+    }
+
+    // Date label
+    const skip = Math.ceil(data.length/14);
+    if (i % skip === 0) {
+      ctx.fillStyle = textColor;
+      ctx.font = `${Math.min(10,Math.floor(bw*0.8))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(labels[i], x+bw/2, H-3);
+    }
+  });
+}
+
+
 let dashLine = 'all';
 let dashPartNo = '';
 let dashDateFrom = '';
@@ -2157,19 +2219,6 @@ function renderDashBody() {
     .sort((a,b)=>b.avg-a.avg).slice(0,8);
   const maxDur=durRank[0]?.avg||1;
 
-  // SVG bar chart for daily counts
-  const maxDaily=Math.max(...dailyData,1);
-  const bw=Math.floor(260/dailyData.length)-1;
-  const chartH=60;
-  const barsHtml=dailyData.map((v,i)=>{
-    const bh=Math.round(v/maxDaily*(chartH-14));
-    const x=i*(260/dailyData.length)+0.5;
-    const y=chartH-bh-12;
-    const showLbl = dailyData.length<=14 || i%Math.ceil(dailyData.length/10)===0;
-    return `<rect x="${x}" y="${y}" width="${Math.max(bw,2)}" height="${bh}" fill="#378ADD" rx="1"/>
-      ${showLbl?`<text x="${x+bw/2}" y="${chartH-1}" font-size="7" text-anchor="middle" fill="var(--text3)">${dailyLabels[i]}</text>`:''}`;
-  }).join('');
-
   // Weekday labels for heatmap
   const dowLabels = ['日','月','火','水','木','金','土'];
 
@@ -2186,7 +2235,7 @@ function renderDashBody() {
 
     <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border:0.5px solid var(--border)">
       <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">日別メンテ件数</div>
-      <svg viewBox="0 0 260 ${chartH}" width="100%" style="display:block;overflow:visible">${barsHtml}</svg>
+      <canvas id="dash-daily-canvas" style="width:100%;height:120px;display:block"></canvas>
     </div>
 
     <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border:0.5px solid var(--border);overflow-x:auto">
@@ -2238,6 +2287,8 @@ function renderDashBody() {
     </div>
 
   </div>`;
+
+  requestAnimationFrame(() => drawDashDailyChart(dailyLabels, dailyData));
 }
 
 
