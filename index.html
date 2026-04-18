@@ -2157,7 +2157,10 @@ function setDashLine(v) {
 let _dashLogs = [];
 function renderDashBody() {
   const logs = _dashLogs.filter(l => {
-    if (dashLine !== 'all' && l.machines?.lines?.name !== dashLine) return false;
+    if (dashLine !== 'all') {
+      const moldRef = state.molds.find(m => m.id === l.mold_id);
+      if (!moldRef || moldRef.line_name !== dashLine) return false;
+    }
     if (dashPartNo.trim()) {
       const kw = dashPartNo.trim().toLowerCase();
       if (!(l.molds?.part_no||'').toLowerCase().includes(kw) && !(l.molds?.part_name||'').toLowerCase().includes(kw)) return false;
@@ -2335,7 +2338,7 @@ async function renderDashboard(el) {
 
   try {
     const { startDate, endDate } = getDashPeriodDates();
-    let q = `?performed_at=gte.${startDate}&order=performed_at.asc&select=id,maintenance_type,performed_at,duration_min,molds(part_no,part_name),machines(machine_no,lines(name))&limit=5000`;
+    let q = `?performed_at=gte.${startDate}&order=performed_at.asc&select=id,mold_id,maintenance_type,performed_at,duration_min,molds(part_no,part_name)&limit=5000`;
     if (endDate) q += `&performed_at=lte.${endDate}`;
     _dashLogs = (await sb("maintenance_logs","GET",null,q)) || [];
     renderDashBody();
@@ -3583,7 +3586,7 @@ async function executeMaintenance() {
     }, `?id=eq.${mold.id}`);
     await sb('maintenance_logs','POST',{
       mold_id: mold.id,
-      machine_id: mold.machine_id || null,
+      machine_id: mold.machine_id || state.machines.find(m => m.machine_no === mold.machine_no)?.id || null,
       maintenance_type: state.maintType,
       shot_at_maintenance: currentTotalShot,
       maint_shot_at_maintenance: currentMaintShot,
