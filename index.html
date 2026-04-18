@@ -2109,7 +2109,7 @@ function getDashPeriodDates() {
 }
 
 function heatColor(n) {
-  const dark = document.body.classList.contains('dark') || !document.body.classList.contains('light');
+  const dark = !document.body.classList.contains('light');
   if (n===0) return dark ? '#1e2d45' : '#f0ede8';
   if (n===1) return '#C8F5D4';
   if (n<=3)  return '#6EE89A';
@@ -2278,8 +2278,7 @@ function renderDashBody() {
       </div>
       <div style="display:flex;gap:8px;margin-top:10px;align-items:flex-end">
         ${[['#f0ede8','#1e2d45','0件'],['#C8F5D4','#C8F5D4','1件'],['#6EE89A','#6EE89A','2-3件'],['#FFE580','#FFE580','4-5件'],['#FFB3B3','#FFB3B3','6-7件'],['#FF6B6B','#FF6B6B','8件+']].map(([lc,dc,lbl])=>{
-          const isDarkMode = !document.body.classList.contains('light');
-          return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+          const isDarkMode = !document.body.classList.contains('light');          return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
             <div style="width:24px;height:10px;border-radius:2px;background:${isDarkMode?dc:lc}"></div>
             <div style="font-size:9px;color:var(--text3);white-space:nowrap">${lbl}</div>
           </div>`;
