@@ -5818,7 +5818,7 @@ async function renderSchedule(el) {
             const order = ['1S','2S','3S'];
             const ci = order.indexOf(curShift);
             const tabs = [['all','すべて'], ...([0,1,2].map(i => { const s = order[(ci+i)%3]; return [s, s === curShift ? '▶ '+s : s]; }))];
-            return tabs.map(([v,l])=>`<button class="seg-btn ${scheduleShift===v?'active':''}" onclick="setSchedShift('${v}')" style="padding:4px 10px;font-size:10px${v===curShift&&scheduleShift!==v?';color:var(--warning)':''}">${l}</button>`).join('');
+            return tabs.map(([v,l])=>`<button class="seg-btn ${scheduleShift===v?'active':''}" onclick="setSchedShift('${v}')" style="padding:4px 10px;font-size:10px;flex:none${v===curShift&&scheduleShift!==v?';color:var(--warning)':''}">${l}</button>`).join('');
           })()}
         </div>
         <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:3px" id="sched-view-seg">
