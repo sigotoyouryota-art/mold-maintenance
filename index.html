@@ -5801,7 +5801,7 @@ async function renderSchedule(el) {
   const now = new Date();
   const h = now.getHours();
   const curShift = h>=8&&h<16?'1S':h>=16?'2S':'3S';
-  scheduleShift = curShift; // デフォルトは現在の直
+  scheduleShift = 'all'; // デフォルトはすべて
   const SHIFT_LABELS = {'1S':'1S（08:00〜16:00）','2S':'2S（16:00〜24:00）','3S':'3S（00:00〜08:00）'};
   const WEEKDAYS_H = ['日','月','火','水','木','金','土'];
   const headerDate = `${now.getMonth()+1}/${now.getDate()}(${WEEKDAYS_H[now.getDay()]})`;
@@ -5814,7 +5814,12 @@ async function renderSchedule(el) {
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:3px" id="sched-shift-seg">
-          ${[['all','すべて'],['1S','1S'],['2S','2S'],['3S','3S']].map(([v,l])=>`<button class="seg-btn ${scheduleShift===v?'active':''}" onclick="setSchedShift('${v}')" style="padding:4px 10px;font-size:10px">${l}</button>`).join('')}
+          ${(()=>{
+            const order = ['1S','2S','3S'];
+            const ci = order.indexOf(curShift);
+            const tabs = [['all','すべて'], ...([0,1,2].map(i => { const s = order[(ci+i)%3]; return [s, s === curShift ? '▶ '+s : s]; }))];
+            return tabs.map(([v,l])=>`<button class="seg-btn ${scheduleShift===v?'active':''}" onclick="setSchedShift('${v}')" style="padding:4px 10px;font-size:10px${v===curShift&&scheduleShift!==v?';color:var(--warning)':''}">${l}</button>`).join('');
+          })()}
         </div>
         <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:3px" id="sched-view-seg">
           <button class="seg-btn ${scheduleView==='card'?'active':''}" onclick="setSchedView('card',this)" style="padding:4px 8px;font-size:10px" title="${t('viewCard')}">📋</button>
