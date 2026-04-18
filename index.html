@@ -5801,6 +5801,7 @@ async function renderSchedule(el) {
   const now = new Date();
   const h = now.getHours();
   const curShift = h>=8&&h<16?'1S':h>=16?'2S':'3S';
+  scheduleShift = curShift; // デフォルトは現在の直
   const SHIFT_LABELS = {'1S':'1S（08:00〜16:00）','2S':'2S（16:00〜24:00）','3S':'3S（00:00〜08:00）'};
   const WEEKDAYS_H = ['日','月','火','水','木','金','土'];
   const headerDate = `${now.getMonth()+1}/${now.getDate()}(${WEEKDAYS_H[now.getDay()]})`;
@@ -5811,7 +5812,10 @@ async function renderSchedule(el) {
         <div style="font-size:13px;font-weight:600;color:var(--text)">${t('scheduleTitle')}</div>
         <div style="font-size:10px;color:var(--text3)">${headerDate}　${SHIFT_LABELS[curShift]}</div>
       </div>
-      <div style="display:flex;gap:6px;align-items:center">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:3px" id="sched-shift-seg">
+          ${[['all','すべて'],['1S','1S'],['2S','2S'],['3S','3S']].map(([v,l])=>`<button class="seg-btn ${scheduleShift===v?'active':''}" onclick="setSchedShift('${v}')" style="padding:4px 10px;font-size:10px">${l}</button>`).join('')}
+        </div>
         <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:3px" id="sched-view-seg">
           <button class="seg-btn ${scheduleView==='card'?'active':''}" onclick="setSchedView('card',this)" style="padding:4px 8px;font-size:10px" title="${t('viewCard')}">📋</button>
           <button class="seg-btn ${scheduleView==='timeline'?'active':''}" onclick="setSchedView('timeline',this)" style="padding:4px 8px;font-size:10px" title="${t('viewTimeline')}">📊</button>
@@ -5882,6 +5886,14 @@ function setSchedView(view, el) {
   scheduleView = view;
   document.querySelectorAll('#sched-view-seg .seg-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
+  renderScheduleBody();
+}
+function setSchedShift(v) {
+  scheduleShift = v;
+  document.querySelectorAll('#sched-shift-seg .seg-btn').forEach(b=>b.classList.remove('active'));
+  const btns = document.querySelectorAll('#sched-shift-seg .seg-btn');
+  const idx = ['all','1S','2S','3S'].indexOf(v);
+  if (btns[idx]) btns[idx].classList.add('active');
   renderScheduleBody();
 }
 
@@ -6161,7 +6173,14 @@ function renderScheduleBody() {
   if (!state.molds.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
 
   const allData = buildAllShifts();
-  const totalCount = allData.reduce((n,d)=>n+d.scheduled.length,0);
+  // シフトタブフィルタ（'all'以外は対象直のみ表示）
+  const visibleData = scheduleShift === 'all'
+    ? allData
+    : allData.filter((d, i) => {
+        if (i === 3) return d.shiftName === scheduleShift && d.scheduled.some(s => s.isContinuation || s.crossShift);
+        return d.shiftName === scheduleShift;
+      });
+  const totalCount = visibleData.reduce((n,d)=>n+d.scheduled.length,0);
   const today = new Date(); today.setHours(0,0,0,0);
 
   if (!totalCount && (!allData.unregisteredMolds || !allData.unregisteredMolds.length)) {
@@ -6176,8 +6195,7 @@ function renderScheduleBody() {
   // DEADLINE OVER バナー
   // 4直目は「直またぎ/継続がある場合のみ表示」なので、それが無い場合は
   // 4直目のエントリはUIに現れない → バナーカウントから除外して整合性を保つ
-  const deadlineOverCount = allData.reduce((n, d, i) => {
-    // 4直目かつ直またぎ/継続が無い場合は、その直のエントリは表示されないのでカウントしない
+  const deadlineOverCount = visibleData.reduce((n, d, i) => {
     if (i === 3 && !d.scheduled.some(s => s.isContinuation || s.crossShift)) return n;
     return n + d.scheduled.filter(s => s.deadlineOver && !s.isContinuation).length;
   }, 0);
@@ -6228,7 +6246,7 @@ function renderScheduleBody() {
   if (scheduleView === 'card') {
     let html = '';
     let globalRank = 0;
-    allData.forEach((shiftData, shiftIndex) => {
+    visibleData.forEach((shiftData, shiftIndex) => {
       // 4直目（受け皿）は直またぎ継続エントリがある場合のみ表示
       if (shiftIndex === 3 && !shiftData.scheduled.some(s => s.isContinuation || s.crossShift)) return;
       html += makeShiftHeader(shiftData, shiftIndex);
@@ -6344,7 +6362,7 @@ function renderScheduleBody() {
   // ===== タイムラインビュー =====
   let html = '';
   let globalRank = 0;
-  allData.forEach((shiftData, shiftIndex) => {
+  visibleData.forEach((shiftData, shiftIndex) => {
     // 4直目（受け皿）は直またぎ継続エントリがある場合のみ表示
     if (shiftIndex === 3 && !shiftData.scheduled.some(s => s.isContinuation || s.crossShift)) return;
     const { shiftStart, shiftEnd, scheduled } = shiftData;
