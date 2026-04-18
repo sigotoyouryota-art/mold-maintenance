@@ -2398,6 +2398,67 @@ function renderDashBody() {
       </div>
     </div>
 
+    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">工数</div>
+    <div id="workload-section">
+      <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-bottom:6px">
+        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">直別工数（本日）</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px" id="workload-today-cards">
+          <div style="text-align:center;padding:20px 0;color:var(--text4);font-size:11px;grid-column:1/-1">読み込み中...</div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-bottom:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:500;color:var(--text)">工数ヒートマップ</div>
+          <div style="display:flex;gap:3px;align-items:center">
+            <button onclick="setWorkloadPeriod('hm',7)" id="wl-hm-7" style="font-size:10px;padding:2px 8px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text3);cursor:pointer">7日</button>
+            <button onclick="setWorkloadPeriod('hm',14)" id="wl-hm-14" style="font-size:10px;padding:2px 8px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text3);cursor:pointer">14日</button>
+            <button onclick="setWorkloadPeriod('hm',30)" id="wl-hm-30" style="font-size:10px;padding:2px 8px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text3);cursor:pointer">30日</button>
+            <button onclick="openWorkloadCalendar('hm')" id="wl-hm-cal" style="font-size:10px;padding:2px 7px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text3);cursor:pointer">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+          </div>
+        </div>
+        <div id="workload-heatmap">
+          <div style="text-align:center;padding:20px 0;color:var(--text4);font-size:11px">読み込み中...</div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-bottom:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:500;color:var(--text)">工数履歴</div>
+          <div style="display:flex;gap:3px;align-items:center">
+            <button onclick="setWorkloadPeriod('hist',7)" id="wl-hist-7" style="font-size:10px;padding:2px 8px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text3);cursor:pointer">7日</button>
+            <button onclick="setWorkloadPeriod('hist',14)" id="wl-hist-14" style="font-size:10px;padding:2px 8px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text3);cursor:pointer">14日</button>
+            <button onclick="setWorkloadPeriod('hist',30)" id="wl-hist-30" style="font-size:10px;padding:2px 8px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text3);cursor:pointer">30日</button>
+            <button onclick="openWorkloadCalendar('hist')" id="wl-hist-cal" style="font-size:10px;padding:2px 7px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text3);cursor:pointer">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+          </div>
+        </div>
+        <div id="workload-history">
+          <div style="text-align:center;padding:20px 0;color:var(--text4);font-size:11px">読み込み中...</div>
+        </div>
+      </div>
+      <div id="workload-cal-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column">
+        <div style="background:var(--bg);border-radius:12px;padding:16px;width:280px;border:0.5px solid var(--border2)" onclick="event.stopPropagation()">
+          <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px">期間を指定</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:var(--text3);width:28px">From</span>
+              <input type="date" id="wl-cal-from" style="flex:1;font-size:12px;padding:4px 8px;border-radius:6px;border:0.5px solid var(--border2);background:var(--bg);color:var(--text)">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:var(--text3);width:28px">To</span>
+              <input type="date" id="wl-cal-to" style="flex:1;font-size:12px;padding:4px 8px;border-radius:6px;border:0.5px solid var(--border2);background:var(--bg);color:var(--text)">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="applyWorkloadCalendar()" style="flex:1;padding:7px;background:var(--info-bg);color:var(--info-text);border:none;border-radius:6px;font-size:12px;cursor:pointer">適用</button>
+            <button onclick="closeWorkloadCalendar()" style="flex:1;padding:7px;background:var(--bg2);color:var(--text3);border:0.5px solid var(--border2);border-radius:6px;font-size:12px;cursor:pointer">キャンセル</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">件数分析</div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px">
       <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border)">
@@ -2495,6 +2556,8 @@ function renderDashBody() {
   };
 
   requestAnimationFrame(() => drawDashDailyChart(dailyLabels, dailyData));
+  // 工数セクション描画（非同期）
+  renderWorkloadSection().catch(e => console.error('workload error', e));
 }
 
 
@@ -2955,6 +3018,319 @@ function getLocalDateStr(date) {
   const d = String(date.getDate()).padStart(2,'0');
   return `${y}-${m}-${d}`;
 }
+// ===== 工数 (shift_workload) =====
+const WORKLOAD_CAPACITY = 435; // 7時間15分 = 435分
+let _wlHmDays = 7, _wlHistDays = 7;
+let _wlHmFrom = null, _wlHmTo = null;
+let _wlHistFrom = null, _wlHistTo = null;
+let _wlCalTarget = 'hm'; // 'hm' or 'hist'
+
+async function loadWorkloadData(fromDate, toDate) {
+  const q = '?shift_date=gte.' + fromDate + '&shift_date=lte.' + toDate + '&order=shift_date.desc,shift.asc&limit=500';
+  return (await sb('shift_workload', 'GET', null, q)) || [];
+}
+
+async function saveShiftWorkload(shiftDate, shift, actualMin) {
+  await sb('shift_workload', 'POST', { shift_date: shiftDate, shift: shift, actual_min: actualMin }, '?on_conflict=shift_date,shift');
+}
+
+function getWorkloadColor(kosu) {
+  if (kosu === null || kosu === undefined) return { bg: 'var(--bg)', text: 'var(--text4)' };
+  if (kosu >= 1.0) return { bg: '#E24B4A', text: 'white' };
+  if (kosu >= 0.8) return { bg: '#ffc107', text: '#633806' };
+  if (kosu >= 0.6) return { bg: '#28a745', text: 'white' };
+  if (kosu >= 0.3) return { bg: '#70c98a', text: '#27500A' };
+  if (kosu > 0)    return { bg: '#d4edda', text: '#27500A' };
+  return { bg: 'var(--bg)', text: 'var(--text4)' };
+}
+
+function getWorkloadBarColor(kosu) {
+  if (kosu === null || kosu === undefined) return 'var(--border)';
+  if (kosu >= 1.0) return '#E24B4A';
+  if (kosu >= 0.8) return '#ffc107';
+  if (kosu >= 0.6) return '#28a745';
+  return '#70c98a';
+}
+
+// 今日の予定工数をbuildAllShiftsから計算
+function calcTodayPlannedWorkload() {
+  try {
+    const allData = buildAllShifts();
+    const result = { '1S': null, '2S': null, '3S': null };
+    allData.forEach(d => {
+      if (!d || !d.shiftName || !result.hasOwnProperty(d.shiftName)) return;
+      const totalMin = (d.scheduled || []).reduce((s, e) => s + (e.dur || 0), 0);
+      result[d.shiftName] = parseFloat((totalMin / WORKLOAD_CAPACITY).toFixed(2));
+    });
+    return result;
+  } catch(e) { return { '1S': null, '2S': null, '3S': null }; }
+}
+
+// シフトが終了済みか判定
+function isShiftFinished(shiftDate, shift) {
+  const now = new Date();
+  const today = getLocalDateStr(now);
+  const h = now.getHours();
+  if (shiftDate < today) return true;
+  if (shiftDate > today) return false;
+  // 同日
+  if (shift === '1S') return h >= 16;
+  if (shift === '2S') return h >= 0 && h < 8; // 翌日0-8時は2S終了
+  if (shift === '3S') return h >= 8;
+  return false;
+}
+
+// 今日の実績工数をmaintenance_logsから計算して保存
+async function checkAndSaveFinishedShifts() {
+  const today = getLocalDateStr();
+  const yesterday = getLocalDateStr(new Date(Date.now() - 86400000));
+  // 1S/3Sは今日、2Sは今日の深夜(0-8)なので昨日の2Sもチェック
+  const targets = [
+    { shift_date: today, shift: '1S' },
+    { shift_date: today, shift: '3S' },
+    { shift_date: yesterday, shift: '2S' },
+  ];
+  for (const { shift_date, shift } of targets) {
+    if (!isShiftFinished(shift_date, shift)) continue;
+    // 既に実績保存済みか確認
+    const existing = await sb('shift_workload', 'GET', null, '?shift_date=eq.' + shift_date + '&shift=eq.' + shift + '&limit=1');
+    if (existing && existing.length > 0 && existing[0].actual_min !== null) continue;
+    // 実績を集計
+    const shiftStart = shift === '1S' ? shift_date + 'T08:00:00' : shift === '2S' ? shift_date + 'T16:00:00' : shift_date + 'T00:00:00';
+    const shiftEnd   = shift === '1S' ? shift_date + 'T16:00:00' : shift === '2S' ? shift_date + 'T23:59:59' : shift_date + 'T08:00:00';
+    const q = '?shift=eq.' + shift + '&performed_at=gte.' + shiftStart + '&performed_at=lte.' + shiftEnd + '&select=duration_min&limit=1000';
+    const logs = (await sb('maintenance_logs', 'GET', null, q)) || [];
+    const actualMin = logs.reduce((s, l) => s + (l.duration_min || 0), 0);
+    await saveShiftWorkload(shift_date, shift, actualMin);
+  }
+}
+
+async function renderWorkloadSection() {
+  // 終了シフトの実績を自動保存
+  try { await checkAndSaveFinishedShifts(); } catch(e) {}
+
+  // --- 今日の直別工数カード ---
+  const planned = calcTodayPlannedWorkload();
+  const today = getLocalDateStr();
+  const existing = (await sb('shift_workload', 'GET', null, '?shift_date=eq.' + today + '&limit=3')) || [];
+  const todayMap = {};
+  existing.forEach(r => { todayMap[r.shift] = r; });
+
+  const todayEl = document.getElementById('workload-today-cards');
+  if (todayEl) {
+    const shiftColors = { '1S': { bg: '#E6F1FB', text: '#0C447C' }, '2S': { bg: '#EAF3DE', text: '#27500A' }, '3S': { bg: '#FAEEDA', text: '#633806' } };
+    todayEl.innerHTML = ['1S', '2S', '3S'].map(s => {
+      const rec = todayMap[s];
+      const finished = isShiftFinished(today, s);
+      let kosu, label;
+      if (finished && rec && rec.actual_min !== null) {
+        kosu = parseFloat((rec.actual_min / WORKLOAD_CAPACITY).toFixed(2));
+        label = '実績';
+      } else {
+        kosu = planned[s];
+        label = '予定';
+      }
+      const c = shiftColors[s];
+      return '<div style="background:var(--bg);border-radius:6px;padding:8px 10px;border:0.5px solid var(--border)">' +
+        '<div style="font-size:10px;color:' + c.text + ';background:' + c.bg + ';display:inline-block;padding:1px 6px;border-radius:4px;margin-bottom:6px">' + s + '</div>' +
+        '<div style="font-size:20px;font-weight:500;color:var(--info-text)">' + (kosu !== null ? kosu.toFixed(2) : '-') + '</div>' +
+        '<div style="font-size:10px;color:var(--text4)">' + label + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // --- ヒートマップ ---
+  await renderWorkloadHeatmap();
+  // --- 履歴 ---
+  await renderWorkloadHistory();
+
+  // ボタンのアクティブ状態を更新
+  updateWorkloadBtnActive();
+}
+
+function updateWorkloadBtnActive() {
+  ['hm', 'hist'].forEach(type => {
+    const days = type === 'hm' ? _wlHmDays : _wlHistDays;
+    const from = type === 'hm' ? _wlHmFrom : _wlHistFrom;
+    [7, 14, 30].forEach(d => {
+      const btn = document.getElementById('wl-' + type + '-' + d);
+      if (!btn) return;
+      const active = !from && days === d;
+      btn.style.background = active ? 'var(--info-bg)' : 'var(--bg)';
+      btn.style.color = active ? 'var(--info-text)' : 'var(--text3)';
+      btn.style.borderColor = active ? 'var(--info-text)' : 'var(--border2)';
+    });
+    const calBtn = document.getElementById('wl-' + type + '-cal');
+    if (calBtn) {
+      calBtn.style.background = from ? 'var(--info-bg)' : 'var(--bg)';
+      calBtn.style.color = from ? 'var(--info-text)' : 'var(--text3)';
+    }
+  });
+}
+
+async function renderWorkloadHeatmap() {
+  const el = document.getElementById('workload-heatmap');
+  if (!el) return;
+  const today = new Date();
+  const toDate = getLocalDateStr(today);
+  let fromDate;
+  if (_wlHmFrom) {
+    fromDate = _wlHmFrom;
+  } else {
+    const d = new Date(today); d.setDate(d.getDate() - (_wlHmDays - 1));
+    fromDate = getLocalDateStr(d);
+  }
+  const toDateStr = _wlHmTo || toDate;
+  const rows = await loadWorkloadData(fromDate, toDateStr);
+  const planned = calcTodayPlannedWorkload();
+
+  // 日付リスト生成（降順）
+  const dates = [];
+  const cur = new Date(toDateStr + 'T00:00:00');
+  const from = new Date(fromDate + 'T00:00:00');
+  while (cur >= from) { dates.push(getLocalDateStr(new Date(cur))); cur.setDate(cur.getDate() - 1); }
+
+  // rowsをMap化
+  const rowMap = {};
+  rows.forEach(r => { rowMap[r.shift_date + '_' + r.shift] = r; });
+
+  // テーブル構築
+  const dateHeaders = dates.map(d => {
+    const dt = new Date(d + 'T00:00:00');
+    return (dt.getMonth()+1) + '/' + dt.getDate();
+  });
+
+  let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:separate;border-spacing:2px">';
+  html += '<thead><tr><th style="width:24px"></th>' + dateHeaders.map(h => '<th style="font-size:9px;color:var(--text3);font-weight:400;text-align:center;padding:2px 0;white-space:nowrap">' + h + '</th>').join('') + '</tr></thead><tbody>';
+
+  ['1S', '2S', '3S'].forEach(shift => {
+    html += '<tr><td style="font-size:10px;color:var(--text3);text-align:right;padding-right:4px;font-weight:500">' + shift + '</td>';
+    dates.forEach(d => {
+      const rec = rowMap[d + '_' + shift];
+      const finished = isShiftFinished(d, shift);
+      let kosu, label;
+      if (finished && rec && rec.actual_min !== null) {
+        kosu = rec.actual_min / WORKLOAD_CAPACITY;
+        label = kosu.toFixed(2);
+      } else if (d === toDate && !finished) {
+        kosu = planned[shift];
+        label = kosu !== null ? kosu.toFixed(2) : '-';
+      } else {
+        kosu = null; label = '-';
+      }
+      const c = getWorkloadColor(kosu);
+      html += '<td style="background:' + c.bg + ';border-radius:3px;height:22px;text-align:center;font-size:9px;font-weight:500;color:' + c.text + ';cursor:default">' + label + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  // 凡例
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">' +
+    '<span style="font-size:9px;color:var(--text4)">工数：</span>' +
+    [['#d4edda','#27500A','〜0.3'],['#70c98a','#27500A','〜0.6'],['#28a745','white','〜0.8'],['#ffc107','#633806','〜1.0'],['#E24B4A','white','超過']].map(([bg,c,lbl]) =>
+      '<span style="display:flex;align-items:center;gap:2px;font-size:9px;color:var(--text3)"><span style="width:11px;height:11px;border-radius:2px;background:' + bg + ';display:inline-block"></span>' + lbl + '</span>'
+    ).join('') + '</div>';
+
+  el.innerHTML = html;
+}
+
+async function renderWorkloadHistory() {
+  const el = document.getElementById('workload-history');
+  if (!el) return;
+  const today = new Date();
+  const toDate = getLocalDateStr(today);
+  let fromDate;
+  if (_wlHistFrom) {
+    fromDate = _wlHistFrom;
+  } else {
+    const d = new Date(today); d.setDate(d.getDate() - (_wlHistDays - 1));
+    fromDate = getLocalDateStr(d);
+  }
+  const toDateStr = _wlHistTo || toDate;
+  const rows = await loadWorkloadData(fromDate, toDateStr);
+  const planned = calcTodayPlannedWorkload();
+  const todayStr = getLocalDateStr();
+
+  if (!rows.length && !['1S','2S','3S'].some(s => isShiftFinished(todayStr, s))) {
+    el.innerHTML = '<div style="text-align:center;padding:16px 0;color:var(--text4);font-size:11px">データがありません</div>';
+    return;
+  }
+
+  // 今日の予定行も追加（終了していない直）
+  const allRows = [...rows];
+  const rowKeys = new Set(rows.map(r => r.shift_date + '_' + r.shift));
+  ['3S', '2S', '1S'].forEach(shift => {
+    if (!isShiftFinished(todayStr, shift) && !rowKeys.has(todayStr + '_' + shift)) {
+      const kosu = planned[shift];
+      if (kosu !== null) allRows.unshift({ shift_date: todayStr, shift, actual_min: null, _planned: kosu });
+    }
+  });
+
+  const shiftBadgeStyle = { '1S': 'background:#E6F1FB;color:#0C447C', '2S': 'background:#EAF3DE;color:#27500A', '3S': 'background:#FAEEDA;color:#633806' };
+
+  let html = '';
+  allRows.forEach(r => {
+    const finished = isShiftFinished(r.shift_date, r.shift);
+    let kosu, isPlanned;
+    if (finished && r.actual_min !== null) {
+      kosu = r.actual_min / WORKLOAD_CAPACITY;
+      isPlanned = false;
+    } else {
+      kosu = r._planned !== undefined ? r._planned : planned[r.shift];
+      isPlanned = true;
+    }
+    const dt = new Date(r.shift_date + 'T00:00:00');
+    const dateLabel = (dt.getMonth()+1) + '/' + dt.getDate();
+    const pct = kosu !== null ? Math.min(kosu, 1.2) / 1.2 * 100 : 0;
+    const barColor = getWorkloadBarColor(kosu);
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border)">' +
+      '<span style="font-size:11px;color:var(--text3);min-width:32px">' + dateLabel + '</span>' +
+      '<span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;' + (shiftBadgeStyle[r.shift] || '') + '">' + r.shift + '</span>' +
+      '<div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden">' +
+        '<div style="width:' + pct.toFixed(1) + '%;height:100%;background:' + barColor + ';border-radius:4px' + (isPlanned ? ';opacity:0.5' : '') + '"></div>' +
+      '</div>' +
+      '<span style="font-size:11px;font-weight:500;color:var(--text);min-width:36px;text-align:right">' + (kosu !== null ? kosu.toFixed(2) : '-') + '</span>' +
+      (isPlanned ? '<span style="font-size:9px;color:var(--text4);min-width:20px">予定</span>' : '<span style="font-size:9px;color:var(--text4);min-width:20px">実績</span>') +
+      '</div>';
+  });
+  el.innerHTML = html || '<div style="text-align:center;padding:16px 0;color:var(--text4);font-size:11px">データがありません</div>';
+}
+
+function setWorkloadPeriod(type, days) {
+  if (type === 'hm') { _wlHmDays = days; _wlHmFrom = null; _wlHmTo = null; renderWorkloadHeatmap(); }
+  else { _wlHistDays = days; _wlHistFrom = null; _wlHistTo = null; renderWorkloadHistory(); }
+  updateWorkloadBtnActive();
+}
+
+function openWorkloadCalendar(type) {
+  _wlCalTarget = type;
+  const today = getLocalDateStr();
+  const fromVal = type === 'hm' ? (_wlHmFrom || (() => { const d = new Date(); d.setDate(d.getDate()-6); return getLocalDateStr(d); })()) : (_wlHistFrom || (() => { const d = new Date(); d.setDate(d.getDate()-6); return getLocalDateStr(d); })());
+  const toVal = type === 'hm' ? (_wlHmTo || today) : (_wlHistTo || today);
+  const fromEl = document.getElementById('wl-cal-from');
+  const toEl = document.getElementById('wl-cal-to');
+  if (fromEl) fromEl.value = fromVal;
+  if (toEl) toEl.value = toVal;
+  const modal = document.getElementById('workload-cal-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeWorkloadCalendar() {
+  const modal = document.getElementById('workload-cal-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function applyWorkloadCalendar() {
+  const from = document.getElementById('wl-cal-from')?.value;
+  const to = document.getElementById('wl-cal-to')?.value;
+  if (!from || !to) return;
+  closeWorkloadCalendar();
+  if (_wlCalTarget === 'hm') { _wlHmFrom = from; _wlHmTo = to; renderWorkloadHeatmap(); }
+  else { _wlHistFrom = from; _wlHistTo = to; renderWorkloadHistory(); }
+  updateWorkloadBtnActive();
+}
+
 let dandoriData = {};
 let dandoriMoldIdSet = new Set(); // dandoriDataのvalue(mold_id)のSetキャッシュ（O(1)検索用）
 let dandoriConfigured = false; // DBに段取り設定が1件でも存在すればtrue（全台停止と未設定を区別）
