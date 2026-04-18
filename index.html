@@ -5351,7 +5351,7 @@ function removeShachoBlackBg(src) {
         const imageData = ctx.getImageData(0, 0, c.width, c.height);
         const data = imageData.data;
         for (let i = 0; i < data.length; i += 4) {
-          if (data[i] < 40 && data[i+1] < 40 && data[i+2] < 40) {
+          if (data[i] < 15 && data[i+1] < 15 && data[i+2] < 15) {
             data[i+3] = 0;
           }
         }
@@ -5372,11 +5372,7 @@ function removeShachoBlackBg(src) {
 function setShachoImgEl(el, src) {
   if (!el || !src) return;
   if (document.body.classList.contains('light')) {
-    console.log('[shacho] light mode: removing black bg, src length=', src.length);
-    removeShachoBlackBg(src).then(url => {
-      console.log('[shacho] done, url length=', url.length, url === src ? '(unchanged)' : '(processed)');
-      if (el) el.src = url;
-    });
+    removeShachoBlackBg(src).then(url => { if (el) el.src = url; });
   } else {
     el.src = src;
   }
