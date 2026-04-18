@@ -503,6 +503,8 @@ select.form-control { cursor: pointer; }
 .shacho-bubble-box { position:absolute; right:calc(100% + 8px); top:50%; transform:translateY(-50%) translateX(4px); background:var(--bg2); border:0.5px solid var(--border2); border-radius:10px; padding:6px 11px; font-size:12px; color:var(--text); white-space:nowrap; opacity:0; transition:opacity 0.22s,transform 0.22s; pointer-events:none; z-index:200; }
 .shacho-bubble-box::after { content:''; position:absolute; right:-5px; top:50%; transform:translateY(-50%) rotate(45deg); width:8px; height:8px; background:var(--bg2); border-top:0.5px solid var(--border2); border-right:0.5px solid var(--border2); }
 .shacho-tab-wrap { display:flex; align-items:center; flex-shrink:0; position:relative; cursor:pointer; }
+.shacho-tab-wrap img { mix-blend-mode:screen; }
+.light .shacho-tab-wrap img { mix-blend-mode:normal; }
 .shacho-bubble-show { opacity:1 !important; transform:translateY(-50%) translateX(0) !important; }
 @keyframes shachoShimmer { 0%,100%{color:#f8d060} 25%{color:#ffe89a} 50%{color:#c8a000} 75%{color:#ffd040} }
 @keyframes shachoCrownBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
@@ -6184,7 +6186,7 @@ async function renderSchedule(el) {
         <!-- 社長（PC・スマホ共通、右カラム） -->
         <div class="shacho-tab-wrap" id="shacho-title-wrap" style="${shachoVisible?'display:flex':'display:none'}" onclick="shachoTap('all', currentDelayCount)">
           <div id="shacho-bubble" class="shacho-bubble-box"></div>
-          <img id="shacho-tab-img" src="${getShachoImg('all',0)}" style="width:86px;height:96px;object-fit:cover;object-position:top center;mix-blend-mode:screen;display:block">
+          <img id="shacho-tab-img" src="${getShachoImg('all',0)}" style="width:86px;height:96px;object-fit:cover;object-position:top center;display:block">
         </div>
       </div>
     </div>
