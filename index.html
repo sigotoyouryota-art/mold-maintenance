@@ -2354,29 +2354,30 @@ function renderDashBody() {
       <div class="kpi-card"><div class="kpi-label">平均所要時間</div><div class="kpi-value" style="font-size:18px">${avgDur}<span style="font-size:11px;color:var(--text3)"> 分</span></div></div>
     </div>
 
-    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border:0.5px solid var(--border)">
-      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">${dashPeriod==='today'?'時間別メンテ件数（業務日08:00起点）':'日別メンテ件数'}</div>
-      <canvas id="dash-daily-canvas" style="width:100%;height:120px;display:block"></canvas>
+    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">現場状況</div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px">
+      <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border)">
+        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:10px">直別件数</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+          ${['1S','2S','3S'].map(s=>`<div style="background:var(--bg);border-radius:6px;padding:8px 10px;border:0.5px solid var(--border)">
+            <div style="font-size:10px;color:var(--text4);margin-bottom:4px">${s}</div>
+            <div style="font-size:20px;font-weight:500;color:var(--info-text)">${shiftCountMap[s]}</div>
+            <div style="font-size:10px;color:var(--text4)">件</div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border)">
+        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">作業者別件数</div>
+        ${workerRank.map(([name,cnt])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <span style="font-size:11px;color:var(--text2);width:90px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</span>
+          <div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${Math.round(cnt/maxWorker*100)}%;height:100%;background:#378ADD;border-radius:4px"></div></div>
+          <span style="font-size:11px;color:var(--text3);width:28px;text-align:right;flex-shrink:0">${cnt}件</span>
+        </div>`).join('')}
+        ${!workerRank.length?`<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">${t('noData')}</div>`:''}
+      </div>
     </div>
 
-    <div style="background:var(--bg2);border-radius:8px;padding:14px 16px;margin-bottom:8px;border:0.5px solid var(--border);overflow-x:auto">
-      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:12px">時間帯別件数ヒートマップ</div>
-      <div style="display:grid;grid-template-columns:52px repeat(7,1fr);gap:3px;align-items:center;min-width:360px">
-        <div></div>
-        ${['月','火','水','木','金','土','日'].map(d=>`<div style="font-size:11px;color:var(--text3);text-align:center;padding-bottom:4px">${d}</div>`).join('')}
-        ${timeSlots.map((slot,si)=>`
-          <div style="font-size:10px;color:var(--text3);text-align:right;padding-right:6px;white-space:nowrap">${slot}</div>
-          ${[1,2,3,4,5,6,0].map(dow=>{
-            const n=heatmap[si][dow];
-            return `<div style="height:30px;border-radius:4px;background:${heatColor(n)};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:${heatTextCol(n)}" title="${slot} ${['月','火','水','木','金','土','日'][dow===0?6:dow-1]}曜: ${n}件">${n>0?n:''}</div>`;
-          }).join('')}
-        `).join('')}
-      </div>
-      <div style="display:flex;gap:8px;margin-top:10px;align-items:flex-end">
-        ${[['var(--hm-empty)','0件'],['#C8F5D4','1件'],['#6EE89A','2-3件'],['#FFE580','4-5件'],['#FFB3B3','6-7件'],['#FF6B6B','8件+']].map(([bg,lbl])=>`<div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:24px;height:10px;border-radius:2px;background:${bg}"></div><div style="font-size:9px;color:var(--text3);white-space:nowrap">${lbl}</div></div>`).join('')}
-      </div>
-    </div>
-
+    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">件数分析</div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px">
       <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border)">
         <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">金型別件数 TOP${moldRank.length}</div>
@@ -2402,30 +2403,8 @@ function renderDashBody() {
       </div>
     </div>
 
-    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border)">
-      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">平均メンテ時間 TOP${durRank.length}（2件以上の金型）</div>
-      ${durRank.map(m=>`<div style="margin-bottom:5px">
-        <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">
-          <span style="color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${esc(m.name)}</span>
-          <span style="color:var(--text3);font-weight:500;flex-shrink:0">${m.avg}分</span>
-        </div>
-        <div style="height:4px;background:var(--border);border-radius:2px"><div style="height:100%;width:${Math.round(m.avg/maxDur*100)}%;background:#a78bfa;border-radius:2px"></div></div>
-      </div>`).join('')}
-      ${!durRank.length?`<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">所要時間の登録データが2件以上ある金型が対象です</div>`:''}
-    </div>
-
-    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-top:8px">
-      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:10px">直別件数</div>
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
-        ${['1S','2S','3S'].map(s=>`<div style="background:var(--bg);border-radius:6px;padding:8px 10px;border:0.5px solid var(--border)">
-          <div style="font-size:10px;color:var(--text4);margin-bottom:4px">${s}</div>
-          <div style="font-size:20px;font-weight:500;color:var(--info-text)">${shiftCountMap[s]}</div>
-          <div style="font-size:10px;color:var(--text4)">件</div>
-        </div>`).join('')}
-      </div>
-    </div>
-
-    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-top:8px">
+    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">品質指標</div>
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-bottom:8px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:11px;font-weight:500;color:var(--text)">メンテ間隔遵守率</div>
         <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px" id="comp-tab-seg">
@@ -2449,14 +2428,40 @@ function renderDashBody() {
       </div>
     </div>
 
-    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-top:8px">
-      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">作業者別件数</div>
-      ${workerRank.map(([name,cnt])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-        <span style="font-size:11px;color:var(--text2);width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</span>
-        <div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${Math.round(cnt/maxWorker*100)}%;height:100%;background:#378ADD;border-radius:4px"></div></div>
-        <span style="font-size:11px;color:var(--text3);width:34px;text-align:right;flex-shrink:0">${cnt}件</span>
+    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">トレンド</div>
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border:0.5px solid var(--border)">
+      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">${dashPeriod==='today'?'時間別メンテ件数（業務日08:00起点）':'日別メンテ件数'}</div>
+      <canvas id="dash-daily-canvas" style="width:100%;height:120px;display:block"></canvas>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:8px;padding:14px 16px;margin-bottom:8px;border:0.5px solid var(--border);overflow-x:auto">
+      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:12px">時間帯別件数ヒートマップ</div>
+      <div style="display:grid;grid-template-columns:52px repeat(7,1fr);gap:3px;align-items:center;min-width:360px">
+        <div></div>
+        ${['月','火','水','木','金','土','日'].map(d=>`<div style="font-size:11px;color:var(--text3);text-align:center;padding-bottom:4px">${d}</div>`).join('')}
+        ${timeSlots.map((slot,si)=>`
+          <div style="font-size:10px;color:var(--text3);text-align:right;padding-right:6px;white-space:nowrap">${slot}</div>
+          ${[1,2,3,4,5,6,0].map(dow=>{
+            const n=heatmap[si][dow];
+            return `<div style="height:30px;border-radius:4px;background:${heatColor(n)};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:${heatTextCol(n)}" title="${slot} ${['月','火','水','木','金','土','日'][dow===0?6:dow-1]}曜: ${n}件">${n>0?n:''}</div>`;
+          }).join('')}
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:flex-end">
+        ${[['var(--hm-empty)','0件'],['#C8F5D4','1件'],['#6EE89A','2-3件'],['#FFE580','4-5件'],['#FFB3B3','6-7件'],['#FF6B6B','8件+']].map(([bg,lbl])=>`<div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="width:24px;height:10px;border-radius:2px;background:${bg}"></div><div style="font-size:9px;color:var(--text3);white-space:nowrap">${lbl}</div></div>`).join('')}
+      </div>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border)">
+      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">平均メンテ時間 TOP${durRank.length}（2件以上の金型）</div>
+      ${durRank.map(m=>`<div style="margin-bottom:5px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">
+          <span style="color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${esc(m.name)}</span>
+          <span style="color:var(--text3);font-weight:500;flex-shrink:0">${m.avg}分</span>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:2px"><div style="height:100%;width:${Math.round(m.avg/maxDur*100)}%;background:#a78bfa;border-radius:2px"></div></div>
       </div>`).join('')}
-      ${!workerRank.length?`<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">${t('noData')}</div>`:''}
+      ${!durRank.length?`<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">所要時間の登録データが2件以上ある金型が対象です</div>`:''}
     </div>
 
   </div>`;
