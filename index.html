@@ -4878,7 +4878,7 @@ function renderSettings(el) {
           <div style="font-size:13px;color:var(--text2)">${t('appVersionLabel')}</div>
           <div style="font-size:11px;color:var(--text4);margin-top:2px">v${CURRENT_VERSION}</div>
         </div>
-        <button id="update-check-btn" onclick="checkForUpdate()" class="btn btn-secondary btn-sm" style="white-space:nowrap">${t('updateCheckBtn')}</button>
+        <button id="update-check-btn" onclick="forceReload()" class="btn btn-secondary btn-sm" style="white-space:nowrap">${t('updateCheckBtn')}</button>
       </div>
       <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="forceReload()">
         <span style="font-size:13px;color:var(--text2)">${t('reloadBtn')}</span>
