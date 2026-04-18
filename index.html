@@ -3116,6 +3116,7 @@ async function renderWorkloadHeatmap() {
   const cur = new Date(toDate + 'T00:00:00');
   const from = new Date(fromDate + 'T00:00:00');
   while (cur >= from) { dates.push(getLocalDateStr(new Date(cur))); cur.setDate(cur.getDate() - 1); }
+  dates.reverse();
 
   const rowMap = {};
   rows.forEach(r => { rowMap[r.shift_date + '_' + r.shift] = r; });
