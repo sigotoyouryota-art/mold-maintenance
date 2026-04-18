@@ -2302,21 +2302,7 @@ function renderDashBody() {
 
 async function renderDashboard(el) {
   await loadDandoriForSchedule();
-  const dashMolds = state.molds.filter(m=>dandoriMoldIdSet.has(m.id));
-  const lv4=dashMolds.filter(m=>calcStatus(m)==='overdue').length;
-  const lv3=dashMolds.filter(m=>calcStatus(m)==='danger').length;
-  const lv2=dashMolds.filter(m=>calcStatus(m)==='warning').length;
-  const lv1=dashMolds.filter(m=>calcStatus(m)==='normal').length;
-
   el.innerHTML = renderDashFilterBar() + `
-  <div style="padding:8px 12px 4px">
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:8px">
-      <div style="background:var(--bg2);border-radius:8px;padding:6px;text-align:center;border:0.5px solid var(--border);border-top:2px solid var(--overdue-border)"><div style="font-size:9px;color:var(--overdue-text);font-weight:500">Lv4 超過</div><div style="font-size:20px;font-weight:500;color:var(--overdue-text)">${lv4}</div></div>
-      <div style="background:var(--bg2);border-radius:8px;padding:6px;text-align:center;border:0.5px solid var(--border);border-top:2px solid var(--danger-border)"><div style="font-size:9px;color:var(--maint-text);font-weight:500">Lv3 警戒</div><div style="font-size:20px;font-weight:500;color:var(--maint-text)">${lv3}</div></div>
-      <div style="background:var(--bg2);border-radius:8px;padding:6px;text-align:center;border:0.5px solid var(--border);border-top:2px solid var(--warning)"><div style="font-size:9px;color:var(--warning-text);font-weight:500">Lv2 準備</div><div style="font-size:20px;font-weight:500;color:var(--warning-text)">${lv2}</div></div>
-      <div style="background:var(--bg2);border-radius:8px;padding:6px;text-align:center;border:0.5px solid var(--border);border-top:2px solid var(--success)"><div style="font-size:9px;color:var(--success-text);font-weight:500">Lv1 予定</div><div style="font-size:20px;font-weight:500;color:var(--success-text)">${lv1}</div></div>
-    </div>
-  </div>
   <div id="dash-body" style="padding:0 12px"><div class="loading-overlay"><div class="spinner"></div></div></div>`;
 
   try {
