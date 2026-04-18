@@ -133,7 +133,7 @@ body { background: var(--bg); color: var(--text); transition: background 0.2s, c
   border-bottom: 0.5px solid var(--border);
   z-index: 100;
 }
-.app-logo { display: flex; align-items: center; gap: 8px; }
+.app-logo { display: flex; align-items: center; gap: 8px; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
 .header-right { display: flex; align-items: center; gap: 8px; }
 .lang-sw { display: flex; gap: 2px; }
 .lang-btn { font-size: 10px; padding: 3px 7px; border-radius: 3px; color: var(--text3); cursor: pointer; border: none; background: none; }
@@ -5461,14 +5461,17 @@ function initShachoLongPress() {
   });
   logo.addEventListener('mouseup', () => clearTimeout(shachoLongPressTimer));
   logo.addEventListener('mouseleave', () => clearTimeout(shachoLongPressTimer));
-  logo.addEventListener('touchstart', () => {
+  logo.addEventListener('touchstart', (e) => {
+    e.preventDefault();
     shachoLongPressTimer = setTimeout(() => {
       saveShachoSetting(!shachoVisible);
       logo.style.opacity = '0.6';
       setTimeout(() => logo.style.opacity = '', 300);
     }, 5000);
-  }, {passive:true});
+  }, {passive:false});
+  logo.addEventListener('touchmove', () => clearTimeout(shachoLongPressTimer), {passive:true});
   logo.addEventListener('touchend', () => clearTimeout(shachoLongPressTimer));
+  logo.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
 
