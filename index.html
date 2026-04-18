@@ -878,7 +878,7 @@ const T = {
     resetCounter:'ショットカウンターをリセット', resetNote:'OHメンテは自動でリセット',
     worker:'作業者', confirmTitle:'登録内容を確認', back:'戻る', register:'登録する',
     maintShotSection:'メンテ時点のshot数', maintShotAutoCalc:'自動計算値を修正可', maintShotMaint:'メンテ間 shot', maintShotTotal:'累計 shot', maintShotHint:'実機の表示と異なる場合は修正してください',
-    maintTimeSection:'作業時間', maintStartTime:'開始時刻', maintEndTime:'終了時刻', maintDuration:'所要時間', maintDurationUnit:'分', maintTimeRequired:'開始・終了時刻を入力してください',
+    maintTimeSection:'作業時間', maintStartTime:'開始時刻', maintEndTime:'終了時刻', maintDuration:'所要時間', maintDurationUnit:'分', maintTimeRequired:'開始・終了時刻を入力してください', maintDurationZero:'所要時間が0分です。開始・終了時刻を確認してください',
     maintType:'メンテ種別', resetStatus:'カウンター', withReset:'リセットあり', noReset:'リセットなし',
     shotCount:'実施shot数', shift:'直', detail:'詳細', simple:'簡易',
     dandoriOnly:'段替え号機のみ表示', dandoriNotSet:'段取り未設定', operating:'段取り設定中', men:'面', prevConfig:'前回構成を自動引継済み',
@@ -1087,7 +1087,7 @@ const T = {
     resetCounter:'Reset bộ đếm shot', resetNote:'BT tổng hợp tự động reset',
     worker:'Công nhân', confirmTitle:'Xác nhận nội dung', back:'Quay lại', register:'Đăng ký',
     maintShotSection:'Shot tại thời điểm BT', maintShotAutoCalc:'Có thể chỉnh sửa', maintShotMaint:'Shot kỳ BT', maintShotTotal:'Tổng shot', maintShotHint:'Sửa nếu khác với màn hình máy',
-    maintTimeSection:'Thời gian BT', maintStartTime:'Giờ bắt đầu', maintEndTime:'Giờ kết thúc', maintDuration:'Thời lượng', maintDurationUnit:'phút', maintTimeRequired:'Vui lòng nhập giờ bắt đầu và kết thúc',
+    maintTimeSection:'Thời gian BT', maintStartTime:'Giờ bắt đầu', maintEndTime:'Giờ kết thúc', maintDuration:'Thời lượng', maintDurationUnit:'phút', maintTimeRequired:'Vui lòng nhập giờ bắt đầu và kết thúc', maintDurationZero:'Thời lượng là 0 phút. Vui lòng kiểm tra lại',
     maintType:'Loại BT', resetStatus:'Bộ đếm', withReset:'Có reset', noReset:'Không reset',
     shotCount:'Số shot thực hiện', shift:'Ca', detail:'Chi tiết', simple:'Đơn giản',
     dandoriOnly:'Chỉ máy đổi khuôn', dandoriNotSet:'Chưa cài đặt', operating:'Đang cài đặt', men:'khuôn', prevConfig:'Đã kế thừa cấu hình hôm qua',
@@ -1295,7 +1295,7 @@ const T = {
     resetCounter:'Reset shot counter', resetNote:'OH maint. resets automatically',
     worker:'Worker', confirmTitle:'Confirm details', back:'Back', register:'Register',
     maintShotSection:'Shot at maintenance', maintShotAutoCalc:'Auto-calculated, editable', maintShotMaint:'Interval shot', maintShotTotal:'Total shot', maintShotHint:'Correct if different from machine display',
-    maintTimeSection:'Work time', maintStartTime:'Start time', maintEndTime:'End time', maintDuration:'Duration', maintDurationUnit:'min', maintTimeRequired:'Please enter start and end time',
+    maintTimeSection:'Work time', maintStartTime:'Start time', maintEndTime:'End time', maintDuration:'Duration', maintDurationUnit:'min', maintTimeRequired:'Please enter start and end time', maintDurationZero:'Duration is 0 min. Please check the start and end times',
     maintType:'Maint. type', resetStatus:'Counter', withReset:'Reset', noReset:'Keep',
     shotCount:'Shot count', shift:'Shift', detail:'Detail', simple:'Simple',
     dandoriOnly:'Changeover only', dandoriNotSet:'Not set', operating:'Set up', men:'mold(s)', prevConfig:'Previous config auto-loaded',
@@ -3364,6 +3364,15 @@ function confirmMaintenance() {
   const endT   = getDrumTime('end');
   let durationMin = (endT.h * 60 + endT.m) - (startT.h * 60 + startT.m);
   if (durationMin < 0) durationMin += 24 * 60;
+
+  // 所要時間0分は登録不可
+  if (durationMin === 0) {
+    const err = document.getElementById('maint-time-error');
+    err.textContent = '⚠ ' + (t('maintDurationZero') || '所要時間が0分です。開始・終了時刻を確認してください');
+    err.style.display = 'block';
+    return;
+  }
+
   state.maintStartTime   = startT.str;
   state.maintEndTime     = endT.str;
   state.maintDurationMin = durationMin;
