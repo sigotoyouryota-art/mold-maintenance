@@ -165,7 +165,8 @@ body { background: var(--bg); color: var(--text); transition: background 0.2s, c
 .sidebar-item:hover { color: var(--text2); background: var(--bg2); }
 .sidebar-item.active { color: var(--text); background: var(--bg); border-color: var(--accent); }
 .sidebar-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-.main-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.main-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; align-items: center; }
+.main-content > * { width: 100%; max-width: 1200px; box-sizing: border-box; flex-shrink: 0; }
 
 /* ===== スマホ ボトムナビ ===== */
 .bottom-nav {
