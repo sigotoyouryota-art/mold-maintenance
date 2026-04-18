@@ -495,7 +495,7 @@ select.form-control { cursor: pointer; }
 @media (min-width: 769px) {
   .mold-cards { display: none !important; }
   .bottom-nav { display: none !important; }
-  #sched-view-seg { display: none !important; }
+
 }
 .drum-col { width:44px; height:120px; overflow-y:scroll; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; overscroll-behavior:contain; position:relative; z-index:2; cursor:grab; }
 .drum-col::-webkit-scrollbar { display:none; }
@@ -6160,25 +6160,28 @@ async function renderSchedule(el) {
   el.innerHTML = `
   <div style="position:sticky;top:0;z-index:10;background:var(--bg3)">
     <div style="padding:8px 12px;border-bottom:0.5px solid var(--border)">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+      <div style="display:flex;align-items:stretch;gap:8px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">${t('scheduleTitle')}</div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:8px">${headerDate}　${SHIFT_LABELS[curShift]}</div>
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-            <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:3px" id="sched-shift-seg">
-              ${(()=>{
-                const order = ['1S','2S','3S'];
-                const ci = order.indexOf(curShift);
-                const tabs = [['all','すべて'], ...([0,1,2].map(i => { const s = order[(ci+i)%3]; return [s, s === curShift ? '▶ '+s : s]; }))];
-                return tabs.map(([v,l])=>`<button class="seg-btn ${scheduleShift===v?'active':''}" onclick="setSchedShift('${v}')" style="padding:4px 10px;font-size:10px;flex:none${v===curShift&&scheduleShift!==v?';color:var(--warning)':''}">${l}</button>`).join('');
-              })()}
-            </div>
-            <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:3px" id="sched-view-seg">
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">${t('scheduleTitle')}</div>
+          <!-- 1行目: シフトタブ -->
+          <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:3px;margin-bottom:5px" id="sched-shift-seg">
+            ${(()=>{
+              const order = ['1S','2S','3S'];
+              const ci = order.indexOf(curShift);
+              const tabs = [['all','すべて'], ...([0,1,2].map(i => { const s = order[(ci+i)%3]; return [s, s === curShift ? '▶ '+s : s]; }))];
+              return tabs.map(([v,l])=>`<button class="seg-btn ${scheduleShift===v?'active':''}" onclick="setSchedShift('${v}')" style="padding:4px 10px;font-size:10px;flex:none${v===curShift&&scheduleShift!==v?';color:var(--warning)':''}">${l}</button>`).join('');
+            })()}
+          </div>
+          <!-- 2行目: ビュータブ + 日付時間 -->
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:3px;flex-shrink:0" id="sched-view-seg">
               <button class="seg-btn ${scheduleView==='card'?'active':''}" onclick="setSchedView('card',this)" style="padding:4px 8px;font-size:10px" title="${t('viewCard')}">📋</button>
               <button class="seg-btn ${scheduleView==='timeline'?'active':''}" onclick="setSchedView('timeline',this)" style="padding:4px 8px;font-size:10px" title="${t('viewTimeline')}">📊</button>
             </div>
+            <div style="font-size:10px;color:var(--text3);white-space:nowrap">${headerDate}　${SHIFT_LABELS[curShift]}</div>
           </div>
         </div>
+        <!-- 社長（PC・スマホ共通、右カラム） -->
         <div class="shacho-tab-wrap" id="shacho-title-wrap" style="${shachoVisible?'display:flex':'display:none'}" onclick="shachoTap('all', currentDelayCount)">
           <div id="shacho-bubble" class="shacho-bubble-box"></div>
           <img id="shacho-tab-img" src="${getShachoImg('all',0)}" style="width:86px;height:96px;object-fit:cover;object-position:top center;mix-blend-mode:screen;display:block">
