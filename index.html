@@ -1952,6 +1952,7 @@ async function handlePinSet() {
 
 function doLogout() {
   stopRealtimeUpdate(); // タイマーを確実に停止
+  stopAutoLogout();     // 自動ログアウトタイマーを停止
   state.currentUser = null;
   localStorage.removeItem('currentUser');
   showPage('login');
@@ -2027,6 +2028,8 @@ function showSection(section) {
   state.currentSection = section;
   localStorage.setItem('lastSection', section);
   startRealtimeUpdate();
+  startAutoLogout();     // 自動ログアウト開始（リロード後は残り時間から再開）
+  resetAutoLogoutTimer(); // 初回操作時刻を記録
   // ナビ更新
   document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.bn-item').forEach(el => el.classList.remove('active'));
@@ -5495,6 +5498,42 @@ function setListSort(mode) {
 let realtimeTimer = null;
 let pollingTimer = null;
 const POLLING_INTERVAL = 30000; // 30秒ごとにサーバーからデータ再取得
+
+// ===== 自動ログアウト（8時間無操作） =====
+const AUTO_LOGOUT_MS = 8 * 60 * 60 * 1000; // 8時間
+let _autoLogoutTimer = null;
+
+function resetAutoLogoutTimer() {
+  if (!state.currentUser) return;
+  localStorage.setItem('lastActivityAt', Date.now().toString());
+  if (_autoLogoutTimer) clearTimeout(_autoLogoutTimer);
+  _autoLogoutTimer = setTimeout(() => {
+    doLogout();
+  }, AUTO_LOGOUT_MS);
+}
+
+function startAutoLogout() {
+  // ページリロード後：残り時間から再開
+  const last = parseInt(localStorage.getItem('lastActivityAt') || '0');
+  const elapsed = Date.now() - last;
+  const remaining = AUTO_LOGOUT_MS - elapsed;
+  if (_autoLogoutTimer) clearTimeout(_autoLogoutTimer);
+  if (remaining <= 0) {
+    doLogout();
+    return;
+  }
+  _autoLogoutTimer = setTimeout(() => { doLogout(); }, remaining);
+}
+
+function stopAutoLogout() {
+  if (_autoLogoutTimer) { clearTimeout(_autoLogoutTimer); _autoLogoutTimer = null; }
+  localStorage.removeItem('lastActivityAt');
+}
+
+// ユーザー操作を検知してタイマーリセット
+['click', 'touchstart', 'keydown'].forEach(ev => {
+  document.addEventListener(ev, () => { if (state.currentUser) resetAutoLogoutTimer(); }, { passive: true });
+});
 
 // ショット未入力判定
 function isShotUnregistered(mold) {
