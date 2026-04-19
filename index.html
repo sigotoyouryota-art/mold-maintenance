@@ -1105,7 +1105,7 @@ const T = {
     weekdays:'月,火,水,木,金,土,日',
     hmLegend0:'0件', hmLegend1:'1件', hmLegend2:'2-3件', hmLegend3:'4-5件', hmLegend4:'6-7件', hmLegend5:'8件+',
     dashMoldCount:'金型別件数 TOP', hourUnit:'時', dashAvgMaintTop:'平均メンテ時間 TOP', weekdaysSun:'日,月,火,水,木,金,土', otherLabel:'その他',
-    dashToday:'今日', wlLegend1:'〜0.3', wlLegend2:'〜0.6', wlLegend3:'〜0.8', wlLegend4:'〜1.0', dashLast7:'直近7日', dashLast30:'直近30日', dashLast90:'直近90日', dashAll:'全期間', dashCustom:'カスタム', dashPartFilter:'品番・品名で絞り込み', dashLimitWarn:'データ件数が上限（5,000件）に達しています。期間を絞り込んでください。',
+    dashToday:'今日', wlLegend1:'〜0.3', wlLegend2:'〜0.6', wlLegend3:'〜0.8', wlLegend4:'〜1.0', dashLast7:'直近7日', dashLast30:'直近30日', dashLast90:'直近90日', dashAll:'全期間（最新5,000件）', dashCustom:'カスタム', dashPartFilter:'品番・品名で絞り込み',
   },
   vi: {
     appName:'Quản Lý Bảo Trì Khuôn', login:'Đăng nhập', selectShift:'Chọn ca', selectWorker:'Chọn công nhân',
@@ -1329,7 +1329,7 @@ const T = {
     weekdays:'T2,T3,T4,T5,T6,T7,CN',
     hmLegend0:'0', hmLegend1:'1', hmLegend2:'2-3', hmLegend3:'4-5', hmLegend4:'6-7', hmLegend5:'8+',
     dashMoldCount:'Khuôn TOP', hourUnit:'h', dashAvgMaintTop:'Thời gian BT TB TOP', weekdaysSun:'CN,T2,T3,T4,T5,T6,T7', otherLabel:'Khác',
-    dashToday:'Hôm nay', wlLegend1:'〜0.3', wlLegend2:'〜0.6', wlLegend3:'〜0.8', wlLegend4:'〜1.0', dashLast7:'7 ngày', dashLast30:'30 ngày', dashLast90:'90 ngày', dashAll:'Tất cả', dashCustom:'Tùy chỉnh', dashPartFilter:'Lọc theo mã/tên', dashLimitWarn:'Số bản ghi đã đạt giới hạn (5.000). Hãy thu hẹp khoảng thời gian.',
+    dashToday:'Hôm nay', wlLegend1:'〜0.3', wlLegend2:'〜0.6', wlLegend3:'〜0.8', wlLegend4:'〜1.0', dashLast7:'7 ngày', dashLast30:'30 ngày', dashLast90:'90 ngày', dashAll:'Tất cả (5.000 mới nhất)', dashCustom:'Tùy chỉnh', dashPartFilter:'Lọc theo mã/tên',
   },
   en: {
     appName:'Mold Maintenance', login:'Login', selectShift:'Select shift', selectWorker:'Select worker',
@@ -1553,7 +1553,7 @@ const T = {
     weekdays:'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
     hmLegend0:'0', hmLegend1:'1', hmLegend2:'2-3', hmLegend3:'4-5', hmLegend4:'6-7', hmLegend5:'8+',
     dashMoldCount:'Mold TOP', hourUnit:'h', dashAvgMaintTop:'Avg maint time TOP', weekdaysSun:'Sun,Mon,Tue,Wed,Thu,Fri,Sat', otherLabel:'Other',
-    dashToday:'Today', wlLegend1:'〜0.3', wlLegend2:'〜0.6', wlLegend3:'〜0.8', wlLegend4:'〜1.0', dashLast7:'Last 7d', dashLast30:'Last 30d', dashLast90:'Last 90d', dashAll:'All', dashCustom:'Custom', dashPartFilter:'Filter by part no/name', dashLimitWarn:'Record limit (5,000) reached. Please narrow the date range.',
+    dashToday:'Today', wlLegend1:'〜0.3', wlLegend2:'〜0.6', wlLegend3:'〜0.8', wlLegend4:'〜1.0', dashLast7:'Last 7d', dashLast30:'Last 30d', dashLast90:'Last 90d', dashAll:'All (latest 5,000)', dashCustom:'Custom', dashPartFilter:'Filter by part no/name',
   }
 };
 function t(key) { return T[state.lang][key] || key; }
@@ -2417,8 +2417,6 @@ function renderDashBody() {
   body.innerHTML = `
   <div style="padding:8px 0 80px">
 
-    ${_dashLogs.length >= 1 ? `<div style="background:var(--warning-bg);border:0.5px solid var(--warning);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--warning-text)">${t('dashLimitWarn')}</div>` : ''}
-
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px">
       <div class="kpi-card"><div class="kpi-label">${t('dashTodayDone')}</div><div class="kpi-value" style="color:var(--success)">${todayCount}<span style="font-size:11px;color:var(--text3)"> 件</span></div></div>
       <div class="kpi-card"><div class="kpi-label">${t('dashTotal')}</div><div class="kpi-value">${fmtNum(totalCount)}<span style="font-size:11px;color:var(--text3)"> 件</span></div></div>
@@ -2578,7 +2576,7 @@ async function renderDashboard(el) {
 
   try {
     const { startDate, endDate } = getDashPeriodDates();
-    let q = `?performed_at=gte.${startDate}&order=performed_at.asc&select=id,mold_id,maintenance_type,performed_at,duration_min,maint_shot_at_maintenance,shift,performed_by,molds(part_no,part_name,maintenance_interval),users(name)&limit=5000`;
+    let q = `?performed_at=gte.${startDate}&order=performed_at.desc&select=id,mold_id,maintenance_type,performed_at,duration_min,maint_shot_at_maintenance,shift,performed_by,molds(part_no,part_name,maintenance_interval),users(name)&limit=5000`;
     if (endDate) q += `&performed_at=lte.${endDate}`;
     _dashLogs = (await sb("maintenance_logs","GET",null,q)) || [];
     renderDashBody();
