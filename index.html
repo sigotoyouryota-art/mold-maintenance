@@ -5100,15 +5100,15 @@ async function backupAllData() {
     await loadSheetJS();
     const wb = XLSX.utils.book_new();
 
-    // 全テーブルのデータを取得
+    // 全テーブルのデータを取得（limit=100000で実質全件）
     const [molds, machines, lines, users, categories, maintLogs, shotLogs] = await Promise.all([
       sb('molds','GET',null,'?order=part_no'),
       sb('machines','GET',null,'?order=machine_no'),
       sb('lines','GET',null,'?order=sort_order'),
       sb('users','GET',null,'?order=name'),
       sb('mold_categories','GET',null,'?order=sort_order'),
-      sb('maintenance_logs','GET',null,'?order=performed_at.desc&limit=10000'),
-      sb('shot_logs','GET',null,'?order=logged_at.desc&limit=10000'),
+      sb('maintenance_logs','GET',null,'?order=performed_at.desc&limit=100000'),
+      sb('shot_logs','GET',null,'?order=logged_at.desc&limit=100000'),
     ]);
 
     const sheets = [
@@ -5130,9 +5130,10 @@ async function backupAllData() {
     const now = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
     XLSX.writeFile(wb, `MoldMainte_バックアップ_${dateStr}.xlsx`);
-    showToast(t('backupDone'), 'success');
+    showToast(`${t('backupDone')} (${t('histMaint')||'メンテ'}:${(maintLogs||[]).length}${t('readMoreUnit')||'件'} / Shot:${(shotLogs||[]).length}${t('readMoreUnit')||'件'})`, 'success');
   } catch(e) {
     showToast(t('backupError') + e.message, 'error');
+    console.error('backup error:', e);
   }
 }
 
