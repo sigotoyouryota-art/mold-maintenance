@@ -2003,6 +2003,7 @@ async function initMainPage() {
 
 async function loadMolds() {
   state.molds = await sb('mold_status', 'GET', null, '?order=progress_pct.desc');
+  invalidateShiftsCache();
 }
 async function loadLines() {
   state.lines = await sb('lines', 'GET', null, '?order=sort_order');
@@ -3059,7 +3060,7 @@ function getWorkloadBarColor(kosu) {
 // 今日の予定工数をbuildAllShiftsから計算
 function calcTodayPlannedWorkload() {
   try {
-    const allData = buildAllShifts();
+    const allData = buildAllShiftsCached();
     const result = { '1S': null, '2S': null, '3S': null };
     allData.forEach(d => {
       if (!d || !d.shiftName || !result.hasOwnProperty(d.shiftName)) return;
@@ -5931,7 +5932,7 @@ async function manualRefresh() {
       const sec = state.currentSection;
       if (sec === 'dashboard') renderDashboard(content);
       else if (sec === 'list') renderList(content);
-      else if (sec === 'schedule') { buildAllShifts(); renderScheduleBody(); }
+      else if (sec === 'schedule') { buildAllShiftsCached(); renderScheduleBody(); }
       else if (sec === 'shotUpdate') renderShotUpdateGrid(content);
       else if (sec === 'history') renderHistory(content);
       else if (sec === 'dandori') renderDandori(content);
@@ -6631,6 +6632,7 @@ async function loadDandoriForSchedule() {
     dandoriData = {};
     (settings||[]).forEach(s => { if (s.mold_id && !dandoriData.hasOwnProperty(s.machine_id)) dandoriData[s.machine_id] = s.mold_id; });
     dandoriMoldIdSet = new Set(Object.values(dandoriData));
+    invalidateShiftsCache();
   } catch(e) {
     console.error('loadDandoriForSchedule error:', e);
   }
@@ -6661,6 +6663,19 @@ function setSchedShift(v) {
   scheduleShift = v;
   // タブ再描画はrenderScheduleBody内で行うためここでのDOM操作は不要
   renderScheduleBody();
+}
+
+// ===== buildAllShiftsキャッシュ =====
+let _allShiftsCache = null;
+let _allShiftsCacheTime = 0;
+const _SHIFTS_CACHE_TTL = 60000;
+function invalidateShiftsCache() { _allShiftsCache = null; _allShiftsCacheTime = 0; }
+function buildAllShiftsCached() {
+  const now = Date.now();
+  if (_allShiftsCache && (now - _allShiftsCacheTime) < _SHIFTS_CACHE_TTL) return _allShiftsCache;
+  _allShiftsCache = buildAllShifts();
+  _allShiftsCacheTime = now;
+  return _allShiftsCache;
 }
 
 // ===== 3直分を1本の時間軸で計算して直ごとに分割 =====
@@ -6918,7 +6933,7 @@ function _buildEntry(e, sr, crossShift) {
 }
 
 function buildSchedule(shift) {
-  const allData = buildAllShifts();
+  const allData = buildAllShiftsCached();
   const found = allData.find(d => d.shiftName === shift);
   if (found) return { scheduled: found.scheduled, shiftStart: found.shiftStart, shiftEnd: found.shiftEnd };
   const now = new Date();
@@ -6950,8 +6965,7 @@ function renderScheduleBody() {
 
   if (!state.molds.length) { el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">${t('noData')}</div>`; return; }
 
-  const allData = buildAllShifts();
-  // シフトタブフィルタ（'all'以外は対象直のみ表示）
+  const allData = buildAllShiftsCached();
   const visibleData = scheduleShift === 'all'
     ? allData
     : allData.filter((d, i) => {
