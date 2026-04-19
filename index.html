@@ -533,10 +533,13 @@ select.form-control { cursor: pointer; }
         <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:2px">Mold<span style="color:var(--logo-orange)">Mainte</span></div>
         <div style="font-size:10px;color:var(--text4);letter-spacing:2px;font-weight:500;margin-bottom:2px">MOLD MAINTENANCE MANAGEMENT SYSTEM</div>
         <div class="login-sub" id="login-subtitle">製造3課</div>
-        <div style="display:flex;gap:4px;justify-content:center;margin-bottom:16px">
+        <div style="display:flex;gap:4px;justify-content:center;align-items:center;margin-bottom:16px">
           <button class="lang-btn active" data-lang="ja" onclick="setLang('ja')">JP</button>
           <button class="lang-btn" data-lang="vi" onclick="setLang('vi')">VI</button>
           <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+          <div style="width:0.5px;height:14px;background:var(--border);margin:0 2px"></div>
+          <button class="lang-btn" id="login-theme-dark" onclick="if(state.theme!=='dark'){toggleTheme()}">Dark</button>
+          <button class="lang-btn" id="login-theme-light" onclick="if(state.theme!=='light'){toggleTheme()}">Light</button>
         </div>
       </div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:8px" id="label-shift">直を選択</div>
@@ -1563,6 +1566,10 @@ function applyTheme() {
   document.body.className = state.theme === 'dark' ? 'dark' : 'light';
   const icon = state.theme === 'dark' ? '☾' : '☀';
   document.querySelectorAll('.theme-btn').forEach(b => b.textContent = icon);
+  const darkBtn = document.getElementById('login-theme-dark');
+  const lightBtn = document.getElementById('login-theme-light');
+  if (darkBtn) darkBtn.classList.toggle('active', state.theme === 'dark');
+  if (lightBtn) lightBtn.classList.toggle('active', state.theme === 'light');
 }
 function toggleTheme() {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
