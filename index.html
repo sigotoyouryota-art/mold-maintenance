@@ -1955,6 +1955,7 @@ function doLogout() {
   stopAutoLogout();     // 自動ログアウトタイマーを停止
   state.currentUser = null;
   localStorage.removeItem('currentUser');
+  localStorage.setItem('lastSection', 'dashboard'); // 次回ログイン時はダッシュボードから
   showPage('login');
   loadUsers();
 }
