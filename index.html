@@ -2582,7 +2582,7 @@ async function renderDashboard(el) {
     renderDashBody();
   } catch(e) {
     const b = document.getElementById("dash-body");
-    if (b) b.innerHTML = `<div style="padding:20px;text-align:center;color:var(--danger-text)">${t("loadError")}</div>`;
+    if (b) b.innerHTML = `<div style="padding:20px;text-align:center"><div style="color:var(--danger-text);margin-bottom:10px">${t("loadError")}</div><button onclick="renderDashboard(document.getElementById('main-content'))" style="padding:6px 18px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;cursor:pointer">${t('retryBtn')}</button></div>`;
   }
 }
 
@@ -2934,7 +2934,7 @@ async function loadHistory() {
     if (histEditMode) updateHistDeleteBar();
   } catch(e) {
     console.error('loadHistory:', e);
-    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger-text)">${t('loadError')}: ${esc(e.message)}</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:40px"><div style="color:var(--danger-text);margin-bottom:10px">${t('loadError')}</div><button onclick="loadHistory()" style="padding:6px 18px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;cursor:pointer">${t('retryBtn')}</button></div>`;
   }
 }
 
@@ -3304,7 +3304,7 @@ async function loadDandori() {
 
     renderDandoriMachines();
   } catch(e) {
-    document.getElementById('dandori-body').innerHTML = `<div style="color:var(--danger-text)">${t('loadError')}</div>`;
+    document.getElementById('dandori-body').innerHTML = `<div style="text-align:center;padding:20px"><div style="color:var(--danger-text);margin-bottom:10px">${t('loadError')}</div><button onclick="loadDandori()" style="padding:6px 18px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;cursor:pointer">${t('retryBtn')}</button></div>`;
   }
 }
 
@@ -7485,7 +7485,7 @@ async function renderAnalysisList(el) {
       }).join('')}
     </div>`;
   } catch(e) {
-    el.innerHTML = `<div style="padding:20px;color:var(--danger-text)">${t('loadError')}: ${esc(e.message)}</div>`;
+    el.innerHTML = `<div style="padding:20px;text-align:center"><div style="color:var(--danger-text);margin-bottom:10px">${t('loadError')}</div><button onclick="renderAnalysis(document.getElementById('main-content'))" style="padding:6px 18px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;cursor:pointer">${t('retryBtn')}</button></div>`;
     console.error(e);
   }
 }
@@ -7622,7 +7622,7 @@ async function renderAnalysisDetail(el, moldId) {
       </div>
     </div>`;
   } catch(e) {
-    el.innerHTML = `<div style="padding:20px;color:var(--danger-text)">${t('loadError')}: ${esc(e.message)}</div>`;
+    el.innerHTML = `<div style="padding:20px;text-align:center"><div style="color:var(--danger-text);margin-bottom:10px">${t('loadError')}</div><button onclick="showAnalysisDetail('${moldId}')" style="padding:6px 18px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;cursor:pointer">${t('retryBtn')}</button></div>`;
     console.error(e);
   }
 }
