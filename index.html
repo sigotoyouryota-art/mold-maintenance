@@ -1995,6 +1995,9 @@ async function initMainPage() {
   const lastSection = localStorage.getItem('lastSection') || 'dashboard';
   // 管理者専用セクションは権限チェック
   const adminOnly = ['master'];
+  resetAutoLogoutTimer(); // 操作時刻を記録してからタイマー開始
+  startAutoLogout();     // 自動ログアウト開始（リロード後は残り時間から再開）
+
   if (adminOnly.includes(lastSection) && state.currentUser?.role !== 'admin') {
     showSection('dashboard');
   } else {
@@ -2028,8 +2031,6 @@ function showSection(section) {
   state.currentSection = section;
   localStorage.setItem('lastSection', section);
   startRealtimeUpdate();
-  startAutoLogout();     // 自動ログアウト開始（リロード後は残り時間から再開）
-  resetAutoLogoutTimer(); // 初回操作時刻を記録
   // ナビ更新
   document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.bn-item').forEach(el => el.classList.remove('active'));
