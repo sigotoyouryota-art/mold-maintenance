@@ -610,7 +610,7 @@ select.form-control { cursor: pointer; }
   </div>
   <div class="bottom-nav">
     <div class="bn-item active" onclick="showSection('dashboard')" id="bn-dashboard"><span class="bn-icon"><svg style="width:20px;height:20px;display:block;margin:0 auto" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="bn-label" id="bn-label-dashboard">DB</span></div>
-    <div class="bn-item" onclick="showSection('schedule')" id="bn-schedule"><span class="bn-icon"><svg style="width:20px;height:20px;display:block;margin:0 auto" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="4" x2="9" y2="20"/><line x1="15" y1="4" x2="15" y2="20"/></svg></span><span class="bn-label" id="bn-label-schedule">予定</span></div>
+    <div class="bn-item" onclick="showSection('schedule')" id="bn-schedule"><span class="bn-icon"><svg style="width:20px;height:20px;display:block;margin:0 auto" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="4" x2="9" y2="20"/><line x1="15" y1="4" x2="15" y2="20"/></svg></span><span class="bn-label" id="bn-label-schedule">${t('schedule')}</span></div>
     <div class="bn-item" onclick="showSection('shotUpdate')" id="bn-shotUpdate"><span class="bn-icon"><svg style="width:20px;height:20px;display:block;margin:0 auto" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg></span><span class="bn-label" id="bn-label-shotUpdate">ショット更新</span></div>
     <div class="bn-item" onclick="showSection('dandori')" id="bn-dandori"><span class="bn-icon"><svg style="width:20px;height:20px;display:block;margin:0 auto" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></span><span class="bn-label" id="bn-label-dandori-bn">段取り</span></div>
     <div class="bn-item" onclick="showSection('list')" id="bn-list"><span class="bn-icon"><svg style="width:20px;height:20px;display:block;margin:0 auto" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5" fill="#94a3b8" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="#94a3b8" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="#94a3b8" stroke="none"/></svg></span><span class="bn-label" id="bn-label-list">一覧</span></div>
@@ -1090,6 +1090,15 @@ const T = {
     suResetConfirmAll:'全機番の累計ショット数をリセットしますか？', suResetConfirmLine:'ラインの累計ショット数をリセットしますか？', suResetConfirmMachine:'の累計ショット数をリセットしますか？',
     suResetDone:'リセットしました', suResetSelect:'リセット対象を選択',
     suBackToList:'← 一覧', suInputLabel:'入力', suPrevShot:'前回', suCurrentTotal:'現在の累計ショット数', suSaveAndBack:'保存してグリッドへ戻る',
+    dashFieldStatus:'現場状況', dashShiftCount:'直別件数', dashWorkerCount:'作業者別件数',
+    dashAvgDuration:'平均所要時間', dashWorkload:'工数', dashWorkloadToday:'直別工数（本日）',
+    dashHeatmap:'工数ヒートマップ', dashWorkloadHist:'工数履歴', dashCountAnalysis:'件数分析',
+    dashLineCount:'ライン別件数', dashQuality:'品質指標', dashCompRate:'メンテ間隔遵守率',
+    dashCompRateTotal:'総合遵守率', dashCompRateNote:'閾値 ±10%以内',
+    dashTimeHeatmap:'時間帯別件数ヒートマップ', dashTrend:'トレンド', dashTotal:'期間合計',
+    dashTodayDone:'今日完了', dashDataNone:'データなし',
+    dashNoRegData:'所要時間の登録データが2件以上ある金型が対象です',
+    dashActualLabel:'実績', dashPlanLabel:'予定',
   },
   vi: {
     appName:'Quản Lý Bảo Trì Khuôn', login:'Đăng nhập', selectShift:'Chọn ca', selectWorker:'Chọn công nhân',
@@ -1298,6 +1307,15 @@ const T = {
     suResetConfirmAll:'Đặt lại tổng shot tất cả máy?', suResetConfirmLine:' - đặt lại tổng shot?', suResetConfirmMachine:' - đặt lại tổng shot?',
     suResetDone:'Đã đặt lại', suResetSelect:'Chọn đối tượng đặt lại',
     suBackToList:'← Danh sách', suInputLabel:'Nhập', suPrevShot:'Lần trước', suCurrentTotal:'Tổng shot hiện tại', suSaveAndBack:'Lưu và quay lại',
+    dashFieldStatus:'Tình trạng hiện trường', dashShiftCount:'Số lượng theo ca', dashWorkerCount:'Theo công nhân',
+    dashAvgDuration:'Thời gian TB', dashWorkload:'Khối lượng CV', dashWorkloadToday:'CV hôm nay',
+    dashHeatmap:'Bản đồ nhiệt', dashWorkloadHist:'Lịch sử CV', dashCountAnalysis:'Phân tích số lượng',
+    dashLineCount:'Theo dây chuyền', dashQuality:'Chỉ số chất lượng', dashCompRate:'Tỷ lệ tuân thủ',
+    dashCompRateTotal:'Tổng thể', dashCompRateNote:'Ngưỡng ±10%',
+    dashTimeHeatmap:'Bản đồ theo giờ', dashTrend:'Xu hướng', dashTotal:'Tổng kỳ',
+    dashTodayDone:'Hoàn thành hôm nay', dashDataNone:'Không có dữ liệu',
+    dashNoRegData:'Khuôn có từ 2 dữ liệu thời gian BT trở lên',
+    dashActualLabel:'Thực tế', dashPlanLabel:'Dự kiến',
   },
   en: {
     appName:'Mold Maintenance', login:'Login', selectShift:'Select shift', selectWorker:'Select worker',
@@ -1506,6 +1524,15 @@ const T = {
     suResetConfirmAll:'Reset total shots for all machines?', suResetConfirmLine:' - reset total shots?', suResetConfirmMachine:' - reset total shots?',
     suResetDone:'Reset complete', suResetSelect:'Select reset target',
     suBackToList:'← List', suInputLabel:'Input', suPrevShot:'Previous', suCurrentTotal:'Current total shots', suSaveAndBack:'Save & back to grid',
+    dashFieldStatus:'Field status', dashShiftCount:'Count by shift', dashWorkerCount:'By worker',
+    dashAvgDuration:'Avg. duration', dashWorkload:'Workload', dashWorkloadToday:"Today's workload",
+    dashHeatmap:'Workload heatmap', dashWorkloadHist:'Workload history', dashCountAnalysis:'Count analysis',
+    dashLineCount:'By line', dashQuality:'Quality', dashCompRate:'Compliance rate',
+    dashCompRateTotal:'Overall rate', dashCompRateNote:'Threshold ±10%',
+    dashTimeHeatmap:'Time heatmap', dashTrend:'Trend', dashTotal:'Period total',
+    dashTodayDone:'Today done', dashDataNone:'No data',
+    dashNoRegData:'Molds with 2+ duration records',
+    dashActualLabel:'Actual', dashPlanLabel:'Planned',
   }
 };
 function t(key) { return T[state.lang][key] || key; }
@@ -2344,7 +2371,7 @@ function renderDashBody() {
 
   function compColor(p) { return p>=80?'#1D9E75':p>=60?'#EF9F27':'#E24B4A'; }
   function compBarRows(arr) {
-    if (!arr.length) return `<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">データなし</div>`;
+    if (!arr.length) return `<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">${t('dashDataNone')}</div>`;
     return arr.map(m=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
       <span style="font-size:11px;color:var(--text2);width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(m.label)}">${esc(m.label)}</span>
       <div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${m.pct}%;height:100%;background:${compColor(m.pct)};border-radius:4px"></div></div>
@@ -2370,15 +2397,15 @@ function renderDashBody() {
   <div style="padding:8px 0 80px">
 
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px">
-      <div class="kpi-card"><div class="kpi-label">今日完了</div><div class="kpi-value" style="color:var(--success)">${todayCount}<span style="font-size:11px;color:var(--text3)"> 件</span></div></div>
-      <div class="kpi-card"><div class="kpi-label">期間合計</div><div class="kpi-value">${fmtNum(totalCount)}<span style="font-size:11px;color:var(--text3)"> 件</span></div></div>
-      <div class="kpi-card"><div class="kpi-label">平均所要時間</div><div class="kpi-value" style="font-size:18px">${avgDur}<span style="font-size:11px;color:var(--text3)"> 分</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">${t('dashTodayDone')}</div><div class="kpi-value" style="color:var(--success)">${todayCount}<span style="font-size:11px;color:var(--text3)"> 件</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">${t('dashTotal')}</div><div class="kpi-value">${fmtNum(totalCount)}<span style="font-size:11px;color:var(--text3)"> 件</span></div></div>
+      <div class="kpi-card"><div class="kpi-label">${t('dashAvgDuration')}</div><div class="kpi-value" style="font-size:18px">${avgDur}<span style="font-size:11px;color:var(--text3)"> 分</span></div></div>
     </div>
 
-    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">現場状況</div>
+    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">${t('dashFieldStatus')}</div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px">
       <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border)">
-        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:10px">直別件数</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:10px">${t('dashShiftCount')}</div>
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
           ${['1S','2S','3S'].map(s=>`<div style="background:var(--bg);border-radius:6px;padding:8px 10px;border:0.5px solid var(--border)">
             <div style="font-size:10px;color:var(--text4);margin-bottom:4px">${s}</div>
@@ -2388,7 +2415,7 @@ function renderDashBody() {
         </div>
       </div>
       <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border)">
-        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">作業者別件数</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">${t('dashWorkerCount')}</div>
         ${workerRank.map(([name,cnt])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
           <span style="font-size:11px;color:var(--text2);width:90px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</span>
           <div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${Math.round(cnt/maxWorker*100)}%;height:100%;background:#378ADD;border-radius:4px"></div></div>
@@ -2398,28 +2425,28 @@ function renderDashBody() {
       </div>
     </div>
 
-    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">工数</div>
+    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">${t('dashWorkload')}</div>
     <div id="workload-section">
       <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-bottom:6px">
-        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">直別工数（本日）</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">${t('dashWorkloadToday')}</div>
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px" id="workload-today-cards">
           <div style="text-align:center;padding:20px 0;color:var(--text4);font-size:11px;grid-column:1/-1">読み込み中...</div>
         </div>
       </div>
       <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-bottom:6px">
-        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:10px">工数ヒートマップ</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:10px">${t('dashHeatmap')}</div>
         <div id="workload-heatmap">
           <div style="text-align:center;padding:20px 0;color:var(--text4);font-size:11px">読み込み中...</div>
         </div>
       </div>
       <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-bottom:6px">
-        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:10px">工数履歴</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:10px">${t('dashWorkloadHist')}</div>
         <div id="workload-history">
           <div style="text-align:center;padding:20px 0;color:var(--text4);font-size:11px">読み込み中...</div>
         </div>
       </div>
     </div>
-        <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">件数分析</div>
+        <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">${t('dashCountAnalysis')}</div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px">
       <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border)">
         <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">金型別件数 TOP${moldRank.length}</div>
@@ -2433,7 +2460,7 @@ function renderDashBody() {
         ${!moldRank.length?`<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">${t('noData')}</div>`:''}
       </div>
       <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border)">
-        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">ライン別件数</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">${t('dashLineCount')}</div>
         ${lineRank.map(([name,cnt])=>`<div style="margin-bottom:8px">
           <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">
             <span style="color:var(--text)">${esc(name)}</span>
@@ -2445,17 +2472,17 @@ function renderDashBody() {
       </div>
     </div>
 
-    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">品質指標</div>
+    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">${t('dashQuality')}</div>
     <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:0.5px solid var(--border);margin-bottom:8px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:500;color:var(--text)">メンテ間隔遵守率</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text)">${t('dashCompRate')}</div>
         <div style="display:flex;gap:2px;background:var(--bg);border-radius:6px;padding:2px" id="comp-tab-seg">
           ${[['line','ライン別'],['shift','直別'],['part','品番別'],['mold','金型別']].map(([k,l])=>`<button onclick="setDashCompTab('${k}')" id="comp-tab-${k}" style="font-size:10px;padding:2px 8px;border-radius:4px;border:0.5px solid transparent;background:none;color:var(--text4);cursor:pointer${k==='line'?';background:var(--bg2);color:var(--text);border-color:var(--border2)':''}">${l}</button>`).join('')}
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border-radius:6px;border:0.5px solid var(--border);margin-bottom:10px">
         <div>
-          <div style="font-size:10px;color:var(--text4)">総合遵守率</div>
+          <div style="font-size:10px;color:var(--text4)">${t('dashCompRateTotal')}</div>
           <div style="font-size:20px;font-weight:500;color:${compTotal!==null?compColor(compTotal):'var(--text4)'}">${compTotal!==null?compTotal+'%':'-'}</div>
         </div>
         <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
@@ -2466,18 +2493,18 @@ function renderDashBody() {
       <div id="comp-tab-body">${compBarRows(compLineRank)}</div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border);flex-wrap:wrap">
         ${[['#1D9E75','80%以上'],['#EF9F27','60〜79%'],['#E24B4A','60%未満']].map(([c,l])=>`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:${c}"></div><span style="font-size:10px;color:var(--text4)">${l}</span></div>`).join('')}
-        <span style="font-size:10px;color:var(--text4);margin-left:auto">閾値 ±10%以内</span>
+        <span style="font-size:10px;color:var(--text4);margin-left:auto">${t('dashCompRateNote')}</span>
       </div>
     </div>
 
-    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">トレンド</div>
+    <div style="font-size:10px;font-weight:500;color:var(--text4);margin:14px 0 6px;padding-left:6px;border-left:2px solid var(--border2);border-radius:0">${t('dashTrend')}</div>
     <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border:0.5px solid var(--border)">
       <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px">${dashPeriod==='today'?'時間別メンテ件数（業務日08:00起点）':'日別メンテ件数'}</div>
       <canvas id="dash-daily-canvas" style="width:100%;height:120px;display:block"></canvas>
     </div>
 
     <div style="background:var(--bg2);border-radius:8px;padding:14px 16px;margin-bottom:8px;border:0.5px solid var(--border);overflow-x:auto">
-      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:12px">時間帯別件数ヒートマップ</div>
+      <div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:12px">${t('dashTimeHeatmap')}</div>
       <div style="display:grid;grid-template-columns:52px repeat(7,1fr);gap:3px;align-items:center;min-width:360px">
         <div></div>
         ${['月','火','水','木','金','土','日'].map(d=>`<div style="font-size:11px;color:var(--text3);text-align:center;padding-bottom:4px">${d}</div>`).join('')}
@@ -2503,7 +2530,7 @@ function renderDashBody() {
         </div>
         <div style="height:4px;background:var(--border);border-radius:2px"><div style="height:100%;width:${Math.round(m.avg/maxDur*100)}%;background:#a78bfa;border-radius:2px"></div></div>
       </div>`).join('')}
-      ${!durRank.length?`<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">所要時間の登録データが2件以上ある金型が対象です</div>`:''}
+      ${!durRank.length?`<div style="font-size:11px;color:var(--text4);text-align:center;padding:8px">${t('dashNoRegData')}</div>`:''}
     </div>
 
   </div>`;
@@ -3081,10 +3108,10 @@ async function renderWorkloadSection() {
       let kosu, label;
       if (finished && rec && rec.actual_min !== null) {
         kosu = parseFloat((rec.actual_min / WORKLOAD_CAPACITY).toFixed(2));
-        label = '実績';
+        label = t('dashActualLabel');
       } else {
         kosu = planned[s];
-        label = '予定';
+        label = t('dashPlanLabel');
       }
       const c = shiftColors[s];
       return '<div style="background:var(--bg);border-radius:6px;padding:8px 10px;border:0.5px solid var(--border)">' +
@@ -3208,7 +3235,7 @@ async function renderWorkloadHistory() {
         '<div style="width:' + pct.toFixed(1) + '%;height:100%;background:' + barColor + ';border-radius:4px' + (isPlanned ? ';opacity:0.5' : '') + '"></div>' +
       '</div>' +
       '<span style="font-size:11px;font-weight:500;color:var(--text);min-width:36px;text-align:right">' + (kosu !== null ? kosu.toFixed(2) : '-') + '</span>' +
-      (isPlanned ? '<span style="font-size:9px;color:var(--text4);min-width:20px">予定</span>' : '<span style="font-size:9px;color:var(--text4);min-width:20px">実績</span>') +
+      (isPlanned ? '<span style="font-size:9px;color:var(--text4);min-width:20px">' + t('dashPlanLabel') + '</span>' : '<span style="font-size:9px;color:var(--text4);min-width:20px">' + t('dashActualLabel') + '</span>') +
       '</div>';
   });
   el.innerHTML = html;
@@ -4814,7 +4841,7 @@ async function generateMonthlyReport() {
       ['月間アラート発生', alertLogs.length, ''],
       [],
       ['■ 所要時間集計（作業時間登録分）'],
-      ['項目', '平均所要時間（分）', '対象件数'],
+      ['項目', t('dashAvgDuration')+'（分）', '対象件数'],
       (() => { const d = maintLogs.filter(l=>l.duration_min>0); return ['全体平均', d.length ? Math.round(d.reduce((s,l)=>s+l.duration_min,0)/d.length) : '-', d.length]; })(),
       (() => { const d = maintLogs.filter(l=>l.duration_min>0&&l.maintenance_type==='OH'); return ['OHメンテ', d.length ? Math.round(d.reduce((s,l)=>s+l.duration_min,0)/d.length) : '-', d.length]; })(),
       (() => { const d = maintLogs.filter(l=>l.duration_min>0&&l.maintenance_type==='simple'); return ['簡易メンテ', d.length ? Math.round(d.reduce((s,l)=>s+l.duration_min,0)/d.length) : '-', d.length]; })(),
@@ -4912,7 +4939,7 @@ async function generateMonthlyReport() {
     // ファイル出力
     // ⑤ 直別集計
     const shifts = ['1S','2S','3S'];
-    const shiftHeader = ['直','OHメンテ','簡易メンテ','合計','OH率(%)','平均所要時間(分)'];
+    const shiftHeader = ['直','OHメンテ','簡易メンテ','合計','OH率(%)',t('dashAvgDuration')+'(分)'];
     const shiftRows = shifts.map(s => {
       const sl = maintLogs.filter(l=>l.shift===s);
       const oh = sl.filter(l=>l.maintenance_type==='OH').length;
@@ -4937,7 +4964,7 @@ async function generateMonthlyReport() {
       else userMap[name].simple++;
       if (l.duration_min>0) userMap[name].durations.push(l.duration_min);
     });
-    const userHeader = ['作業者','OHメンテ','簡易メンテ','合計','OH率(%)','平均所要時間(分)'];
+    const userHeader = ['作業者','OHメンテ','簡易メンテ','合計','OH率(%)',t('dashAvgDuration')+'(分)'];
     const userRows = Object.entries(userMap).sort((a,b)=>(b[1].oh+b[1].simple)-(a[1].oh+a[1].simple)).map(([name,d])=>{
       const total = d.oh+d.simple;
       return [name, d.oh, d.simple, total, total?Math.round(d.oh/total*100):0,
