@@ -921,7 +921,7 @@ const T = {
     loggedIn:'ログイン中', theme:'テーマ', language:'言語',
     addHomeScreen:'📱 ホーム画面に追加する', adminMenu:'管理者メニュー',
     monthlyReport:'月次レポート出力', backup:'データバックアップ',
-    version:'製造3課',
+    version:'Mold Maintenance Management System',
     analysis:'分析', analysisTitle:'メンテ間隔 乖離分析',
     backToList:'← 分析一覧',
     settingVal:'設定値', actualAvg:'実績平均', deviationRate:'乖離率',
@@ -1145,7 +1145,7 @@ const T = {
     loggedIn:'Đang đăng nhập', theme:'Giao diện', language:'Ngôn ngữ',
     addHomeScreen:'📱 Thêm vào màn hình chính', adminMenu:'Menu quản trị',
     monthlyReport:'Xuất báo cáo tháng', backup:'Sao lưu dữ liệu',
-    version:'Phân xưởng 3',
+    version:'Mold Maintenance Management System',
     analysis:'Phân tích', analysisTitle:'Phân tích sai lệch chu kỳ BT',
     backToList:'← Danh sách phân tích',
     settingVal:'Giá trị cài đặt', actualAvg:'Trung bình thực tế', deviationRate:'Tỷ lệ sai lệch',
@@ -1369,7 +1369,7 @@ const T = {
     loggedIn:'Logged in', theme:'Theme', language:'Language',
     addHomeScreen:'📱 Add to home screen', adminMenu:'Admin menu',
     monthlyReport:'Monthly report', backup:'Data backup',
-    version:'Section 3',
+    version:'Mold Maintenance Management System',
     analysis:'Analysis', analysisTitle:'Maint. interval deviation analysis',
     backToList:'← Analysis list',
     settingVal:'Setting', actualAvg:'Actual avg.', deviationRate:'Deviation',
@@ -4855,7 +4855,7 @@ async function generateMonthlyReport() {
     const resetCount = maintLogs.filter(l=>l.is_reset).length;
 
     const summaryData = [
-      [`MoldMainte 月次レポート　${y}年${m}月度　製造3課`],
+      [`MoldMainte Monthly Report　${y}/${m}　Mold Maintenance Management System`],
       [],
       ['■ 月次サマリー'],
       ['項目', '件数', '備考'],
