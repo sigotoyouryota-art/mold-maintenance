@@ -1105,7 +1105,7 @@ const T = {
     weekdays:'月,火,水,木,金,土,日',
     hmLegend0:'0件', hmLegend1:'1件', hmLegend2:'2-3件', hmLegend3:'4-5件', hmLegend4:'6-7件', hmLegend5:'8件+',
     dashMoldCount:'金型別件数 TOP', hourUnit:'時', dashAvgMaintTop:'平均メンテ時間 TOP', weekdaysSun:'日,月,火,水,木,金,土', otherLabel:'その他',
-    dashToday:'今日', dashLast7:'直近7日', dashLast30:'直近30日', dashLast90:'直近90日', dashAll:'全期間', dashCustom:'カスタム', dashPartFilter:'品番・品名で絞り込み',
+    dashToday:'今日', wlLegend1:'〜0.3', wlLegend2:'〜0.6', wlLegend3:'〜0.8', wlLegend4:'〜1.0', dashLast7:'直近7日', dashLast30:'直近30日', dashLast90:'直近90日', dashAll:'全期間', dashCustom:'カスタム', dashPartFilter:'品番・品名で絞り込み',
   },
   vi: {
     appName:'Quản Lý Bảo Trì Khuôn', login:'Đăng nhập', selectShift:'Chọn ca', selectWorker:'Chọn công nhân',
@@ -1329,7 +1329,7 @@ const T = {
     weekdays:'T2,T3,T4,T5,T6,T7,CN',
     hmLegend0:'0', hmLegend1:'1', hmLegend2:'2-3', hmLegend3:'4-5', hmLegend4:'6-7', hmLegend5:'8+',
     dashMoldCount:'Khuôn TOP', hourUnit:'h', dashAvgMaintTop:'Thời gian BT TB TOP', weekdaysSun:'CN,T2,T3,T4,T5,T6,T7', otherLabel:'Khác',
-    dashToday:'Hôm nay', dashLast7:'7 ngày', dashLast30:'30 ngày', dashLast90:'90 ngày', dashAll:'Tất cả', dashCustom:'Tùy chỉnh', dashPartFilter:'Lọc theo mã/tên',
+    dashToday:'Hôm nay', wlLegend1:'〜0.3', wlLegend2:'〜0.6', wlLegend3:'〜0.8', wlLegend4:'〜1.0', dashLast7:'7 ngày', dashLast30:'30 ngày', dashLast90:'90 ngày', dashAll:'Tất cả', dashCustom:'Tùy chỉnh', dashPartFilter:'Lọc theo mã/tên',
   },
   en: {
     appName:'Mold Maintenance', login:'Login', selectShift:'Select shift', selectWorker:'Select worker',
@@ -1553,7 +1553,7 @@ const T = {
     weekdays:'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
     hmLegend0:'0', hmLegend1:'1', hmLegend2:'2-3', hmLegend3:'4-5', hmLegend4:'6-7', hmLegend5:'8+',
     dashMoldCount:'Mold TOP', hourUnit:'h', dashAvgMaintTop:'Avg maint time TOP', weekdaysSun:'Sun,Mon,Tue,Wed,Thu,Fri,Sat', otherLabel:'Other',
-    dashToday:'Today', dashLast7:'Last 7d', dashLast30:'Last 30d', dashLast90:'Last 90d', dashAll:'All', dashCustom:'Custom', dashPartFilter:'Filter by part no/name',
+    dashToday:'Today', wlLegend1:'〜0.3', wlLegend2:'〜0.6', wlLegend3:'〜0.8', wlLegend4:'〜1.0', dashLast7:'Last 7d', dashLast30:'Last 30d', dashLast90:'Last 90d', dashAll:'All', dashCustom:'Custom', dashPartFilter:'Filter by part no/name',
   }
 };
 function t(key) { return T[state.lang][key] || key; }
@@ -3200,8 +3200,8 @@ async function renderWorkloadHeatmap() {
 
   html += '</tbody></table></div>';
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">' +
-    '<span style="font-size:9px;color:var(--text4)">工数：</span>' +
-    [['#d4edda','#27500A','〜0.3'],['#70c98a','#27500A','〜0.6'],['#28a745','white','〜0.8'],['#ffc107','#633806','〜1.0'],['#E24B4A','white','超過']].map(([bg,c,lbl]) =>
+    '<span style="font-size:9px;color:var(--text4)">' + (t('dashWorkload')||'工数') + '：</span>' +
+    [['#d4edda','#27500A',t('wlLegend1')||'〜0.3'],['#70c98a','#27500A',t('wlLegend2')||'〜0.6'],['#28a745','white',t('wlLegend3')||'〜0.8'],['#ffc107','#633806',t('wlLegend4')||'〜1.0'],['#E24B4A','white',t('overShot')||'超過']].map(([bg,c,lbl]) =>
       '<span style="display:flex;align-items:center;gap:2px;font-size:9px;color:var(--text3)"><span style="width:11px;height:11px;border-radius:2px;background:' + bg + ';display:inline-block"></span>' + lbl + '</span>'
     ).join('') + '</div>';
 
