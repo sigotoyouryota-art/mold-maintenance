@@ -5540,9 +5540,11 @@ function stopAutoLogout() {
 }
 
 // ユーザー操作を検知してタイマーリセット
-['click', 'touchstart', 'keydown'].forEach(ev => {
+['click', 'keydown'].forEach(ev => {
   document.addEventListener(ev, () => { if (state.currentUser) resetAutoLogoutTimer(); }, { passive: true });
 });
+// touchstartはpassive:falseにするとスクロール性能に影響するため別途登録
+document.addEventListener('touchstart', () => { if (state.currentUser) resetAutoLogoutTimer(); }, { passive: true, capture: false });
 
 // ショット未入力判定
 function isShotUnregistered(mold) {
@@ -5895,29 +5897,42 @@ function updateShachoTab(tab, delayCount) {
   if (img) setShachoImgEl(img, getShachoImg(tab, delayCount));
 }
 
-// ロゴ5秒長押しでON/OFF切り替え
+// ロゴ3秒長押しでON/OFF切り替え
 function initShachoLongPress() {
   const logo = document.getElementById('main-logo');
   if (!logo) return;
   // タッチはオーバーレイdivで捕捉（SVG・テキスト長押しのデフォルト動作を回避）
   const guard = document.getElementById('logo-touch-guard') || logo;
+  const LONG_PRESS_MS = 3000;
+  let triggered = false;
   const trigger = () => {
+    if (triggered) return;
+    triggered = true;
     saveShachoSetting(!shachoVisible);
     logo.style.opacity = '0.6';
     setTimeout(() => logo.style.opacity = '', 300);
   };
+  const cancel = () => {
+    clearTimeout(shachoLongPressTimer);
+    triggered = false;
+  };
   // PC: mousedown
-  logo.addEventListener('mousedown', () => { shachoLongPressTimer = setTimeout(trigger, 5000); });
-  logo.addEventListener('mouseup', () => clearTimeout(shachoLongPressTimer));
-  logo.addEventListener('mouseleave', () => clearTimeout(shachoLongPressTimer));
+  logo.addEventListener('mousedown', () => { triggered = false; shachoLongPressTimer = setTimeout(trigger, LONG_PRESS_MS); });
+  logo.addEventListener('mouseup', cancel);
+  logo.addEventListener('mouseleave', cancel);
   // スマホ: オーバーレイdivで捕捉
   guard.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    shachoLongPressTimer = setTimeout(trigger, 5000);
+    triggered = false;
+    shachoLongPressTimer = setTimeout(trigger, LONG_PRESS_MS);
   }, {passive:false});
-  guard.addEventListener('touchmove', () => clearTimeout(shachoLongPressTimer), {passive:true});
-  guard.addEventListener('touchend', () => clearTimeout(shachoLongPressTimer));
-  guard.addEventListener('touchcancel', () => clearTimeout(shachoLongPressTimer));
+  guard.addEventListener('touchmove', cancel, {passive:true});
+  guard.addEventListener('touchend', cancel);
+  // touchcancelはiOSがコンテキストメニュー等を出そうとした証拠→即発火
+  guard.addEventListener('touchcancel', () => {
+    clearTimeout(shachoLongPressTimer);
+    trigger();
+  });
   // contextmenuは念のため両方抑止
   logo.addEventListener('contextmenu', (e) => e.preventDefault());
   guard.addEventListener('contextmenu', (e) => e.preventDefault());
